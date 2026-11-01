@@ -1,6 +1,6 @@
 # M0-01: Go module and tooling
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M0 — Walking skeleton
 - **Linear:** [HAM-15](https://linear.app/hamid-corp/issue/HAM-15/m0-01-go-module-and-tooling)
 - **Estimate:** ½ day
@@ -26,7 +26,7 @@ definition of "green". See CLAUDE.md → Commands.
    **Then** it exits non-zero and names the file and rule.
 3. **Given** the repo
    **When** I read `go.mod`
-   **Then** the module path is `github.com/shinraxtensei/job-hunt-agent` and the Go
+   **Then** the module path is `github.com/shinraxtensei/job-hunter` and the Go
    version is the current stable release.
 4. **Given** the repo
    **When** I run `make help`
@@ -44,7 +44,8 @@ govulncheck is part of `check` from day one. golangci-lint enables `gosec` and
 
 ## Notes for the implementer
 
-- Pin tool versions with `go tool` directives in `go.mod` (Go 1.24+), so CI and local
-  use the same versions.
+- Pin tool versions with `tool` directives in a separate `tools.mod` (Go 1.24+), so CI
+  and local use the same versions and the app's `go.mod` never inherits the linters'
+  dependencies. Run them with `go tool -modfile=tools.mod <name>`.
 - golangci-lint config: start from the defaults plus `errcheck`, `gosec`, `revive`,
   `gocritic`, `bodyclose`, `contextcheck`, `errorlint`. Keep the list short.

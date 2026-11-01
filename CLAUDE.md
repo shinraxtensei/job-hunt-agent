@@ -63,6 +63,7 @@ testdata/            golden files (recorded board responses, sample postings)
 | Python tests | `make test-py` → `uv run pytest` |
 | Agent evals | `make evals` |
 | Lint | `make lint` → golangci-lint, ruff, pyright |
+| Format Go / check formatting | `make fmt` / `make fmt-check` |
 | Regenerate sqlc | `make sqlc` |
 | New migration | `make migration name=<snake_case>` |
 | Vulnerability scan | `make vuln` → govulncheck |

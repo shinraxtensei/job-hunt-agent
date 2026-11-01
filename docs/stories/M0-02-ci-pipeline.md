@@ -44,5 +44,5 @@ SHA, not tag. No secrets needed for this story.
 
 ## Notes for the implementer
 
-- Create the GitHub repo `shinraxtensei/job-hunt-agent` (private for now) and push the
-  existing history first.
+- The GitHub repo is `shinraxtensei/job-hunter` (default branch `master`); history was
+  pushed with M0-01.
