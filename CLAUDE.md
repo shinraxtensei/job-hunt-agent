@@ -6,6 +6,7 @@ application to its outcome. The owner reviews and sends everything.
 
 - PRD: `docs/prd.md` (source: https://claude.ai/artifact/ETPNX5BhXxhyvnJQoZkXgW)
 - Decisions: `docs/adr/` (index below)
+- Roadmap: `docs/roadmap.md` (all milestones; scope changes are edited there in a PR)
 - Stories: `docs/stories/` (one file per story, linked from Linear)
 
 ## Golden rules

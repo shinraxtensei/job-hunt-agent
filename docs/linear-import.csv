@@ -1,0 +1,600 @@
+Title,Description,Project,Status,Priority,Labels
+M0-01: Go module and tooling,"Story file: `docs/stories/M0-01-go-module-and-tooling.md` (source of truth)
+Estimate: ½ day
+
+## Story
+
+As the job seeker building this tool, I want one command that formats, lints, tests and
+scans the code, so that every change is checked the same way locally and in CI.
+
+## Context
+
+First code in the repo. Everything later relies on `make check` being the single
+definition of ""green"". See CLAUDE.md → Commands.
+
+## Acceptance criteria
+
+1. **Given** a fresh clone with Go installed
+   **When** I run `make check`
+   **Then** it runs `gofmt` check, `go vet`, golangci-lint, `go test -race ./...` and
+   `govulncheck ./...`, and exits 0 on the empty project.
+2. **Given** a Go file with a formatting error or an unchecked error return
+   **When** I run `make check`
+   **Then** it exits non-zero and names the file and rule.
+3. **Given** the repo
+   **When** I read `go.mod`
+   **Then** the module path is `github.com/shinraxtensei/job-hunt-agent` and the Go
+   version is the current stable release.
+4. **Given** the repo
+   **When** I run `make help`
+   **Then** every target in the CLAUDE.md Commands table is listed with a one-line
+   description (targets not built yet print ""not implemented yet"" and exit 1).
+
+## Out of scope
+
+- Python tooling (M3-01), TypeScript tooling (M2-06), Docker (M0-03).
+
+## Security notes
+
+govulncheck is part of `check` from day one. golangci-lint enables `gosec` and
+`errcheck`. No secrets involved.
+
+## Notes for the implementer
+
+- Pin tool versions with `go tool` directives in `go.mod` (Go 1.24+), so CI and local
+  use the same versions.
+- golangci-lint config: start from the defaults plus `errcheck`, `gosec`, `revive`,
+  `gocritic`, `bodyclose`, `contextcheck`, `errorlint`. Keep the list short.
+",M0 — Walking skeleton,Todo,High,"story,go"
+M0-02: CI pipeline,"Story file: `docs/stories/M0-02-ci-pipeline.md` (source of truth)
+Estimate: ½ day
+
+## Story
+
+As the job seeker building this tool, I want every push and pull request checked
+automatically, so that `main` is always green and deployable.
+
+## Context
+
+Depends on M0-01. Runs the same `make check` as local. Deployment is added in M0-05.
+
+## Acceptance criteria
+
+1. **Given** a pull request to `main`
+   **When** it is opened or updated
+   **Then** a GitHub Actions workflow runs `make check` and reports pass/fail on the PR.
+2. **Given** a commit containing something that looks like a secret (API key pattern)
+   **When** CI runs
+   **Then** the gitleaks step fails the build.
+3. **Given** the repository settings
+   **When** a PR has a failing check
+   **Then** it cannot be merged into `main` (branch protection requires the check).
+4. **Given** Go dependencies
+   **When** a new version is published
+   **Then** Dependabot or Renovate opens an update PR (weekly, grouped).
+5. **Given** a repeat CI run with no dependency change
+   **When** it runs
+   **Then** the Go module and build caches are restored (visible in the logs).
+
+## Out of scope
+
+- Deployment (M0-05), Python and web jobs (added with their milestones), Claude security
+  review action (optional, later).
+
+## Security notes
+
+Workflow permissions default to `contents: read`. Third-party actions pinned by commit
+SHA, not tag. No secrets needed for this story.
+
+## Notes for the implementer
+
+- Create the GitHub repo `shinraxtensei/job-hunt-agent` (private for now) and push the
+  existing history first.
+",M0 — Walking skeleton,Todo,High,"story,go"
+M0-03: Local Postgres and migrations,"Story file: `docs/stories/M0-03-local-postgres-and-migrations.md` (source of truth)
+Estimate: ½ day
+
+## Story
+
+As the job seeker building this tool, I want a local database with versioned migrations,
+so that the schema is reproducible on my laptop, in tests and on the server.
+
+## Context
+
+PostgreSQL is the only shared state (ADR-0001). Migrations are plain SQL, forward-only,
+run by goose from `cmd/migrate`.
+
+## Acceptance criteria
+
+1. **Given** Docker running
+   **When** I run `make up`
+   **Then** PostgreSQL (current major version) starts from `deploy/compose.yaml` with a
+   named volume, and `make down` stops it without deleting data.
+2. **Given** an empty database
+   **When** I run `go run ./cmd/migrate up`
+   **Then** all migrations apply in order, and running it again is a no-op.
+3. **Given** the first migration
+   **When** applied
+   **Then** tables `companies` (id, name, board_type, board_slug, excluded, created_at)
+   and `postings` (id, company_id, source, source_posting_id, url, title, raw_payload
+   jsonb, first_seen_at, last_checked_at) exist, with a unique constraint on
+   (source, source_posting_id).
+4. **Given** `make migration name=add_x`
+   **When** run
+   **Then** a new timestamped SQL file is created in `db/migrations/`.
+5. **Given** the store package
+   **When** integration tests run (`make test-integration`)
+   **Then** a throwaway Postgres starts via testcontainers-go, migrations apply, and a
+   test inserts and reads a company.
+
+## Out of scope
+
+- sqlc query generation beyond one smoke query (grows in M1), the work queue table (M3).
+
+## Security notes
+
+Local credentials only in `.env` (gitignored); commit a `.env.example` with placeholders.
+The app connects with a non-superuser role; only migrations use the owner role.
+",M0 — Walking skeleton,Todo,High,"story,go"
+M0-04: First Lever posting end to end,"Story file: `docs/stories/M0-04-first-lever-posting-end-to-end.md` (source of truth)
+Estimate: 1 day
+
+## Story
+
+As the job seeker, I want the collector to fetch real postings from one company's Lever
+board and store them, so that the whole path from the web to the database works before
+anything else is built.
+
+## Context
+
+The tracer bullet. Deliberately minimal: one company from an env var, no scheduler, no
+concurrency. M1-03 completes this adapter. Follow the `source-adapter` skill.
+
+## Acceptance criteria
+
+1. **Given** `COLLECTOR_LEVER_COMPANY` set to a company with a public Lever board
+   **When** I run `go run ./cmd/collector once`
+   **Then** its open postings are inserted into `postings` with the raw JSON stored, and
+   the command logs (slog, JSON) how many were new and how many already existed.
+2. **Given** the same command run twice
+   **When** the second run finishes
+   **Then** no duplicate rows exist and `last_checked_at` is updated.
+3. **Given** a recorded Lever response in `internal/source/lever/testdata/`
+   **When** the parse test runs against an `httptest` server
+   **Then** the produced records match the golden expectation exactly.
+4. **Given** the Lever endpoint returns 500
+   **When** the collector runs
+   **Then** it exits non-zero with an error naming the company, and nothing partial is
+   written.
+5. **Given** any run
+   **When** I read the logs
+   **Then** they contain counts and IDs, never full posting text.
+
+## Out of scope
+
+- Rate limiting, retries, fuzzing, multiple companies (all M1).
+
+## Security notes
+
+Check Lever's public postings API terms and record them in this file before coding
+(step 0 of the `source-adapter` skill). Posting content is untrusted: stored as data,
+never logged in full. HTTP client has a timeout.
+
+## Notes for the implementer
+
+- Lever's public postings endpoint is documented in the lever/postings-api repo on
+  GitHub; confirm the current URL and JSON shape there rather than guessing.
+",M0 — Walking skeleton,Todo,High,"story,go"
+"M0-05: Server, Tailscale and deploy","Story file: `docs/stories/M0-05-server-tailscale-and-deploy.md` (source of truth)
+Estimate: 1 day
+
+## Story
+
+As the job seeker, I want every merge to `main` deployed to my own server that only I can
+reach, so that the tool is real from week one and shipping is never a big event.
+
+## Context
+
+ADR-0002 (Tailscale instead of auth). One small VPS running Docker Compose. Images built
+in CI and pushed to GHCR.
+
+## Acceptance criteria
+
+1. **Given** a fresh VPS
+   **When** the documented setup in `deploy/README.md` is followed
+   **Then** the server has Docker, joins the tailnet, allows only SSH (keys only) and
+   Tailscale through its firewall, and has automatic security updates enabled.
+2. **Given** a merge to `main` with green CI
+   **When** the deploy workflow runs
+   **Then** it builds and pushes images tagged with the commit SHA, runs migrations, then
+   restarts services with `docker compose pull && docker compose up -d`.
+3. **Given** a failed migration
+   **When** the deploy runs
+   **Then** the services are not restarted and the workflow fails visibly.
+4. **Given** the deployed stack
+   **When** I open `https://<server>.<tailnet>.ts.net/healthz` from my phone on Tailscale
+   **Then** it returns 200 with the commit SHA; from outside the tailnet it is unreachable.
+5. **Given** the server
+   **When** I run the collector container once with a Lever company set
+   **Then** postings appear in the server's database (M0-04 proven in production).
+
+## Out of scope
+
+- Scheduled runs (M1-08), backups (M1-09), the web UI (M2-06).
+
+## Security notes
+
+Secrets (DB password, Tailscale auth key, SSH deploy key) live only in GitHub Actions
+secrets and a root-only `.env` on the server. The deploy SSH key is restricted to the
+deploy command. Postgres is not exposed on any interface outside the compose network.
+",M0 — Walking skeleton,Todo,High,"story,go"
+M1-01: Watch list seed and companies sync,"Story file: `docs/stories/M1-01-watch-list-seed-and-companies-sync.md` (source of truth)
+Estimate: ½ day (plus time choosing the 50 companies)
+
+## Story
+
+As the job seeker, I want my target companies kept in a reviewed file that syncs to the
+database, so that the watch list is versioned and easy to change.
+
+## Context
+
+Answers the PRD's first open question. Start from the 86 researched companies in the
+September ""Departures"" tracker and pick 50 that use Lever, Greenhouse, Ashby or Workable.
+
+## Acceptance criteria
+
+1. **Given** `data/companies.yaml` with name, board_type, board_slug, track (morocco,
+   remote, relocation, consulting) and optional `excluded: true`
+   **When** I run `go run ./cmd/collector companies sync`
+   **Then** the `companies` table matches the file: new rows inserted, changed rows
+   updated, rows removed from the file marked inactive (never deleted).
+2. **Given** a file entry with an unknown board_type or a missing slug
+   **When** sync runs
+   **Then** it fails before writing anything and lists every invalid line.
+3. **Given** the seed file
+   **When** it is reviewed
+   **Then** it holds at least 50 active companies, and Yassir is present with
+   `excluded: true`.
+4. **Given** sync is run twice with no file change
+   **When** the second run finishes
+   **Then** it reports 0 inserted, 0 updated.
+
+## Out of scope
+
+- Career-page scraping for companies without an ATS board (M7).
+
+## Security notes
+
+The file holds public company data only.
+",M1 — Collector,Backlog,Medium,"story,go"
+M1-02: Concurrent collector run,"Story file: `docs/stories/M1-02-concurrent-collector-run.md` (source of truth)
+Estimate: 1 day
+
+## Story
+
+As the job seeker, I want one collector run to fetch every active company concurrently
+and politely, so that 50 companies finish in minutes and one broken board never stops the
+rest.
+
+## Context
+
+Introduces the `Source` interface (defined in `internal/collector`, the consumer) and the
+source registry. Follows the `source-adapter` skill's politeness rules.
+
+## Acceptance criteria
+
+1. **Given** active companies across several board types
+   **When** `collector run` executes
+   **Then** companies are fetched concurrently (bounded by `COLLECTOR_CONCURRENCY`,
+   default 8) using `errgroup` and a shared `context`.
+2. **Given** several companies on the same host
+   **When** they are fetched
+   **Then** requests to that host never exceed its configured rate (default 1/s), verified
+   by a test with a fake source counting request times.
+3. **Given** one company's fetch fails
+   **When** the run finishes
+   **Then** the other companies' results are still stored, the failure is recorded with
+   its error, and the run exits 0 with a ""partial"" outcome.
+4. **Given** SIGINT or SIGTERM during a run
+   **When** received
+   **Then** in-flight requests are cancelled, nothing half-written remains, and the
+   process exits within 10 seconds.
+5. **Given** a board type with no registered adapter
+   **When** the run starts
+   **Then** those companies are skipped with a warning naming them.
+6. **Given** the test suite
+   **When** run with `-race` and goleak
+   **Then** no data races and no leaked goroutines are reported.
+
+## Out of scope
+
+- Scheduling (M1-08), the adapters themselves (M1-03 to M1-06).
+
+## Security notes
+
+Every HTTP client has a timeout and a descriptive User-Agent with a contact URL.
+",M1 — Collector,Backlog,Medium,"story,go"
+M1-03: Lever adapter,"Story file: `docs/stories/M1-03-lever-adapter.md` (source of truth)
+Estimate: ½ day
+
+## Story
+
+As the job seeker, I want postings from companies on Lever collected, so that those
+companies' openings reach my tracker without me checking their sites.
+
+## Context
+
+M0-04 started this adapter; this story completes it to the skill's standard. Follow the `source-adapter` skill end to end; it is the definition of done.
+
+## Acceptance criteria
+
+1. **Given** the Lever public API terms
+   **When** this story starts
+   **Then** the endpoint URL, its terms and robots status are recorded below under
+   Security notes before any code is written.
+2. **Given** recorded responses in `internal/source/lever/testdata/`
+   **When** the golden-file test runs against `httptest`
+   **Then** the exact expected `job.Raw` records are produced.
+3. **Given** an empty board, a malformed posting, a 404, a 429 with `Retry-After`, and a
+   cancelled context
+   **When** each is tested
+   **Then** the behaviour matches the `source-adapter` skill (empty slice; skip one;
+   error naming the company; retry after the delay; prompt stop).
+4. **Given** `FuzzParse` seeded with the golden files
+   **When** fuzzed for 30 seconds
+   **Then** it never panics.
+5. **Given** a real company on Lever from the watch list
+   **When** `collector run` executes locally
+   **Then** its postings are stored and spot-checked by eye against the live site.
+
+## Out of scope
+
+- Normalising fields into the job record (M2-01).
+
+## Security notes
+
+Endpoint, terms and robots status: _fill in at story start._
+No login, no bypassing blocks. Raw payloads stored, never logged in full.
+",M1 — Collector,Backlog,Medium,"story,go"
+M1-04: Greenhouse adapter,"Story file: `docs/stories/M1-04-greenhouse-adapter.md` (source of truth)
+Estimate: ½ day
+
+## Story
+
+As the job seeker, I want postings from companies on Greenhouse collected, so that those
+companies' openings reach my tracker without me checking their sites.
+
+## Context
+
+Greenhouse exposes a public Job Board API per board token. Follow the `source-adapter` skill end to end; it is the definition of done.
+
+## Acceptance criteria
+
+1. **Given** the Greenhouse public API terms
+   **When** this story starts
+   **Then** the endpoint URL, its terms and robots status are recorded below under
+   Security notes before any code is written.
+2. **Given** recorded responses in `internal/source/greenhouse/testdata/`
+   **When** the golden-file test runs against `httptest`
+   **Then** the exact expected `job.Raw` records are produced.
+3. **Given** an empty board, a malformed posting, a 404, a 429 with `Retry-After`, and a
+   cancelled context
+   **When** each is tested
+   **Then** the behaviour matches the `source-adapter` skill (empty slice; skip one;
+   error naming the company; retry after the delay; prompt stop).
+4. **Given** `FuzzParse` seeded with the golden files
+   **When** fuzzed for 30 seconds
+   **Then** it never panics.
+5. **Given** a real company on Greenhouse from the watch list
+   **When** `collector run` executes locally
+   **Then** its postings are stored and spot-checked by eye against the live site.
+
+## Out of scope
+
+- Normalising fields into the job record (M2-01).
+
+## Security notes
+
+Endpoint, terms and robots status: _fill in at story start._
+No login, no bypassing blocks. Raw payloads stored, never logged in full.
+",M1 — Collector,Backlog,Medium,"story,go"
+M1-05: Ashby adapter,"Story file: `docs/stories/M1-05-ashby-adapter.md` (source of truth)
+Estimate: ½ day
+
+## Story
+
+As the job seeker, I want postings from companies on Ashby collected, so that those
+companies' openings reach my tracker without me checking their sites.
+
+## Context
+
+Ashby exposes a public posting API per job board name. Follow the `source-adapter` skill end to end; it is the definition of done.
+
+## Acceptance criteria
+
+1. **Given** the Ashby public API terms
+   **When** this story starts
+   **Then** the endpoint URL, its terms and robots status are recorded below under
+   Security notes before any code is written.
+2. **Given** recorded responses in `internal/source/ashby/testdata/`
+   **When** the golden-file test runs against `httptest`
+   **Then** the exact expected `job.Raw` records are produced.
+3. **Given** an empty board, a malformed posting, a 404, a 429 with `Retry-After`, and a
+   cancelled context
+   **When** each is tested
+   **Then** the behaviour matches the `source-adapter` skill (empty slice; skip one;
+   error naming the company; retry after the delay; prompt stop).
+4. **Given** `FuzzParse` seeded with the golden files
+   **When** fuzzed for 30 seconds
+   **Then** it never panics.
+5. **Given** a real company on Ashby from the watch list
+   **When** `collector run` executes locally
+   **Then** its postings are stored and spot-checked by eye against the live site.
+
+## Out of scope
+
+- Normalising fields into the job record (M2-01).
+
+## Security notes
+
+Endpoint, terms and robots status: _fill in at story start._
+No login, no bypassing blocks. Raw payloads stored, never logged in full.
+",M1 — Collector,Backlog,Medium,"story,go"
+M1-06: Workable adapter,"Story file: `docs/stories/M1-06-workable-adapter.md` (source of truth)
+Estimate: ½ day
+
+## Story
+
+As the job seeker, I want postings from companies on Workable collected, so that those
+companies' openings reach my tracker without me checking their sites.
+
+## Context
+
+Workable's public endpoints are less documented; confirm a supported public endpoint before coding, and stop if only scraping would work. Follow the `source-adapter` skill end to end; it is the definition of done.
+
+## Acceptance criteria
+
+1. **Given** the Workable public API terms
+   **When** this story starts
+   **Then** the endpoint URL, its terms and robots status are recorded below under
+   Security notes before any code is written.
+2. **Given** recorded responses in `internal/source/workable/testdata/`
+   **When** the golden-file test runs against `httptest`
+   **Then** the exact expected `job.Raw` records are produced.
+3. **Given** an empty board, a malformed posting, a 404, a 429 with `Retry-After`, and a
+   cancelled context
+   **When** each is tested
+   **Then** the behaviour matches the `source-adapter` skill (empty slice; skip one;
+   error naming the company; retry after the delay; prompt stop).
+4. **Given** `FuzzParse` seeded with the golden files
+   **When** fuzzed for 30 seconds
+   **Then** it never panics.
+5. **Given** a real company on Workable from the watch list
+   **When** `collector run` executes locally
+   **Then** its postings are stored and spot-checked by eye against the live site.
+
+## Out of scope
+
+- Normalising fields into the job record (M2-01).
+
+## Security notes
+
+Endpoint, terms and robots status: _fill in at story start._
+No login, no bypassing blocks. Raw payloads stored, never logged in full.
+",M1 — Collector,Backlog,Medium,"story,go"
+M1-07: Idempotent posting upsert,"Story file: `docs/stories/M1-07-idempotent-posting-upsert.md` (source of truth)
+Estimate: ½ day
+
+## Story
+
+As the job seeker, I want each posting stored once with its full history of sightings,
+so that reruns are safe and I know when a role first appeared and was last seen.
+
+## Context
+
+Generalises the M0-04 insert into the store layer (pgx + sqlc). Adds `content_hash` and
+`last_changed_at` to `postings` in a new migration. Raw text is always kept
+so extraction can be rerun later without refetching.
+
+## Acceptance criteria
+
+1. **Given** a batch of raw postings for one company
+   **When** stored
+   **Then** it happens in one transaction using `INSERT … ON CONFLICT (source,
+   source_posting_id) DO UPDATE`, returning counts of new and updated rows.
+2. **Given** a posting already stored whose payload changed
+   **When** stored again
+   **Then** `raw_payload` and `content_hash` update, `last_changed_at` is set, and
+   `first_seen_at` is unchanged.
+3. **Given** a posting already stored with an identical payload
+   **When** stored again
+   **Then** only `last_checked_at` changes.
+4. **Given** the integration tests (testcontainers)
+   **When** they run
+   **Then** cases 1–3 are covered against real Postgres, not mocks.
+
+## Out of scope
+
+- Detecting closed postings (M2-04), deduplication across sources (M2-02).
+
+## Security notes
+
+All SQL through sqlc-generated, parameterised queries.
+",M1 — Collector,Backlog,Medium,"story,go"
+M1-08: Daily schedule and run monitoring,"Story file: `docs/stories/M1-08-daily-schedule-and-run-monitoring.md` (source of truth)
+Estimate: ½ day
+
+## Story
+
+As the job seeker, I want the collector to run every morning on its own and tell me when
+it doesn't, so that I never trust stale data without knowing.
+
+## Context
+
+Runs on the server. Keep it simple: a scheduled container (or systemd timer) invoking
+`collector run`, not an in-process cron library.
+
+## Acceptance criteria
+
+1. **Given** the deployed stack
+   **When** 06:00 Africa/Casablanca arrives
+   **Then** `collector run` starts automatically.
+2. **Given** any run
+   **When** it finishes
+   **Then** a row in `collector_runs` records start, end, outcome (ok, partial, failed),
+   companies attempted, failed, and postings new/updated.
+3. **Given** a successful or partial run
+   **When** it finishes
+   **Then** it pings a healthchecks.io check; if no ping arrives within 26 hours, the
+   owner is notified.
+4. **Given** a failed run
+   **When** it finishes
+   **Then** it pings the check's failure URL so the alert fires immediately.
+
+## Out of scope
+
+- The morning digest (M7-02).
+
+## Security notes
+
+The healthchecks ping URL is a secret (env var), never committed or logged.
+",M1 — Collector,Backlog,Medium,"story,go"
+M1-09: Nightly backup and tested restore,"Story file: `docs/stories/M1-09-nightly-backup-and-tested-restore.md` (source of truth)
+Estimate: ½ day
+
+## Story
+
+As the job seeker, I want the database backed up every night off the server, with a
+restore I have actually tried, so that losing the VPS never loses my application history.
+
+## Context
+
+From here on the database holds data worth keeping. An untested backup is not a backup.
+
+## Acceptance criteria
+
+1. **Given** the server
+   **When** 03:00 arrives
+   **Then** `pg_dump` (custom format) runs, the file is encrypted, and it is uploaded to
+   off-server object storage.
+2. **Given** backups older than 14 daily / 8 weekly
+   **When** the job runs
+   **Then** they are pruned by the retention rule.
+3. **Given** the latest backup
+   **When** `deploy/restore.sh` is run against a fresh local Postgres
+   **Then** the database restores and row counts match the source; the procedure and the
+   date of the test are written in `deploy/README.md`.
+4. **Given** a backup failure
+   **When** it happens
+   **Then** a healthchecks.io check alerts the owner.
+
+## Out of scope
+
+- Point-in-time recovery.
+
+## Security notes
+
+Backups contain personal data from M4 onward: encrypted before upload; the key is stored
+outside the server and outside the repo. Storage credentials are write-only where the
+provider allows it.
+",M1 — Collector,Backlog,Medium,"story,go"
