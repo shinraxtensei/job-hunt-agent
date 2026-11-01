@@ -1,6 +1,6 @@
 # M0-04: First Lever posting end to end
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M0 — Walking skeleton
 - **Linear:** [HAM-18](https://linear.app/hamid-corp/issue/HAM-18/m0-04-first-lever-posting-end-to-end)
 - **Estimate:** 1 day
@@ -45,6 +45,29 @@ concurrency. M1-03 completes this adapter. Follow the `source-adapter` skill.
 Check Lever's public postings API terms and record them in this file before coding
 (step 0 of the `source-adapter` skill). Posting content is untrusted: stored as data,
 never logged in full. HTTP client has a timeout.
+
+### Step 0 findings (checked 2026-11-01)
+
+- **Official API:** yes. Lever's public Postings API, documented in
+  [lever/postings-api](https://github.com/lever/postings-api) (README, last pushed
+  2026-04-23). We use only `GET https://api.lever.co/v0/postings/<site>?mode=json`
+  (global instance; EU boards are on `api.eu.lever.co`). Fields used: `id`, `text`,
+  `hostedUrl`; the full element is stored as raw JSON.
+- **Terms:** the README says all published postings "are publicly viewable" and "may be
+  scraped by third parties"; the only documented rate limit is on application POSTs
+  (2/s), which we never call. No API key is needed for reads.
+- **robots.txt:** `api.lever.co` → `User-agent: * / Allow: / / Crawl-delay: 1`. We make
+  one request per run, so the crawl delay is met; M1-03's limiter must keep ≥1s between
+  requests. `jobs.lever.co` (the HTML site, which we don't fetch) also publishes
+  Cloudflare content signals: `search=yes, ai-train=no`, and nothing either way for
+  `ai-input`. We never train on postings; whether scoring with a model counts as
+  `ai-input` for the HTML site is moot while we only use the API, but revisit if we
+  ever fetch `jobs.lever.co`.
+- **Login:** none. **Anti-bot:** none on the JSON API (plain 200 responses, no
+  challenge).
+- **Our client:** 30s timeout, `User-Agent: job-hunter/0.1
+  (+https://github.com/shinraxtensei/job-hunter)`, 32 MiB response cap, errors carry the
+  status only (never the body), logs carry counts and posting IDs only.
 
 ## Notes for the implementer
 

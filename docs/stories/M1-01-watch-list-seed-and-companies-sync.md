@@ -32,6 +32,11 @@ September "Departures" tracker and pick 50 that use Lever, Greenhouse, Ashby or 
 4. **Given** sync is run twice with no file change
    **When** the second run finishes
    **Then** it reports 0 inserted, 0 updated.
+5. **Given** the `companies` table
+   **When** this story's migration is applied
+   **Then** `(board_type, board_slug)` is UNIQUE, and the collector's `companyID`
+   (`internal/collector`) is a single upsert instead of select-then-insert, so concurrent
+   runs can't create duplicate companies. (Left as a `ponytail:` note in M0-04.)
 
 ## Out of scope
 

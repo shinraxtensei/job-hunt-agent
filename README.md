@@ -14,3 +14,8 @@ Start here: [`CLAUDE.md`](CLAUDE.md) · [`docs/prd.md`](docs/prd.md) · [`docs/a
 ## Status
 
 Week 0: walking skeleton.
+
+## Supported sources
+
+- **Lever**: public Postings API (`api.lever.co/v0/postings/<site>`), one board per run
+  for now (M0-04).

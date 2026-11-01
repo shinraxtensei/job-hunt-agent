@@ -4,135 +4,25 @@ package store_test
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"net/url"
-	"os"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
-	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
-	"github.com/shinraxtensei/job-hunter/db/migrations"
 	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunter/internal/store/storetest"
 )
 
-// URLs for the shared test database, set by TestMain.
-var superURL, ownerURL, appURL string
-
-// TestMain starts one throwaway Postgres for the package, from the image pinned in
-// deploy/compose.yaml and with the same role init script, so tests see what prod sees.
-func TestMain(m *testing.M) {
-	code, err := run(m)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	os.Exit(code)
-}
-
-func run(m *testing.M) (int, error) {
-	ctx := context.Background()
-	root, err := filepath.Abs("../..")
-	if err != nil {
-		return 0, fmt.Errorf("resolving repo root: %w", err)
-	}
-	image, err := composeImage(filepath.Join(root, "deploy", "compose.yaml"))
-	if err != nil {
-		return 0, err
-	}
-	ctr, err := postgres.Run(ctx, image,
-		postgres.WithDatabase("jobhunt"),
-		postgres.WithUsername("postgres"),
-		postgres.WithPassword("test-superuser"),
-		postgres.WithInitScripts(filepath.Join(root, "deploy", "postgres", "initdb", "01-roles.sh")),
-		testcontainers.WithEnv(map[string]string{
-			"JOBHUNT_OWNER_PASSWORD": "test-owner",
-			"JOBHUNT_APP_PASSWORD":   "test-app",
-		}),
-		postgres.BasicWaitStrategies(),
-	)
-	if err != nil {
-		return 0, fmt.Errorf("starting postgres: %w", err)
-	}
-	defer func() {
-		if err := testcontainers.TerminateContainer(ctr); err != nil {
-			fmt.Fprintln(os.Stderr, "terminating postgres:", err)
-		}
-	}()
-	superURL, err = ctr.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		return 0, fmt.Errorf("connection string: %w", err)
-	}
-	if ownerURL, err = withUser(superURL, "jobhunt_owner", "test-owner"); err != nil {
-		return 0, err
-	}
-	if appURL, err = withUser(superURL, "jobhunt_app", "test-app"); err != nil {
-		return 0, err
-	}
-	return m.Run(), nil
-}
-
-// composeImage returns the postgres image reference pinned in compose.yaml, so the
-// tests and the local stack can never drift apart.
-func composeImage(path string) (string, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", fmt.Errorf("reading compose file: %w", err)
-	}
-	m := regexp.MustCompile(`(?m)^\s*image:\s*(postgres:\S+)`).FindSubmatch(b)
-	if m == nil {
-		return "", fmt.Errorf("no postgres image in %s", path)
-	}
-	return string(m[1]), nil
-}
-
-func withUser(rawURL, user, password string) (string, error) {
-	u, err := url.Parse(rawURL)
-	if err != nil {
-		return "", fmt.Errorf("parsing connection string: %w", err)
-	}
-	u.User = url.UserPassword(user, password)
-	return u.String(), nil
-}
+func TestMain(m *testing.M) { storetest.Main(m) }
 
 // migrateUp applies all migrations to the shared database as the owner role.
 func migrateUp(t *testing.T) []int64 {
 	t.Helper()
-	return migrateURL(t, ownerURL)
-}
-
-// migrateURL applies all migrations to dsn, the way cmd/migrate does.
-func migrateURL(t *testing.T, dsn string) []int64 {
-	t.Helper()
-	db, err := sql.Open("pgx", dsn)
-	if err != nil {
-		t.Fatalf("opening owner connection: %v", err)
-	}
-	t.Cleanup(func() { _ = db.Close() }) // close error on a test connection changes nothing
-	applied, err := migrations.Up(t.Context(), db)
-	if err != nil {
-		t.Fatalf("migrations up: %v", err)
-	}
-	return applied
-}
-
-func connect(t *testing.T, rawURL string) *pgx.Conn {
-	t.Helper()
-	conn, err := pgx.Connect(t.Context(), rawURL)
-	if err != nil {
-		t.Fatalf("connecting: %v", err)
-	}
-	t.Cleanup(func() { _ = conn.Close(context.Background()) }) // see migrateUp
-	return conn
+	return storetest.Migrate(t, storetest.OwnerURL)
 }
 
 // freshDatabase creates an empty database owned by jobhunt_owner, dropped after the
@@ -140,7 +30,7 @@ func connect(t *testing.T, rawURL string) *pgx.Conn {
 func freshDatabase(t *testing.T) string {
 	t.Helper()
 	name := fmt.Sprintf("fresh_%d", time.Now().UnixNano())
-	super := connect(t, superURL)
+	super := storetest.Connect(t, storetest.SuperURL)
 	if _, err := super.Exec(t.Context(), "CREATE DATABASE "+name+" OWNER jobhunt_owner"); err != nil {
 		t.Fatalf("creating database %s: %v", name, err)
 	}
@@ -150,20 +40,12 @@ func freshDatabase(t *testing.T) string {
 			t.Errorf("dropping database %s: %v", name, err)
 		}
 	})
-	u, err := url.Parse(ownerURL)
+	u, err := url.Parse(storetest.OwnerURL)
 	if err != nil {
 		t.Fatalf("parsing owner URL: %v", err)
 	}
 	u.Path = "/" + name
 	return u.String()
-}
-
-func pgCode(err error) string {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		return pgErr.Code
-	}
-	return ""
 }
 
 // AC2: on an empty database every migration applies in order; a second run is a no-op.
@@ -174,14 +56,14 @@ func TestMigrationsApplyInOrderThenNoOp(t *testing.T) {
 		t.Fatalf("listing migration files: %v (found %d)", err, len(files))
 	}
 	dsn := freshDatabase(t)
-	first := migrateURL(t, dsn)
+	first := storetest.Migrate(t, dsn)
 	if len(first) != len(files) {
 		t.Fatalf("first run applied %d migrations %v, want all %d", len(first), first, len(files))
 	}
 	if !slices.IsSorted(first) {
 		t.Errorf("migrations applied out of order: %v", first)
 	}
-	if again := migrateURL(t, dsn); len(again) != 0 {
+	if again := storetest.Migrate(t, dsn); len(again) != 0 {
 		t.Errorf("second run applied %v, want none", again)
 	}
 }
@@ -189,7 +71,7 @@ func TestMigrationsApplyInOrderThenNoOp(t *testing.T) {
 // AC3: the first migration creates companies and postings with the listed columns.
 func TestFirstMigrationCreatesTables(t *testing.T) {
 	migrateUp(t)
-	conn := connect(t, ownerURL)
+	conn := storetest.Connect(t, storetest.OwnerURL)
 	want := map[string][]string{
 		"companies": {"id", "name", "board_type", "board_slug", "excluded", "created_at"},
 		"postings": {"id", "company_id", "source", "source_posting_id", "url", "title",
@@ -224,7 +106,7 @@ func TestFirstMigrationCreatesTables(t *testing.T) {
 // AC3: (source, source_posting_id) is unique.
 func TestPostingsSourceIDIsUnique(t *testing.T) {
 	migrateUp(t)
-	conn := connect(t, appURL)
+	conn := storetest.Connect(t, storetest.AppURL)
 	q := store.New(conn)
 	co, err := q.CreateCompany(t.Context(), store.CreateCompanyParams{
 		Name: "Unique Co", BoardType: "lever", BoardSlug: "unique-co",
@@ -240,7 +122,7 @@ func TestPostingsSourceIDIsUnique(t *testing.T) {
 		t.Fatalf("first insert: %v", err)
 	}
 	_, err = conn.Exec(t.Context(), insert, co.ID, postingID)
-	if code := pgCode(err); code != "23505" {
+	if code := storetest.PgCode(err); code != "23505" {
 		t.Errorf("duplicate (source, source_posting_id): err = %v (code %q), want unique_violation 23505", err, code)
 	}
 }
@@ -248,7 +130,7 @@ func TestPostingsSourceIDIsUnique(t *testing.T) {
 // AC5: the store inserts and reads a company, connected as the app role.
 func TestStoreCreatesAndReadsCompany(t *testing.T) {
 	migrateUp(t)
-	q := store.New(connect(t, appURL))
+	q := store.New(storetest.Connect(t, storetest.AppURL))
 	created, err := q.CreateCompany(t.Context(), store.CreateCompanyParams{
 		Name: "Acme", BoardType: "lever", BoardSlug: "acme",
 	})
@@ -270,7 +152,7 @@ func TestStoreCreatesAndReadsCompany(t *testing.T) {
 // Security note: the app role is not a superuser and cannot change the schema.
 func TestAppRoleIsLeastPrivilege(t *testing.T) {
 	migrateUp(t)
-	conn := connect(t, appURL)
+	conn := storetest.Connect(t, storetest.AppURL)
 	var super, createDB, createRole bool
 	if err := conn.QueryRow(t.Context(),
 		`SELECT rolsuper, rolcreatedb, rolcreaterole FROM pg_roles WHERE rolname = current_user`,
@@ -286,7 +168,7 @@ func TestAppRoleIsLeastPrivilege(t *testing.T) {
 		`ALTER TABLE postings ADD COLUMN x int`,
 	} {
 		_, err := conn.Exec(t.Context(), stmt)
-		if code := pgCode(err); code != "42501" {
+		if code := storetest.PgCode(err); code != "42501" {
 			t.Errorf("%s as app role: err = %v (code %q), want insufficient_privilege 42501", stmt, err, code)
 		}
 	}
@@ -299,7 +181,7 @@ func TestAppRoleIsLeastPrivilege(t *testing.T) {
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }() // rollback is the point; nothing to keep
 	_, err = tx.Exec(t.Context(), `DELETE FROM goose_db_version`)
-	if code := pgCode(err); code != "42501" {
+	if code := storetest.PgCode(err); code != "42501" {
 		t.Errorf("DELETE FROM goose_db_version as app role: err = %v (code %q), want insufficient_privilege 42501", err, code)
 	}
 }
@@ -307,7 +189,7 @@ func TestAppRoleIsLeastPrivilege(t *testing.T) {
 // Security note: the owner role used by migrations is not a superuser either.
 func TestOwnerRoleIsNotSuperuser(t *testing.T) {
 	var super bool
-	if err := connect(t, ownerURL).QueryRow(t.Context(),
+	if err := storetest.Connect(t, storetest.OwnerURL).QueryRow(t.Context(),
 		`SELECT rolsuper FROM pg_roles WHERE rolname = current_user`).Scan(&super); err != nil {
 		t.Fatalf("reading owner role: %v", err)
 	}

@@ -34,6 +34,11 @@ M0-04 started this adapter; this story completes it to the skill's standard. Fol
 5. **Given** a real company on Lever from the watch list
    **When** `collector run` executes locally
    **Then** its postings are stored and spot-checked by eye against the live site.
+6. **Given** a board where one posting contains a NUL character (`\u0000`) in any field
+   **When** the company is collected
+   **Then** that posting is skipped and counted as skipped, and the rest of the company's
+   postings are still stored. (Postgres rejects NUL in `text` and `jsonb`; today one such
+   posting fails the whole board. Found in M0-04.)
 
 ## Out of scope
 

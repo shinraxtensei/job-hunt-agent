@@ -52,3 +52,26 @@ func (q *Queries) GetCompany(ctx context.Context, id int64) (Company, error) {
 	)
 	return i, err
 }
+
+const getCompanyByBoard = `-- name: GetCompanyByBoard :one
+SELECT id, name, board_type, board_slug, excluded, created_at FROM companies WHERE board_type = $1 AND board_slug = $2
+`
+
+type GetCompanyByBoardParams struct {
+	BoardType string
+	BoardSlug string
+}
+
+func (q *Queries) GetCompanyByBoard(ctx context.Context, arg GetCompanyByBoardParams) (Company, error) {
+	row := q.db.QueryRow(ctx, getCompanyByBoard, arg.BoardType, arg.BoardSlug)
+	var i Company
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.BoardType,
+		&i.BoardSlug,
+		&i.Excluded,
+		&i.CreatedAt,
+	)
+	return i, err
+}
