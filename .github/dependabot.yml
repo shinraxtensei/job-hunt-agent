@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Covers go.mod only. Dependabot has no option for an alternate modfile, so
+  # tools.mod (golangci-lint, govulncheck) is bumped by hand:
+  #   go get -tool -modfile=tools.mod <pkg>@<version>
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      go:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
