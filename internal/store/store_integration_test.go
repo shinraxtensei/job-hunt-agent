@@ -88,8 +88,10 @@ func TestFirstMigrationCreatesTables(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading %s columns: %v", table, err)
 		}
-		if !slices.Equal(got, cols) {
-			t.Errorf("%s columns = %v, want %v", table, got, cols)
+		// The first migration's columns come first, in order; later migrations may add
+		// more after them (M1-01 adds companies.track and companies.active).
+		if len(got) < len(cols) || !slices.Equal(got[:len(cols)], cols) {
+			t.Errorf("%s columns = %v, want them to start with %v", table, got, cols)
 		}
 	}
 	var payloadType string
@@ -109,7 +111,7 @@ func TestPostingsSourceIDIsUnique(t *testing.T) {
 	conn := storetest.Connect(t, storetest.AppURL)
 	q := store.New(conn)
 	co, err := q.CreateCompany(t.Context(), store.CreateCompanyParams{
-		Name: "Unique Co", BoardType: "lever", BoardSlug: "unique-co",
+		Name: "Unique Co", BoardType: "lever", BoardSlug: fmt.Sprintf("unique-co-%d", time.Now().UnixNano()),
 	})
 	if err != nil {
 		t.Fatalf("creating company: %v", err)
@@ -131,8 +133,9 @@ func TestPostingsSourceIDIsUnique(t *testing.T) {
 func TestStoreCreatesAndReadsCompany(t *testing.T) {
 	migrateUp(t)
 	q := store.New(storetest.Connect(t, storetest.AppURL))
+	acme := fmt.Sprintf("acme-%d", time.Now().UnixNano()) // boards are unique; -count > 1 reruns
 	created, err := q.CreateCompany(t.Context(), store.CreateCompanyParams{
-		Name: "Acme", BoardType: "lever", BoardSlug: "acme",
+		Name: "Acme", BoardType: "lever", BoardSlug: acme,
 	})
 	if err != nil {
 		t.Fatalf("creating company: %v", err)
@@ -141,7 +144,7 @@ func TestStoreCreatesAndReadsCompany(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading company: %v", err)
 	}
-	if got.Name != "Acme" || got.BoardType != "lever" || got.BoardSlug != "acme" || got.Excluded {
+	if got.Name != "Acme" || got.BoardType != "lever" || got.BoardSlug != acme || got.Excluded {
 		t.Errorf("read back %+v, want Acme/lever/acme, not excluded", got)
 	}
 	if !got.CreatedAt.Valid {
@@ -195,5 +198,22 @@ func TestOwnerRoleIsNotSuperuser(t *testing.T) {
 	}
 	if super {
 		t.Error("owner role is a superuser")
+	}
+}
+
+// M1-01 AC5: one row per board. A second company on the same board is rejected.
+func TestCompaniesBoardIsUnique(t *testing.T) {
+	migrateUp(t)
+	q := store.New(storetest.Connect(t, storetest.AppURL))
+	params := store.CreateCompanyParams{
+		Name: "First", BoardType: "lever", BoardSlug: fmt.Sprintf("dup-board-%d", time.Now().UnixNano()),
+	}
+	if _, err := q.CreateCompany(t.Context(), params); err != nil {
+		t.Fatalf("first insert: %v", err)
+	}
+	params.Name = "Second"
+	_, err := q.CreateCompany(t.Context(), params)
+	if code := storetest.PgCode(err); code != "23505" {
+		t.Errorf("same (board_type, board_slug) twice: err = %v (code %q), want unique_violation 23505", err, code)
 	}
 }

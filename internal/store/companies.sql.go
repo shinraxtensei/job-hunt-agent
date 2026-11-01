@@ -7,12 +7,14 @@ package store
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createCompany = `-- name: CreateCompany :one
 INSERT INTO companies (name, board_type, board_slug)
 VALUES ($1, $2, $3)
-RETURNING id, name, board_type, board_slug, excluded, created_at
+RETURNING id, name, board_type, board_slug, excluded, created_at, track, active
 `
 
 type CreateCompanyParams struct {
@@ -31,12 +33,29 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		&i.BoardSlug,
 		&i.Excluded,
 		&i.CreatedAt,
+		&i.Track,
+		&i.Active,
 	)
 	return i, err
 }
 
+const deactivateCompaniesNotIn = `-- name: DeactivateCompaniesNotIn :execrows
+UPDATE companies SET active = false
+WHERE active AND board_type || '/' || board_slug <> ALL ($1::text[])
+`
+
+// Marks every active company whose board ("board_type/board_slug") is not in
+// board_keys inactive. Slugs never contain "/" (the watch list rejects them).
+func (q *Queries) DeactivateCompaniesNotIn(ctx context.Context, boardKeys []string) (int64, error) {
+	result, err := q.db.Exec(ctx, deactivateCompaniesNotIn, boardKeys)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const getCompany = `-- name: GetCompany :one
-SELECT id, name, board_type, board_slug, excluded, created_at FROM companies WHERE id = $1
+SELECT id, name, board_type, board_slug, excluded, created_at, track, active FROM companies WHERE id = $1
 `
 
 func (q *Queries) GetCompany(ctx context.Context, id int64) (Company, error) {
@@ -49,29 +68,64 @@ func (q *Queries) GetCompany(ctx context.Context, id int64) (Company, error) {
 		&i.BoardSlug,
 		&i.Excluded,
 		&i.CreatedAt,
+		&i.Track,
+		&i.Active,
 	)
 	return i, err
 }
 
-const getCompanyByBoard = `-- name: GetCompanyByBoard :one
-SELECT id, name, board_type, board_slug, excluded, created_at FROM companies WHERE board_type = $1 AND board_slug = $2
+const upsertCompanyID = `-- name: UpsertCompanyID :one
+INSERT INTO companies (name, board_type, board_slug)
+VALUES ($1, $2, $3)
+ON CONFLICT (board_type, board_slug) DO UPDATE SET board_slug = EXCLUDED.board_slug
+RETURNING id
 `
 
-type GetCompanyByBoardParams struct {
+type UpsertCompanyIDParams struct {
+	Name      string
 	BoardType string
 	BoardSlug string
 }
 
-func (q *Queries) GetCompanyByBoard(ctx context.Context, arg GetCompanyByBoardParams) (Company, error) {
-	row := q.db.QueryRow(ctx, getCompanyByBoard, arg.BoardType, arg.BoardSlug)
-	var i Company
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.BoardType,
-		&i.BoardSlug,
-		&i.Excluded,
-		&i.CreatedAt,
+// Returns the id of the company on this board, creating it if needed, in one statement
+// so concurrent runs can't create two rows. The no-op SET makes RETURNING work for an
+// existing row without changing it.
+func (q *Queries) UpsertCompanyID(ctx context.Context, arg UpsertCompanyIDParams) (int64, error) {
+	row := q.db.QueryRow(ctx, upsertCompanyID, arg.Name, arg.BoardType, arg.BoardSlug)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const upsertWatchedCompany = `-- name: UpsertWatchedCompany :one
+INSERT INTO companies (name, board_type, board_slug, track, excluded, active)
+VALUES ($1, $2, $3, $4, $5, true)
+ON CONFLICT (board_type, board_slug) DO UPDATE
+	SET name = EXCLUDED.name, track = EXCLUDED.track, excluded = EXCLUDED.excluded, active = true
+	WHERE (companies.name, companies.track, companies.excluded, companies.active)
+		IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.track, EXCLUDED.excluded, true)
+RETURNING (xmax = 0)::boolean AS inserted
+`
+
+type UpsertWatchedCompanyParams struct {
+	Name      string
+	BoardType string
+	BoardSlug string
+	Track     pgtype.Text
+	Excluded  bool
+}
+
+// Inserts a watch-list company, or updates it (and marks it active) if anything
+// differs. Returns no row when nothing changed; inserted is true for a new row.
+func (q *Queries) UpsertWatchedCompany(ctx context.Context, arg UpsertWatchedCompanyParams) (bool, error) {
+	row := q.db.QueryRow(ctx, upsertWatchedCompany,
+		arg.Name,
+		arg.BoardType,
+		arg.BoardSlug,
+		arg.Track,
+		arg.Excluded,
 	)
-	return i, err
+	var inserted bool
+	err := row.Scan(&inserted)
+	return inserted, err
 }

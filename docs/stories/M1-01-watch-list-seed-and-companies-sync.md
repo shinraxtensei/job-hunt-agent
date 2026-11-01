@@ -1,6 +1,6 @@
 # M1-01: Watch list seed and companies sync
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M1 — Collector
 - **Linear:** [HAM-20](https://linear.app/hamid-corp/issue/HAM-20/m1-01-watch-list-seed-and-companies-sync)
 - **Estimate:** ½ day (plus time choosing the 50 companies)

@@ -12,7 +12,19 @@ companies' openings reach my tracker without me checking their sites.
 
 ## Context
 
-Workable's public endpoints are less documented; confirm a supported public endpoint before coding, and stop if only scraping would work. Follow the `source-adapter` skill end to end; it is the definition of done.
+Workable's public endpoints are less documented; confirm a supported public endpoint before coding, and stop if only scraping would work.
+
+**Found in M1-01 (2026-11-01):** Workable's help centre lists
+`www.workable.com/api/accounts/{subdomain}` as a public endpoint; it redirects (302) to
+`apply.workable.com/api/v1/widget/accounts/{subdomain}`. That widget endpoint answered
+200 with `"jobs": []` for **every** account tried (Vinted, Chari, Glovo, Qdrant, Fly.io,
+Yassir, ...) and 404 for unknown ones. Vinted certainly has open roles, so either the
+widget no longer lists jobs or these companies don't post through Workable.
+**First task:** find the correct public jobs endpoint (official docs or Workable
+support), using Vinted as the test case: it must return Vinted's current openings. If no
+documented public endpoint lists jobs, stop and say so (no scraping). Until then, Workable
+companies stay out of `data/companies.yaml` and are listed in the roadmap's M7 backlog;
+the one exception is Yassir, which is in the file as `excluded: true` and never collected. Follow the `source-adapter` skill end to end; it is the definition of done.
 
 ## Acceptance criteria
 

@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/shinraxtensei/job-hunter/internal/collector"
 	"github.com/shinraxtensei/job-hunter/internal/source/lever"
 	"github.com/shinraxtensei/job-hunter/internal/store/storetest"
@@ -274,5 +276,40 @@ func TestOnceRollsBackOnFailureMidway(t *testing.T) {
 	}
 	if strings.Contains(logs.String(), "new posting") {
 		t.Errorf("logged new postings that were rolled back:\n%s", logs.String())
+	}
+}
+
+// M1-01 AC5: concurrent runs for a company not stored yet create exactly one company
+// row and none of them fails (companyID is a single upsert on the board).
+func TestOnceConcurrentRunsCreateOneCompany(t *testing.T) {
+	srv, company, _, _ := board(t)
+	storetest.Migrate(t, storetest.OwnerURL)
+	const runs = 6
+	conns := make([]*pgx.Conn, runs)
+	for i := range conns {
+		conns[i] = storetest.Connect(t, storetest.AppURL)
+	}
+	errs := make(chan error, runs)
+	start := make(chan struct{})
+	for _, c := range conns {
+		go func() {
+			<-start
+			_, err := collector.Once(t.Context(), c, lever.New(srv.URL), company, slog.New(slog.DiscardHandler))
+			errs <- err
+		}()
+	}
+	close(start)
+	for range runs {
+		if err := <-errs; err != nil {
+			t.Errorf("concurrent Once: %v", err)
+		}
+	}
+	var companies int
+	if err := conns[0].QueryRow(t.Context(),
+		`SELECT count(*) FROM companies WHERE board_type = 'lever' AND board_slug = $1`, company).Scan(&companies); err != nil {
+		t.Fatalf("counting companies: %v", err)
+	}
+	if companies != 1 {
+		t.Errorf("got %d company rows after %d concurrent runs, want 1", companies, runs)
 	}
 }

@@ -152,6 +152,23 @@ contacts · M6-04 Follow-up reminders · M6-05 Skip reasons
 **Stories:** M7-01 Choose digest channel (ADR) · M7-02 Morning digest · M7-03 Remote
 board adapters · M7-04 Moroccan board adapter
 
+**First new adapter: Moroccan companies.** M1-01 found only one Moroccan company (Jumia)
+on Lever, Greenhouse or Ashby; Moroccan employers mostly post elsewhere. Before building,
+evaluate Welcome to the Jungle, SmartRecruiters and ReKrute, and pick by how many backlog
+companies each covers and whether its terms allow automated reads (source-adapter step 0).
+
+**Backlog: companies not on a supported board** (from M1-01, checked 2026-11-01):
+- Morocco: Inyad, Yakeey, YoLa Fresh, YouCan, Freterium, DabaDoc, HPS; Chari and Glovo
+  have Workable accounts that list 0 jobs (see M1-06).
+- Consulting with Moroccan offices: Capgemini, Globant, SQLI, Devoteam, Xebia, Endava,
+  Neoxia, Nimbleways; Zenika and Dial Technologies have Workable accounts (0 jobs).
+- Relocation: Odoo, Delivery Hero, Zalando, Revolut, Bolt, Back Market, Ledger, Picnic,
+  Bunq, Checkout.com, Aiven; Vinted has a Workable account (0 jobs).
+- Remote: Tinybird, Hasura, Redpanda, dbt Labs, Andela, DuckDuckGo; Xata, Qdrant, Fly.io,
+  Encore and Hotjar have Workable accounts (0 jobs).
+Odoo, Capgemini, Globant, SQLI, HPS, Revolut and Zalando were not probed (own careers
+sites or other systems, from memory); confirm when the adapter is chosen.
+
 ## M8: Feedback and write-up
 
 **Goal:** the system learns from outcomes, and the project is ready to show.

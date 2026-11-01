@@ -15,6 +15,8 @@ type Company struct {
 	BoardSlug string
 	Excluded  bool
 	CreatedAt pgtype.Timestamptz
+	Track     pgtype.Text
+	Active    bool
 }
 
 type Posting struct {

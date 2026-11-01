@@ -3,7 +3,6 @@ package collector
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -70,20 +69,13 @@ func Once(ctx context.Context, conn *pgx.Conn, src *lever.Client, company string
 	return res, nil
 }
 
-// companyID returns the id of company's Lever row, creating it if needed.
-// ponytail: select-then-insert, safe only without concurrent runs; M1-01 adds
-// UNIQUE (board_type, board_slug) and can switch to an upsert.
+// companyID returns the id of company's Lever row, creating it if needed. One upsert
+// on the unique board key (ADR-0005), so concurrent runs share one row. A row created
+// here has no track: it is not on the watch list.
 func companyID(ctx context.Context, q *store.Queries, slug string) (int64, error) {
-	co, err := q.GetCompanyByBoard(ctx, store.GetCompanyByBoardParams{BoardType: "lever", BoardSlug: slug})
-	if err == nil {
-		return co.ID, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return 0, fmt.Errorf("looking up company: %w", err)
-	}
-	co, err = q.CreateCompany(ctx, store.CreateCompanyParams{Name: slug, BoardType: "lever", BoardSlug: slug})
+	id, err := q.UpsertCompanyID(ctx, store.UpsertCompanyIDParams{Name: slug, BoardType: "lever", BoardSlug: slug})
 	if err != nil {
-		return 0, fmt.Errorf("creating company: %w", err)
+		return 0, fmt.Errorf("upserting company: %w", err)
 	}
-	return co.ID, nil
+	return id, nil
 }

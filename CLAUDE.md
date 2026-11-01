@@ -41,6 +41,8 @@ only through Tailscale.
 cmd/                 Go entrypoints: collector, api, migrate
 internal/
   job/               domain: Job record, hard rules, dedup — pure, no I/O
+  collector/         fetch from sources and store postings (one transaction per company)
+  watchlist/         load data/companies.yaml and sync it into companies
   source/            one adapter package per board (lever/, greenhouse/, ...)
   store/             Postgres access: pgx + sqlc (queries in store/queries/*.sql)
   queue/             SKIP LOCKED job table
@@ -48,6 +50,7 @@ internal/
 agents/              Python (uv): extract/, score/, tailor/, evals/
 web/                 TypeScript UI
 db/migrations/       plain SQL migrations (goose), forward-only
+data/companies.yaml  the reviewed watch list (ADR-0005)
 deploy/              compose.yaml, Caddyfile, scripts
 docs/                prd.md, adr/, stories/, threat-model.md
 testdata/            golden files (recorded board responses, sample postings)
@@ -118,6 +121,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0002 | No built-in auth; restrict access with Tailscale | Proposed |
 | 0003 | Call the model provider SDK directly, no LangChain | Proposed |
 | 0004 | Use pgx, sqlc and goose for database access | Accepted |
+| 0005 | Companies table: track, active, one row per board, YAML watch list | Accepted |
 
 ## Project skills
 

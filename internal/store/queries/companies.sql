@@ -6,5 +6,28 @@ RETURNING *;
 -- name: GetCompany :one
 SELECT * FROM companies WHERE id = $1;
 
--- name: GetCompanyByBoard :one
-SELECT * FROM companies WHERE board_type = $1 AND board_slug = $2;
+-- name: UpsertCompanyID :one
+-- Returns the id of the company on this board, creating it if needed, in one statement
+-- so concurrent runs can't create two rows. The no-op SET makes RETURNING work for an
+-- existing row without changing it.
+INSERT INTO companies (name, board_type, board_slug)
+VALUES ($1, $2, $3)
+ON CONFLICT (board_type, board_slug) DO UPDATE SET board_slug = EXCLUDED.board_slug
+RETURNING id;
+
+-- name: UpsertWatchedCompany :one
+-- Inserts a watch-list company, or updates it (and marks it active) if anything
+-- differs. Returns no row when nothing changed; inserted is true for a new row.
+INSERT INTO companies (name, board_type, board_slug, track, excluded, active)
+VALUES (@name, @board_type, @board_slug, @track, @excluded, true)
+ON CONFLICT (board_type, board_slug) DO UPDATE
+	SET name = EXCLUDED.name, track = EXCLUDED.track, excluded = EXCLUDED.excluded, active = true
+	WHERE (companies.name, companies.track, companies.excluded, companies.active)
+		IS DISTINCT FROM (EXCLUDED.name, EXCLUDED.track, EXCLUDED.excluded, true)
+RETURNING (xmax = 0)::boolean AS inserted;
+
+-- name: DeactivateCompaniesNotIn :execrows
+-- Marks every active company whose board ("board_type/board_slug") is not in
+-- board_keys inactive. Slugs never contain "/" (the watch list rejects them).
+UPDATE companies SET active = false
+WHERE active AND board_type || '/' || board_slug <> ALL (@board_keys::text[]);

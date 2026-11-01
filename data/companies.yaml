@@ -1,0 +1,75 @@
+# Watch list: the companies the collector follows (M1-01).
+# Synced to the companies table by: go run ./cmd/collector companies sync
+#
+# Fields: name, board_type (lever | greenhouse | ashby | workable), board_slug,
+# track (morocco | remote | relocation | consulting), optional excluded: true.
+# Removing an entry marks the row inactive; rows are never deleted (ADR-0005).
+# Every board below was verified with one request to its public postings endpoint on
+# 2026-11-01; the trailing number is how many postings it had open that day.
+# Companies on other systems are the M7 backlog in docs/roadmap.md.
+
+# --- Morocco-based
+- { name: Jumia, board_type: greenhouse, board_slug: jumia, track: morocco }  # 23
+
+# --- Consulting firms with Moroccan offices
+- { name: Theodo, board_type: lever, board_slug: theodo, track: consulting }  # 135
+- { name: Ippon Technologies, board_type: lever, board_slug: ippon, track: consulting }  # 64
+- { name: Thoughtworks, board_type: greenhouse, board_slug: thoughtworks, track: consulting }  # 45
+
+# --- Remote: data and Postgres infrastructure
+- { name: ClickHouse, board_type: ashby, board_slug: clickhouse, track: remote }  # 206
+- { name: Grafana Labs, board_type: greenhouse, board_slug: grafanalabs, track: remote }  # 120
+- { name: Temporal, board_type: ashby, board_slug: temporal, track: remote }  # 74
+- { name: Supabase, board_type: ashby, board_slug: supabase, track: remote }  # 68
+- { name: Sentry, board_type: ashby, board_slug: sentry, track: remote }  # 40
+- { name: PlanetScale, board_type: greenhouse, board_slug: planetscale, track: remote }  # 12
+- { name: PostHog, board_type: ashby, board_slug: posthog, track: remote }  # 11
+- { name: Airbyte, board_type: ashby, board_slug: airbyte, track: remote }  # 9
+- { name: MotherDuck, board_type: ashby, board_slug: motherduck, track: remote }  # 7
+- { name: "TigerData (Timescale)", board_type: ashby, board_slug: tigerdata, track: remote }  # 5
+- { name: Materialize, board_type: ashby, board_slug: materialize, track: remote }  # 4
+- { name: Elastic, board_type: greenhouse, board_slug: elastic, track: remote }  # 407
+
+# --- Remote: developer tools
+- { name: Canonical, board_type: greenhouse, board_slug: canonical, track: remote }  # 314
+- { name: GitLab, board_type: greenhouse, board_slug: gitlab, track: remote }  # 238
+- { name: DigitalOcean, board_type: greenhouse, board_slug: digitalocean98, track: remote }  # 167
+- { name: Kong, board_type: ashby, board_slug: kong, track: remote }  # 100
+- { name: Vercel, board_type: greenhouse, board_slug: vercel, track: remote }  # 91
+- { name: Tailscale, board_type: greenhouse, board_slug: tailscale, track: remote }  # 58
+- { name: Render, board_type: ashby, board_slug: render, track: remote }  # 35
+- { name: Linear, board_type: ashby, board_slug: linear, track: remote }  # 31
+- { name: Toptal, board_type: lever, board_slug: toptal, track: remote }  # 29
+- { name: WorkOS, board_type: ashby, board_slug: workos, track: remote }  # 28
+- { name: Resend, board_type: ashby, board_slug: resend, track: remote }  # 14
+- { name: Railway, board_type: ashby, board_slug: railway, track: remote }  # 7
+- { name: Trigger.dev, board_type: ashby, board_slug: triggerdev, track: remote }  # 6
+- { name: Inngest, board_type: ashby, board_slug: inngest, track: remote }  # 2
+
+# --- Relocation (EU): payments and fintech
+- { name: Stripe, board_type: greenhouse, board_slug: stripe, track: relocation }  # 746
+- { name: Airwallex, board_type: ashby, board_slug: airwallex, track: relocation }  # 499
+- { name: SumUp, board_type: greenhouse, board_slug: sumup, track: relocation }  # 358
+- { name: Adyen, board_type: greenhouse, board_slug: adyen, track: relocation }  # 238
+- { name: Pennylane, board_type: ashby, board_slug: pennylane, track: relocation }  # 176
+- { name: Kraken, board_type: ashby, board_slug: kraken.com, track: relocation }  # 87
+- { name: Monzo, board_type: greenhouse, board_slug: monzo, track: relocation }  # 63
+- { name: Mollie, board_type: ashby, board_slug: mollie, track: relocation }  # 53
+- { name: Trade Republic, board_type: greenhouse, board_slug: traderepublicbank, track: relocation }  # 50
+- { name: Bitpanda, board_type: greenhouse, board_slug: bitpanda, track: relocation }  # 32
+- { name: N26, board_type: greenhouse, board_slug: n26, track: relocation }  # 32
+- { name: GoCardless, board_type: greenhouse, board_slug: gocardless, track: relocation }  # 27
+- { name: Wise, board_type: greenhouse, board_slug: wise, track: relocation }  # 21
+- { name: Paddle, board_type: ashby, board_slug: paddle, track: relocation }  # 18
+- { name: Swan, board_type: ashby, board_slug: swan, track: relocation }  # 6
+
+# --- Relocation (EU): tech
+- { name: Cloudflare, board_type: greenhouse, board_slug: cloudflare, track: relocation }  # 463
+- { name: Datadog, board_type: greenhouse, board_slug: datadog, track: relocation }  # 397
+- { name: Doctolib, board_type: greenhouse, board_slug: doctolib, track: relocation }  # 153
+- { name: Spotify, board_type: lever, board_slug: spotify, track: relocation }  # 89
+- { name: Cockroach Labs, board_type: greenhouse, board_slug: cockroachlabs, track: relocation }  # 12
+
+# --- Excluded on purpose: listed so it is never added back by accident; never collected.
+# Its Workable account lists 0 jobs (see M1-06); the board is recorded, not trusted.
+- { name: Yassir, board_type: workable, board_slug: yassir, track: morocco, excluded: true }
