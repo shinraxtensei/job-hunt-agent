@@ -108,7 +108,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 - [ ] `make check` green locally and in CI
 - [ ] ADR written if a decision was made
 - [ ] This file updated if a convention changed
-- [ ] Deployed and seen working on the server
+- [ ] Seen working: locally until milestone D (Deploy) is done, on the server after that
 
 ## ADR index
 

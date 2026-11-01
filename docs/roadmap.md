@@ -24,16 +24,17 @@ Timeline: part-time, roughly one milestone per week; M1 is allowed two.
 
 ## M0: Walking skeleton (Week 0)
 
-**Goal:** a thin, ugly, complete path from a real job board to a deployed database, with
+**Goal:** a thin, ugly, complete path from a real job board to a local database, with
 CI guarding it. Every later milestone adds muscle to this skeleton.
 
 **Exit criteria**
 - `make check` runs lint, tests with `-race`, and govulncheck, locally and in GitHub Actions.
-- One real Lever posting is fetched, stored in Postgres, and visible on the server.
-- A push to `main` deploys automatically; the server is reachable only over Tailscale.
+- One real Lever posting is fetched and stored in the local Postgres.
 
 **Stories:** M0-01 Go module and tooling · M0-02 CI pipeline · M0-03 Local Postgres and
-migrations · M0-04 First Lever posting end to end · M0-05 Server, Tailscale and deploy
+migrations · M0-04 First Lever posting end to end
+
+M0-05 (server and deploy) moved to **D: Deploy**, after M2.
 
 ## M1: Collector
 
@@ -43,15 +44,15 @@ daily, stored raw, and never lost.
 **Exit criteria**
 - 50 watch-list companies in the database, loaded from a reviewed seed file.
 - Lever, Greenhouse, Ashby and Workable adapters pass golden, error and fuzz tests.
-- A daily run collects all companies concurrently with per-host rate limits; failures for
-  one company don't stop the others.
-- Runs are recorded and a missed run alerts the owner.
-- A nightly backup exists and a restore was tested once.
+- One `collector run` collects all companies concurrently with per-host rate limits;
+  failures for one company don't stop the others. Run by hand, locally.
 
 **Stories:** M1-01 Watch list seed and companies sync · M1-02 Concurrent collector run ·
 M1-03 Lever adapter, complete · M1-04 Greenhouse adapter · M1-05 Ashby adapter ·
-M1-06 Workable adapter · M1-07 Idempotent posting upsert · M1-08 Daily schedule and
-run monitoring · M1-09 Nightly backup and tested restore
+M1-06 Workable adapter · M1-07 Idempotent posting upsert
+
+M1-08 (daily schedule and monitoring) and M1-09 (backups) moved to **D: Deploy**: both
+only make sense on an always-on server.
 
 ## M2: Rules and a plain tracker (usable from here)
 
@@ -68,6 +69,19 @@ run monitoring · M1-09 Nightly backup and tested restore
 **Stories:** M2-01 Normalise to the job record · M2-02 Deduplication · M2-03 Hard-rule
 filter with reasons · M2-04 Liveness recheck · M2-05 Leads API (Go) · M2-06 Plain
 tracker table (TypeScript) · M2-07 Manual add by link
+
+## D: Deploy (after M2)
+
+**Goal:** the usable tracker from M2 runs on an always-on server only the owner can reach,
+collects every morning on its own, and its data is backed up.
+
+**Exit criteria**
+- A push to `master` deploys automatically; the server is reachable only over Tailscale.
+- The collector runs daily on the server; runs are recorded and a missed run alerts the owner.
+- A nightly encrypted backup exists off the server, and a restore was tested once.
+
+**Stories:** M0-05 Server, Tailscale and deploy · M1-08 Daily schedule and run monitoring ·
+M1-09 Nightly backup and tested restore (story IDs kept from their original milestones)
 
 ## M3: Extraction and scoring
 
@@ -157,3 +171,4 @@ M8-03 Public README and architecture write-up · M8-04 Threat model review
 | Date | Change | Why |
 |---|---|---|
 | 2026-11-01 | Roadmap created from the PRD; added M0 walking skeleton; Redis removed (ADR-0001) | Initial plan |
+| 2026-11-01 | Local first: M0-05, M1-08 and M1-09 moved to a new milestone **D: Deploy** after M2. M0 and M1 now end with everything working locally. | Hetzner's budget VPS line is sold out; the owner prefers to see the whole pipeline working locally before paying for a server. Deploying after M2 means deploying something already usable. |
