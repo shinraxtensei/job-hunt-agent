@@ -1,0 +1,159 @@
+// Package fetch is the HTTP side every job-board adapter shares: one polite GET with
+// retries, and the check for JSON Postgres can't store. Adapters build the URL and
+// parse the body; the source-adapter skill's politeness rules live here once.
+package fetch
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"math/rand/v2"
+	"net/http"
+	"strconv"
+	"time"
+
+	"golang.org/x/time/rate"
+)
+
+const (
+	userAgent = "job-hunter/0.1 (+https://github.com/shinraxtensei/job-hunter)"
+
+	// maxBody caps how much of a response we read: the payload is untrusted. The
+	// largest real board seen (palantir on Lever, 301 postings) is ~6 MiB.
+	maxBody = 32 << 20
+
+	// maxAttempts bounds retries of one Get (source-adapter skill: at most 3).
+	maxAttempts = 3
+
+	// maxRetryAfter is the longest Retry-After we sit out; longer means give up on this
+	// board for this run rather than stall the whole run.
+	maxRetryAfter = time.Minute
+)
+
+// Client makes polite GETs to one API host.
+type Client struct {
+	HTTP *http.Client
+	// Backoff is the first retry delay; each retry doubles it, plus up to 50% jitter.
+	Backoff time.Duration
+}
+
+// New returns a client with a 30s timeout and a 1s first retry delay.
+func New() *Client {
+	return &Client{HTTP: &http.Client{Timeout: 30 * time.Second}, Backoff: time.Second}
+}
+
+// Get returns the body of a 200 response to u.
+//
+// Every request, retries included, first waits on limit: the host's limiter, shared by
+// every company on that host. It retries 429, 5xx, timeouts and network errors, at most
+// maxAttempts times in all, with exponential backoff and jitter, honouring Retry-After
+// (up to maxRetryAfter). Errors carry the status, never the response body. Callers add
+// the board and company.
+func (c *Client) Get(ctx context.Context, u string, limit *rate.Limiter) ([]byte, error) {
+	var lastErr error
+	for attempt := 1; ; attempt++ {
+		if err := limit.Wait(ctx); err != nil {
+			return nil, err
+		}
+		body, retryAfter, err := c.get(ctx, u)
+		if err == nil {
+			return body, nil
+		}
+		lastErr = err
+		var perm permanent
+		if errors.As(err, &perm) || ctx.Err() != nil || attempt == maxAttempts {
+			return nil, lastErr
+		}
+		if retryAfter > maxRetryAfter {
+			return nil, fmt.Errorf("%w (Retry-After %v is longer than %v; not waiting)", err, retryAfter, maxRetryAfter)
+		}
+		select {
+		case <-time.After(max(retryAfter, c.backoff(attempt))):
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+}
+
+// permanent marks an error that retrying won't fix (4xx other than 429, an oversized
+// body).
+type permanent struct{ error }
+
+// get makes one request. It returns the body on 200; otherwise an error, and for 429
+// or 5xx the server's Retry-After, if any.
+func (c *Client) get(ctx context.Context, u string) ([]byte, time.Duration, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, 0, permanent{err}
+	}
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return nil, 0, err // timeouts and network errors: retryable
+	}
+	defer func() { _ = resp.Body.Close() }() // read-only body; a close error loses nothing
+
+	switch {
+	case resp.StatusCode == http.StatusOK:
+	case resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500:
+		// The body is untrusted and may be large; only the status goes in the error.
+		return nil, retryAfter(resp.Header.Get("Retry-After")), fmt.Errorf("unexpected status %s", resp.Status)
+	default:
+		return nil, 0, permanent{fmt.Errorf("unexpected status %s", resp.Status)}
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBody+1))
+	if err != nil {
+		return nil, 0, fmt.Errorf("reading body: %w", err)
+	}
+	if len(body) > maxBody {
+		return nil, 0, permanent{fmt.Errorf("response larger than %d bytes", maxBody)}
+	}
+	return body, 0, nil
+}
+
+// backoff is the delay before retry number attempt: Backoff * 2^(attempt-1), plus up to
+// 50% jitter so many clients don't retry in lockstep.
+func (c *Client) backoff(attempt int) time.Duration {
+	d := c.Backoff << (attempt - 1)
+	return d + rand.N(d/2+1) //nolint:gosec // jitter, not security
+}
+
+// retryAfter parses a Retry-After header: seconds, or an HTTP date. Zero if absent or
+// unparseable.
+func retryAfter(v string) time.Duration {
+	if v == "" {
+		return 0
+	}
+	if s, err := strconv.Atoi(v); err == nil && s >= 0 {
+		return time.Duration(s) * time.Second
+	}
+	if t, err := http.ParseTime(v); err == nil {
+		return max(time.Until(t), 0)
+	}
+	return 0
+}
+
+// HasNUL reports whether JSON text contains a \u0000 escape that decodes to NUL, which
+// Postgres refuses in text and jsonb: the backslash before "u0000" must itself be
+// unescaped (an odd run of backslashes). Valid JSON can't hold a raw NUL byte, so the
+// escape is the only form to look for.
+func HasNUL(b []byte) bool {
+	for i := 0; i < len(b); i++ {
+		if b[i] != '\\' {
+			continue
+		}
+		j := i
+		for j < len(b) && b[j] == '\\' {
+			j++
+		}
+		if (j-i)%2 == 1 && bytes.HasPrefix(b[j:], []byte("u0000")) {
+			return true
+		}
+		i = j - 1
+	}
+	return false
+}

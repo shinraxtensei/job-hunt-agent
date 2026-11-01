@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/shinraxtensei/job-hunter/internal/collector"
+	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
 	"github.com/shinraxtensei/job-hunter/internal/source/lever"
 	"github.com/shinraxtensei/job-hunter/internal/watchlist"
 )
@@ -85,7 +86,10 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 			return 1, fmt.Errorf("connecting to database: %w", err)
 		}
 		defer pool.Close()
-		reg := collector.Registry{"lever": lever.New(leverURL)}
+		reg := collector.Registry{
+			"lever":      lever.New(leverURL),
+			"greenhouse": greenhouse.New(greenhouse.BaseURL),
+		}
 		res, err := collector.Run(ctx, pool, reg, cfg, log)
 		if err != nil {
 			return 1, err

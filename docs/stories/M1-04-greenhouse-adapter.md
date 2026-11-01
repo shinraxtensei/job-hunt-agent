@@ -1,6 +1,6 @@
 # M1-04: Greenhouse adapter
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M1 — Collector
 - **Linear:** [HAM-23](https://linear.app/hamid-corp/issue/HAM-23/m1-04-greenhouse-adapter)
 - **Estimate:** ½ day
@@ -41,5 +41,19 @@ Greenhouse exposes a public Job Board API per board token. Follow the `source-ad
 
 ## Security notes
 
-Endpoint, terms and robots status: _fill in at story start._
+Checked 2026-11-01 (also seen earlier the same day while building the M1-01 watch list):
+
+- **Endpoint:** `GET https://boards-api.greenhouse.io/v1/boards/<board_token>/jobs?content=true`,
+  Greenhouse's official Job Board API ([docs](https://docs.greenhouse.io/job-board.html)).
+  The response is `{"jobs": [...], "meta": {"total": N}}`; each job has a numeric `id`,
+  `title`, `absolute_url`, `updated_at`, `location`; `content=true` adds the HTML
+  description, departments and offices, which we store raw so extraction can be rerun
+  without refetching. One request returns the whole board.
+- **Terms:** the docs say "Job Board data is publicly available, so authentication is not
+  required for any GET endpoints." Only application POSTs need a key; we never send one.
+  No rate limit, caching rule or acceptable-use clause is documented for GETs.
+- **robots.txt** (`boards-api.greenhouse.io`): `User-agent: * / Disallow: /embed/`. We use
+  only `/v1/boards/`. No Crawl-delay is given, so the skill's default applies: the
+  collector's per-host limiter, ≥1s between requests (retries included).
+- **Login:** none. **Anti-bot:** none on the JSON API (plain 200s during M1-01's checks).
 No login, no bypassing blocks. Raw payloads stored, never logged in full.

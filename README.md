@@ -19,3 +19,5 @@ Week 0: walking skeleton.
 
 - **Lever**: public Postings API (`api.lever.co/v0/postings/<site>`): every Lever board on
   the watch list, ≥1s between requests, up to 3 attempts with backoff (M1-03).
+- **Greenhouse**: public Job Board API (`boards-api.greenhouse.io/v1/boards/<token>/jobs`),
+  descriptions included, same politeness (M1-04).

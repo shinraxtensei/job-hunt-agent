@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/shinraxtensei/job-hunter/internal/source/fetch"
 )
 
 // AC4: parse never panics, and whatever it returns is storable: every record has an
@@ -36,25 +38,9 @@ func FuzzParse(f *testing.F) {
 			t.Fatalf("%d records + %d skipped != %d elements", len(raws), skipped, len(elems))
 		}
 		for _, r := range raws {
-			if r.SourceID == "" || r.URL == "" || !json.Valid(r.Payload) || hasNUL(r.Payload) {
+			if r.SourceID == "" || r.URL == "" || !json.Valid(r.Payload) || fetch.HasNUL(r.Payload) {
 				t.Fatalf("unstorable record: %+v", r)
 			}
 		}
 	})
-}
-
-func TestHasNUL(t *testing.T) {
-	for in, want := range map[string]bool{
-		`{"a":"x\u0000y"}`:   true,  // a real NUL
-		`{"a":"\\u0000"}`:    false, // escaped backslash, then the text u0000
-		`{"a":"\\\u0000"}`:   true,  // escaped backslash, then a real NUL
-		`{"a":"\u00000"}`:    true,  // NUL followed by "0"
-		`{"a":"\u0001"}`:     false, // another control character: Postgres accepts it
-		`{"a":"u0000"}`:      false, // no backslash at all
-		`{"a":"plain text"}`: false,
-	} {
-		if got := hasNUL([]byte(in)); got != want {
-			t.Errorf("hasNUL(%s) = %v, want %v", in, got, want)
-		}
-	}
 }

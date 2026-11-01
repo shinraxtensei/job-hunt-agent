@@ -1,0 +1,254 @@
+package greenhouse_test
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"golang.org/x/time/rate"
+
+	"github.com/shinraxtensei/job-hunter/internal/job"
+	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
+)
+
+// client is a Greenhouse client with a 1ms retry backoff, so retry tests stay fast.
+func client(baseURL string) *greenhouse.Client {
+	c := greenhouse.New(baseURL)
+	c.Backoff = time.Millisecond
+	return c
+}
+
+// noLimit is a limiter that never waits.
+func noLimit() *rate.Limiter { return rate.NewLimiter(rate.Inf, 1) }
+
+func fixture(t *testing.T, name string) []byte {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("testdata", name))
+	if err != nil {
+		t.Fatalf("reading %s: %v", name, err)
+	}
+	return b
+}
+
+// server answers each request with the next status from statuses (the last repeats);
+// 200 serves body. It records each request.
+func server(t *testing.T, body []byte, statuses []int, header http.Header) (*httptest.Server, func() []*http.Request, func() []time.Time) {
+	t.Helper()
+	var mu sync.Mutex
+	var reqs []*http.Request
+	var times []time.Time
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		reqs = append(reqs, r)
+		times = append(times, time.Now())
+		code := statuses[min(len(reqs), len(statuses))-1]
+		mu.Unlock()
+		if code != http.StatusOK {
+			for k, v := range header {
+				w.Header()[k] = v
+			}
+			http.Error(w, "secret upstream detail", code)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body) // a failed write shows up as a client error
+	}))
+	t.Cleanup(srv.Close)
+	return srv,
+		func() []*http.Request { mu.Lock(); defer mu.Unlock(); return append([]*http.Request(nil), reqs...) },
+		func() []time.Time { mu.Lock(); defer mu.Unlock(); return append([]time.Time(nil), times...) }
+}
+
+func ok(t *testing.T, name string) (*httptest.Server, func() []*http.Request) {
+	t.Helper()
+	srv, reqs, _ := server(t, fixture(t, name), []int{200}, nil)
+	return srv, reqs
+}
+
+// jobsOf returns each element of the fixture's "jobs" array, byte for byte.
+func jobsOf(t *testing.T, name string) []json.RawMessage {
+	t.Helper()
+	var doc struct {
+		Jobs []json.RawMessage `json:"jobs"`
+	}
+	if err := json.Unmarshal(fixture(t, name), &doc); err != nil {
+		t.Fatalf("decoding %s: %v", name, err)
+	}
+	return doc.Jobs
+}
+
+// AC2: a recorded Greenhouse response produces exactly the expected raw records, each
+// job's JSON kept byte for byte, its numeric id as the source ID.
+func TestFetchGoldenFile(t *testing.T) {
+	srv, _ := ok(t, "cockroachlabs_jobs.json")
+	got, skipped, err := client(srv.URL).Fetch(t.Context(), "cockroachlabs", noLimit())
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if skipped != 0 {
+		t.Errorf("skipped %d, want 0", skipped)
+	}
+	jobs := jobsOf(t, "cockroachlabs_jobs.json")
+	want := []job.Raw{
+		{Source: "greenhouse", SourceID: "8079608", Title: "Deal Desk Manager, AMER",
+			URL: "https://www.cockroachlabs.com/careers/job/?gh_jid=8079608", Payload: jobs[0]},
+		{Source: "greenhouse", SourceID: "7422578", Title: "Member of Technical Staff (Senior - Specialized Indexing)",
+			URL: "https://www.cockroachlabs.com/careers/job/?gh_jid=7422578", Payload: jobs[1]},
+	}
+	if len(got) != len(want) {
+		t.Fatalf("got %d records, want %d", len(got), len(want))
+	}
+	for i := range want {
+		g, w := got[i], want[i]
+		if g.Source != w.Source || g.SourceID != w.SourceID || g.URL != w.URL || g.Title != w.Title {
+			t.Errorf("record %d = %q %q %q %q, want %q %q %q %q", i,
+				g.Source, g.SourceID, g.URL, g.Title, w.Source, w.SourceID, w.URL, w.Title)
+		}
+		if string(g.Payload) != string(w.Payload) {
+			t.Errorf("record %d payload is not the job exactly as received", i)
+		}
+	}
+}
+
+// The request asks for the full board with descriptions, and identifies us.
+func TestFetchRequest(t *testing.T) {
+	srv, reqs := ok(t, "empty.json")
+	if _, _, err := client(srv.URL).Fetch(t.Context(), "cockroachlabs", noLimit()); err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	r := reqs()[0]
+	if r.URL.Path != "/v1/boards/cockroachlabs/jobs" || r.URL.Query().Get("content") != "true" {
+		t.Errorf("requested %s, want /v1/boards/cockroachlabs/jobs?content=true", r.URL)
+	}
+	if ua := r.Header.Get("User-Agent"); !strings.Contains(ua, "https://github.com/shinraxtensei/job-hunter") {
+		t.Errorf("User-Agent %q has no contact URL", ua)
+	}
+}
+
+func TestNameAndHost(t *testing.T) {
+	c := greenhouse.New(greenhouse.BaseURL)
+	if c.Name() != "greenhouse" || c.Host() != "boards-api.greenhouse.io" {
+		t.Errorf("Name, Host = %q, %q; want greenhouse, boards-api.greenhouse.io", c.Name(), c.Host())
+	}
+	if c.HTTP.Timeout <= 0 || c.HTTP.Timeout > time.Minute {
+		t.Errorf("timeout = %v, want a bounded timeout", c.HTTP.Timeout)
+	}
+}
+
+// AC3: empty board → empty slice, not an error.
+func TestFetchEmptyBoard(t *testing.T) {
+	srv, _ := ok(t, "empty.json")
+	got, _, err := client(srv.URL).Fetch(t.Context(), "cockroachlabs", noLimit())
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if got == nil || len(got) != 0 {
+		t.Errorf("got %#v, want an empty, non-nil slice", got)
+	}
+}
+
+// AC3: malformed jobs (no id, no URL, non-numeric id) are skipped; the rest returned.
+func TestFetchSkipsMalformedPosting(t *testing.T) {
+	srv, _ := ok(t, "malformed_posting.json")
+	got, skipped, err := client(srv.URL).Fetch(t.Context(), "cockroachlabs", noLimit())
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if skipped != 2 || len(got) != 2 || got[0].SourceID != "8079608" || got[1].SourceID != "7422578" {
+		t.Errorf("got %d records (%d skipped), want the two well-formed ones and 2 skipped", len(got), skipped)
+	}
+}
+
+// Like Lever (M1-03 AC6): a job containing NUL is skipped and counted.
+func TestFetchSkipsPostingWithNUL(t *testing.T) {
+	srv, _ := ok(t, "nul_posting.json")
+	got, skipped, err := client(srv.URL).Fetch(t.Context(), "cockroachlabs", noLimit())
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	if skipped != 1 || len(got) != 2 {
+		t.Errorf("got %d records, %d skipped; want 2 and 1", len(got), skipped)
+	}
+}
+
+// A 200 without a jobs array means the API changed: an error, not an empty board.
+func TestFetchRejectsResponseWithoutJobs(t *testing.T) {
+	srv, _, _ := server(t, []byte(`{"error":"Board not found"}`), []int{200}, nil)
+	if _, _, err := client(srv.URL).Fetch(t.Context(), "acme", noLimit()); err == nil || !strings.Contains(err.Error(), "acme") {
+		t.Errorf("error = %v, want one naming acme", err)
+	}
+}
+
+// AC3: 404 → error naming the company, not retried; 500 → retried, at most 3 attempts.
+// Neither leaks the body.
+func TestFetchHTTPErrors(t *testing.T) {
+	for status, attempts := range map[int]int{http.StatusNotFound: 1, http.StatusInternalServerError: 3} {
+		srv, reqs, _ := server(t, nil, []int{status}, nil)
+		_, _, err := client(srv.URL).Fetch(t.Context(), "acme", noLimit())
+		if err == nil || !strings.Contains(err.Error(), "acme") || !strings.Contains(err.Error(), http.StatusText(status)) {
+			t.Errorf("%d: error = %v, want one naming acme and the status", status, err)
+		}
+		if err != nil && strings.Contains(err.Error(), "secret upstream detail") {
+			t.Errorf("%d: error leaks the response body", status)
+		}
+		if n := len(reqs()); n != attempts {
+			t.Errorf("%d: made %d requests, want %d", status, n, attempts)
+		}
+	}
+}
+
+// AC3: a 429 with Retry-After is retried after that delay.
+func TestFetchHonoursRetryAfter(t *testing.T) {
+	srv, _, times := server(t, fixture(t, "cockroachlabs_jobs.json"), []int{429, 200}, http.Header{"Retry-After": {"1"}})
+	got, _, err := client(srv.URL).Fetch(t.Context(), "cockroachlabs", noLimit())
+	if err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	ts := times()
+	if len(ts) != 2 || len(got) != 2 {
+		t.Fatalf("got %d records after %d requests, want 2 after 2", len(got), len(ts))
+	}
+	if gap := ts[1].Sub(ts[0]); gap < time.Second {
+		t.Errorf("retried %v after a 429 with Retry-After: 1, want >= 1s", gap)
+	}
+}
+
+// Every attempt waits on the host's limiter; with a 1ms backoff only the limiter can
+// space requests 200ms apart.
+func TestFetchWaitsOnLimiterForEveryAttempt(t *testing.T) {
+	srv, _, times := server(t, fixture(t, "empty.json"), []int{500, 500, 200}, nil)
+	const every = 200 * time.Millisecond
+	if _, _, err := client(srv.URL).Fetch(t.Context(), "cockroachlabs", rate.NewLimiter(rate.Every(every), 1)); err != nil {
+		t.Fatalf("Fetch: %v", err)
+	}
+	ts := times()
+	for i := 1; i < len(ts); i++ {
+		if gap := ts[i].Sub(ts[i-1]); gap < every-10*time.Millisecond {
+			t.Errorf("attempts %d and %d were %v apart, want >= %v", i-1, i, gap, every)
+		}
+	}
+}
+
+// AC3: a cancelled context stops the fetch promptly.
+func TestFetchStopsOnCancelledContext(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done() // hang until the client gives up
+	}))
+	defer srv.Close()
+	ctx, cancel := context.WithCancel(t.Context())
+	go func() { time.Sleep(50 * time.Millisecond); cancel() }()
+	start := time.Now()
+	if _, _, err := client(srv.URL).Fetch(ctx, "cockroachlabs", noLimit()); err == nil {
+		t.Fatal("Fetch returned no error after cancellation")
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Errorf("Fetch took %v after cancellation, want prompt", d)
+	}
+}
