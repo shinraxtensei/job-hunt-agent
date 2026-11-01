@@ -75,5 +75,14 @@ Story: docs/stories/M1-03-lever-adapter.md  (Linear: <link>)
 
 ## 7. Merge and verify
 
-Squash-merge to `main`. After deploy, confirm the behavior on the server, then mark the
-story `Done` in its file and in Linear. A story is not done until it was seen working.
+`master` is protected (CI required, admins included), so the story file can only change
+through a PR. Keep status in sync like this:
+
+1. Once review is finished and CI is green, push a last commit to the PR setting the story
+   file's status to `Done`.
+2. Squash-merge to `master` and delete the branch.
+3. Move the Linear issue to Done in the same sitting (through the browser if the Linear
+   connector can't edit issues).
+4. For stories with a runtime effect, confirm the behavior on the server after deploy. If
+   it doesn't work, reopen the story and the Linear issue. A story is not done until it
+   was seen working.
