@@ -1,6 +1,6 @@
 # M1-10: Slow but progressing downloads
 
-- **Status:** In review
+- **Status:** Done
 - **Milestone:** M1 — Collector
 - **Linear:** [HAM-29](https://linear.app/hamid-corp/issue/HAM-29/m1-10-slow-but-progressing-downloads)
 - **Estimate:** ½ day
