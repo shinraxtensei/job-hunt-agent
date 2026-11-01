@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M1 — Collector
-- **Linear:** —
+- **Linear:** [HAM-21](https://linear.app/hamid-corp/issue/HAM-21/m1-02-concurrent-collector-run)
 - **Estimate:** 1 day
 
 ## Story

@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M0 — Walking skeleton
-- **Linear:** —
+- **Linear:** [HAM-16](https://linear.app/hamid-corp/issue/HAM-16/m0-02-ci-pipeline)
 - **Estimate:** ½ day
 
 ## Story

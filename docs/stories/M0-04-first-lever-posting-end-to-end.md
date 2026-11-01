@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M0 — Walking skeleton
-- **Linear:** —
+- **Linear:** [HAM-18](https://linear.app/hamid-corp/issue/HAM-18/m0-04-first-lever-posting-end-to-end)
 - **Estimate:** 1 day
 
 ## Story

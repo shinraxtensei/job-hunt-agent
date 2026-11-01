@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M1 — Collector
-- **Linear:** —
+- **Linear:** [HAM-22](https://linear.app/hamid-corp/issue/HAM-22/m1-03-lever-adapter)
 - **Estimate:** ½ day
 
 ## Story

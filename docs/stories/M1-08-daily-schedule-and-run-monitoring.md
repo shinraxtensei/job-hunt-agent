@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M1 — Collector
-- **Linear:** —
+- **Linear:** [HAM-27](https://linear.app/hamid-corp/issue/HAM-27/m1-08-daily-schedule-and-run-monitoring)
 - **Estimate:** ½ day
 
 ## Story

@@ -8,6 +8,10 @@ application to its outcome. The owner reviews and sends everything.
 - Decisions: `docs/adr/` (index below)
 - Roadmap: `docs/roadmap.md` (all milestones; scope changes are edited there in a PR)
 - Stories: `docs/stories/` (one file per story, linked from Linear)
+- Linear: team HAMID CORP, project "Job Hunt Agent", one milestone per roadmap milestone,
+  issues `HAM-n` with labels `story` + language. The story file is the source of truth;
+  its `Linear:` line links the issue. Create or update issues through the browser
+  (signed in to linear.app) when the Linear connector lacks issue tools.
 
 ## Golden rules
 

@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M1 — Collector
-- **Linear:** —
+- **Linear:** [HAM-24](https://linear.app/hamid-corp/issue/HAM-24/m1-05-ashby-adapter)
 - **Estimate:** ½ day
 
 ## Story

@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M1 — Collector
-- **Linear:** —
+- **Linear:** [HAM-23](https://linear.app/hamid-corp/issue/HAM-23/m1-04-greenhouse-adapter)
 - **Estimate:** ½ day
 
 ## Story

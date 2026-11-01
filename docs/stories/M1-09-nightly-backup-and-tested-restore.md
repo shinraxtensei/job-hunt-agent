@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M1 — Collector
-- **Linear:** —
+- **Linear:** [HAM-28](https://linear.app/hamid-corp/issue/HAM-28/m1-09-nightly-backup-and-tested-restore)
 - **Estimate:** ½ day
 
 ## Story

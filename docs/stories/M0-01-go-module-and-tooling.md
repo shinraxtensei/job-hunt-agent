@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M0 — Walking skeleton
-- **Linear:** —
+- **Linear:** [HAM-15](https://linear.app/hamid-corp/issue/HAM-15/m0-01-go-module-and-tooling)
 - **Estimate:** ½ day
 
 ## Story

@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M0 — Walking skeleton
-- **Linear:** —
+- **Linear:** [HAM-17](https://linear.app/hamid-corp/issue/HAM-17/m0-03-local-postgres-and-migrations)
 - **Estimate:** ½ day
 
 ## Story

@@ -2,7 +2,7 @@
 
 - **Status:** Ready
 - **Milestone:** M0 — Walking skeleton
-- **Linear:** —
+- **Linear:** [HAM-19](https://linear.app/hamid-corp/issue/HAM-19/m0-05-server-tailscale-and-deploy)
 - **Estimate:** 1 day
 
 ## Story
