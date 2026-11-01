@@ -124,6 +124,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0004 | Use pgx, sqlc and goose for database access | Accepted |
 | 0005 | Companies table: track, active, one row per board, YAML watch list | Accepted |
 | 0006 | Record collector runs in Postgres from M1-02; goleak in tests | Accepted |
+| 0007 | Track posting changes with a content hash; keep the latest payload | Accepted |
 
 ## Project skills
 

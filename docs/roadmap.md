@@ -134,6 +134,9 @@ M5-04 Document versions linked to applications
 
 **Exit criteria**
 - Statuses from new to offer/rejected/closed/skipped, with a dated history.
+- Each application stores a snapshot of the posting as applied to (title, URL, raw payload
+  and `content_hash` at that moment). `postings` keeps only the latest payload (ADR-0007),
+  so a later edit on the board would otherwise overwrite what was applied to.
 - Board view by status; notes and contacts per application.
 - Follow-up reminder 7 days after applying with no reply, with a drafted message.
 - Skip and skip-with-reason actions stored as feedback.

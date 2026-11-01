@@ -33,7 +33,7 @@ type beginner interface {
 }
 
 // Result counts what one company's collection saw.
-type Result struct{ Fetched, New, Existing, Skipped int }
+type Result struct{ Fetched, New, Changed, Seen, Skipped int }
 
 // Once fetches one board by slug and stores every posting in one transaction, creating
 // the company row if needed (with no track: it is not on the watch list). A failure at
@@ -67,7 +67,7 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 			return err
 		}
 		for _, r := range raws {
-			inserted, err := q.UpsertPosting(ctx, store.UpsertPostingParams{
+			r2, err := q.UpsertPosting(ctx, store.UpsertPostingParams{
 				CompanyID:       co,
 				Source:          r.Source,
 				SourcePostingID: r.SourceID,
@@ -78,8 +78,11 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 			if err != nil {
 				return fmt.Errorf("storing posting %s: %w", r.SourceID, err)
 			}
-			if inserted {
+			switch {
+			case r2.Inserted:
 				newIDs = append(newIDs, r.SourceID)
+			case r2.Changed:
+				res.Changed++
 			}
 		}
 		return nil
@@ -93,9 +96,9 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 		log.Info("new posting", "source", src.Name(), "company", slug, "posting_id", id)
 	}
 	res.New = len(newIDs)
-	res.Existing = res.Fetched - res.New
+	res.Seen = res.Fetched - res.New - res.Changed
 	log.Info("collect finished", "source", src.Name(), "company", slug,
-		"fetched", res.Fetched, "new", res.New, "existing", res.Existing, "skipped", res.Skipped)
+		"fetched", res.Fetched, "new", res.New, "changed", res.Changed, "seen", res.Seen, "skipped", res.Skipped)
 	return res, nil
 }
 

@@ -118,8 +118,8 @@ func TestPostingsSourceIDIsUnique(t *testing.T) {
 	}
 	// Unique per run, so the test also passes with -count > 1 on the shared database.
 	postingID := fmt.Sprintf("dup-%d", time.Now().UnixNano())
-	insert := `INSERT INTO postings (company_id, source, source_posting_id, url, title, raw_payload)
-	           VALUES ($1, 'lever', $2, 'https://example.test/1', 'Engineer', '{}')`
+	insert := `INSERT INTO postings (company_id, source, source_posting_id, url, title, raw_payload, content_hash)
+	           VALUES ($1, 'lever', $2, 'https://example.test/1', 'Engineer', '{}', sha256('{}'))`
 	if _, err := conn.Exec(t.Context(), insert, co.ID, postingID); err != nil {
 		t.Fatalf("first insert: %v", err)
 	}
@@ -215,5 +215,125 @@ func TestCompaniesBoardIsUnique(t *testing.T) {
 	_, err := q.CreateCompany(t.Context(), params)
 	if code := storetest.PgCode(err); code != "23505" {
 		t.Errorf("same (board_type, board_slug) twice: err = %v (code %q), want unique_violation 23505", err, code)
+	}
+}
+
+// upsertFixture creates a company and returns its id and a posting source ID unique to
+// this test run.
+func upsertFixture(t *testing.T, q *store.Queries) (int64, string) {
+	t.Helper()
+	n := time.Now().UnixNano()
+	co, err := q.CreateCompany(t.Context(), store.CreateCompanyParams{
+		Name: "Upsert Co", BoardType: "lever", BoardSlug: fmt.Sprintf("upsert-%d", n),
+	})
+	if err != nil {
+		t.Fatalf("creating company: %v", err)
+	}
+	return co.ID, fmt.Sprintf("posting-%d", n)
+}
+
+func upsert(t *testing.T, q *store.Queries, companyID int64, id, title, payload string) store.UpsertPostingRow {
+	t.Helper()
+	r, err := q.UpsertPosting(t.Context(), store.UpsertPostingParams{
+		CompanyID: companyID, Source: "lever", SourcePostingID: id,
+		Url: "https://example.test/" + id, Title: title, RawPayload: []byte(payload),
+	})
+	if err != nil {
+		t.Fatalf("upserting %s: %v", id, err)
+	}
+	return r
+}
+
+// row returns the stored posting as JSON (every column) and its timestamps.
+func row(t *testing.T, conn *pgx.Conn, id string) (all string, first, checked, changed time.Time) {
+	t.Helper()
+	if err := conn.QueryRow(t.Context(),
+		`SELECT to_jsonb(p)::text, first_seen_at, last_checked_at, last_changed_at
+		 FROM postings p WHERE source = 'lever' AND source_posting_id = $1`, id).Scan(&all, &first, &checked, &changed); err != nil {
+		t.Fatalf("reading posting %s: %v", id, err)
+	}
+	return all, first, checked, changed
+}
+
+// M1-07: a new posting is inserted with its hash, and last_changed_at = first_seen_at.
+func TestUpsertPostingInsertsNew(t *testing.T) {
+	migrateUp(t)
+	conn := storetest.Connect(t, storetest.AppURL)
+	q := store.New(conn)
+	co, id := upsertFixture(t, q)
+
+	if r := upsert(t, q, co, id, "Engineer", `{"id":"x","title":"Engineer"}`); !r.Inserted {
+		t.Errorf("first upsert = %+v, want inserted", r)
+	}
+	var hashOK bool
+	if err := conn.QueryRow(t.Context(),
+		`SELECT content_hash = sha256(convert_to(raw_payload::text, 'UTF8')) AND last_changed_at = first_seen_at
+		 FROM postings WHERE source = 'lever' AND source_posting_id = $1`, id).Scan(&hashOK); err != nil {
+		t.Fatalf("reading posting: %v", err)
+	}
+	if !hashOK {
+		t.Error("new posting: content_hash is not the payload's hash, or last_changed_at != first_seen_at")
+	}
+}
+
+// M1-07 AC3: an identical payload (even with other key order and whitespace) changes
+// only last_checked_at.
+func TestUpsertPostingIdenticalPayloadTouchesOnlyLastChecked(t *testing.T) {
+	migrateUp(t)
+	conn := storetest.Connect(t, storetest.AppURL)
+	q := store.New(conn)
+	co, id := upsertFixture(t, q)
+	upsert(t, q, co, id, "Engineer", `{"id":"x","title":"Engineer","tags":["go","sql"]}`)
+	before, _, checkedBefore, _ := row(t, conn, id)
+
+	r := upsert(t, q, co, id, "Engineer", `{ "tags": ["go", "sql"], "title": "Engineer", "id": "x" }`)
+	if r.Inserted || r.Changed {
+		t.Errorf("identical payload: result = %+v, want neither inserted nor changed", r)
+	}
+	after, _, checkedAfter, _ := row(t, conn, id)
+	if !checkedAfter.After(checkedBefore) {
+		t.Errorf("last_checked_at %v not after %v", checkedAfter, checkedBefore)
+	}
+	var same bool
+	if err := conn.QueryRow(t.Context(),
+		`SELECT ($1::jsonb - 'last_checked_at') = ($2::jsonb - 'last_checked_at')`, before, after).Scan(&same); err != nil {
+		t.Fatalf("comparing rows: %v", err)
+	}
+	if !same {
+		t.Errorf("identical payload changed more than last_checked_at:\nbefore %s\nafter  %s", before, after)
+	}
+}
+
+// M1-07 AC2: a changed payload replaces raw_payload, content_hash, title and URL, sets
+// last_changed_at, and keeps first_seen_at.
+func TestUpsertPostingChangedPayload(t *testing.T) {
+	migrateUp(t)
+	conn := storetest.Connect(t, storetest.AppURL)
+	q := store.New(conn)
+	co, id := upsertFixture(t, q)
+	upsert(t, q, co, id, "Engineer", `{"id":"x","title":"Engineer"}`)
+	_, firstBefore, _, changedBefore := row(t, conn, id)
+
+	r := upsert(t, q, co, id, "Senior Engineer", `{"id":"x","title":"Senior Engineer"}`)
+	if r.Inserted || !r.Changed {
+		t.Errorf("changed payload: result = %+v, want changed, not inserted", r)
+	}
+	_, firstAfter, checkedAfter, changedAfter := row(t, conn, id)
+	if !firstAfter.Equal(firstBefore) {
+		t.Errorf("first_seen_at moved from %v to %v", firstBefore, firstAfter)
+	}
+	if !changedAfter.After(changedBefore) || !changedAfter.Equal(checkedAfter) {
+		t.Errorf("last_changed_at = %v (was %v), want moved to this check (%v)", changedAfter, changedBefore, checkedAfter)
+	}
+	var title, payloadTitle string
+	var hashOK bool
+	if err := conn.QueryRow(t.Context(),
+		`SELECT title, raw_payload->>'title', content_hash = sha256(convert_to(raw_payload::text, 'UTF8'))
+		 FROM postings WHERE source = 'lever' AND source_posting_id = $1`, id).Scan(&title, &payloadTitle, &hashOK); err != nil {
+		t.Fatalf("reading posting: %v", err)
+	}
+	if title != "Senior Engineer" || payloadTitle != "Senior Engineer" || !hashOK {
+		t.Errorf("after change: title=%q payload title=%q hash matches=%v; want the new payload stored and hashed",
+			title, payloadTitle, hashOK)
 	}
 }

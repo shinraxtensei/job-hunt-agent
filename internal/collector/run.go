@@ -29,9 +29,9 @@ type Config struct {
 
 // RunResult is what a run did; the same numbers go into its collector_runs row.
 type RunResult struct {
-	RunID                                 int64
-	Outcome                               string // ok, partial, failed or cancelled
-	Attempted, Failed, Skipped, New, Seen int    // Seen: already stored, re-checked
+	RunID                                          int64
+	Outcome                                        string // ok, partial, failed or cancelled
+	Attempted, Failed, Skipped, New, Changed, Seen int    // Changed: payload differed; Seen: identical
 }
 
 // DB is what Run needs from the database: queries and transactions, concurrently
@@ -100,7 +100,8 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 			switch {
 			case err == nil:
 				res.New += r.New
-				res.Seen += r.Existing
+				res.Changed += r.Changed
+				res.Seen += r.Seen
 			case ctx.Err() != nil:
 				// Stopped by cancellation, not a board failure; the run is "cancelled".
 			default:
@@ -127,7 +128,7 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 		return res, err
 	}
 	log.Info("run finished", "run_id", res.RunID, "outcome", res.Outcome, "attempted", res.Attempted,
-		"failed", res.Failed, "skipped", res.Skipped, "new", res.New, "seen", res.Seen)
+		"failed", res.Failed, "skipped", res.Skipped, "new", res.New, "changed", res.Changed, "seen", res.Seen)
 	return res, nil
 }
 
@@ -196,6 +197,7 @@ func finish(ctx context.Context, db DB, res *RunResult, failures []failure) erro
 			CompaniesSkipped:   int32(res.Skipped),   //nolint:gosec // as above
 			PostingsNew:        int32(res.New),       //nolint:gosec // postings per run, far below 2^31
 			PostingsSeen:       int32(res.Seen),      //nolint:gosec // as above
+			PostingsChanged:    int32(res.Changed),   //nolint:gosec // as above
 		})
 	})
 	if err != nil {

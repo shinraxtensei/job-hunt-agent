@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -89,7 +90,7 @@ func summary(t *testing.T, logs *bytes.Buffer) map[string]any {
 	return nil
 }
 
-// AC1: postings are inserted with the raw JSON stored, and the run logs new/existing.
+// AC1: postings are inserted with the raw JSON stored, and the run logs new/seen.
 func TestOnceInsertsPostingsWithRawJSON(t *testing.T) {
 	srv, company, ids, body := board(t)
 	var logs bytes.Buffer
@@ -101,8 +102,8 @@ func TestOnceInsertsPostingsWithRawJSON(t *testing.T) {
 		t.Errorf("result = %+v, want 2 fetched, 2 new", res)
 	}
 	s := summary(t, &logs)
-	if s["company"] != company || s["new"] != 2.0 || s["existing"] != 0.0 || s["fetched"] != 2.0 {
-		t.Errorf("summary log = %v, want company=%s fetched=2 new=2 existing=0", s, company)
+	if s["company"] != company || s["new"] != 2.0 || s["seen"] != 0.0 || s["changed"] != 0.0 || s["fetched"] != 2.0 {
+		t.Errorf("summary log = %v, want company=%s fetched=2 new=2 changed=0 seen=0", s, company)
 	}
 
 	conn := storetest.Connect(t, storetest.AppURL)
@@ -161,11 +162,11 @@ func TestOnceTwiceUpdatesLastCheckedWithoutDuplicates(t *testing.T) {
 	if err != nil {
 		t.Fatalf("second Once: %v", err)
 	}
-	if res != (collector.Result{Fetched: 2, Existing: 2}) {
-		t.Errorf("second result = %+v, want 2 fetched, 2 existing", res)
+	if res != (collector.Result{Fetched: 2, Seen: 2}) {
+		t.Errorf("second result = %+v, want 2 fetched, 2 seen", res)
 	}
-	if s := summary(t, &logs); s["new"] != 0.0 || s["existing"] != 2.0 {
-		t.Errorf("second summary log = %v, want new=0 existing=2", s)
+	if s := summary(t, &logs); s["new"] != 0.0 || s["seen"] != 2.0 || s["changed"] != 0.0 {
+		t.Errorf("second summary log = %v, want new=0 changed=0 seen=2", s)
 	}
 	after := read()
 	if len(after) != 2 {
@@ -369,5 +370,51 @@ func TestOnceConcurrentRunsCreateOneCompany(t *testing.T) {
 	}
 	if companies != 1 {
 		t.Errorf("got %d company rows after %d concurrent runs, want 1", companies, runs)
+	}
+}
+
+// M1-07 AC1: one company's batch is stored in one transaction and reports new, changed
+// and seen: after one posting is edited, a re-collect counts 1 changed and 1 seen.
+func TestOnceCountsChangedAndSeen(t *testing.T) {
+	_, company, ids, body := board(t)
+	var mu sync.Mutex
+	current := body
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		_, _ = w.Write([]byte(current)) // a failed write shows up as a fetch error
+	}))
+	t.Cleanup(srv.Close)
+
+	var logs bytes.Buffer
+	if res, err := once(t, srv.URL, company, &logs); err != nil || res.New != 2 {
+		t.Fatalf("first Once = %+v, %v; want 2 new", res, err)
+	}
+	mu.Lock()
+	current = strings.Replace(body, `"text": "AV Engineer - Platform"`, `"text": "AV Engineer - Platform (Senior)"`, 1)
+	mu.Unlock()
+	if current == body {
+		t.Fatal("fixture did not change; update the replacement")
+	}
+
+	logs.Reset()
+	res, err := once(t, srv.URL, company, &logs)
+	if err != nil {
+		t.Fatalf("second Once: %v", err)
+	}
+	if res != (collector.Result{Fetched: 2, Changed: 1, Seen: 1}) {
+		t.Errorf("result = %+v, want 2 fetched: 1 changed, 1 seen", res)
+	}
+	if s := summary(t, &logs); s["changed"] != 1.0 || s["seen"] != 1.0 || s["new"] != 0.0 {
+		t.Errorf("summary log = %v, want new=0 changed=1 seen=1", s)
+	}
+	conn := storetest.Connect(t, storetest.AppURL)
+	var title string
+	if err := conn.QueryRow(t.Context(),
+		`SELECT title FROM postings WHERE source = 'lever' AND source_posting_id = $1`, ids[1]).Scan(&title); err != nil {
+		t.Fatalf("reading edited posting: %v", err)
+	}
+	if title != "AV Engineer - Platform (Senior)" {
+		t.Errorf("edited posting title = %q, want the new one stored", title)
 	}
 }

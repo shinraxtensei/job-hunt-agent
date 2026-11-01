@@ -18,6 +18,7 @@ type CollectorRun struct {
 	CompaniesSkipped   int32
 	PostingsNew        int32
 	PostingsSeen       int32
+	PostingsChanged    int32
 }
 
 type CollectorRunError struct {
@@ -47,4 +48,6 @@ type Posting struct {
 	RawPayload      []byte
 	FirstSeenAt     pgtype.Timestamptz
 	LastCheckedAt   pgtype.Timestamptz
+	ContentHash     []byte
+	LastChangedAt   pgtype.Timestamptz
 }

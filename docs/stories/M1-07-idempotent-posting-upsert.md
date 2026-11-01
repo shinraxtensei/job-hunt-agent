@@ -1,6 +1,6 @@
 # M1-07: Idempotent posting upsert
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M1 — Collector
 - **Linear:** [HAM-26](https://linear.app/hamid-corp/issue/HAM-26/m1-07-idempotent-posting-upsert)
 - **Estimate:** ½ day

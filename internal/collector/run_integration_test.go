@@ -427,3 +427,36 @@ func TestRunWithNoCompaniesIsOK(t *testing.T) {
 		t.Errorf("collector_runs row = %+v, want ok and ended", r)
 	}
 }
+
+// M1-07: collector_runs records postings whose payload changed, next to those seen
+// unchanged.
+func TestRunRecordsChangedPostings(t *testing.T) {
+	defer goleak.VerifyNone(t, goleak.IgnoreCurrent())
+	e := newEnv(t)
+	defer e.pool.Close()
+	slug := e.add("lever", "Changes", true, false)
+	a, b := slug+"-a", slug+"-b"
+	src := rawsSource{
+		{Source: "lever", SourceID: a, URL: "https://example.test/a", Title: "A", Payload: []byte(`{"id":"a","v":1}`)},
+		{Source: "lever", SourceID: b, URL: "https://example.test/b", Title: "B", Payload: []byte(`{"id":"b","v":1}`)},
+	}
+	if _, err := collector.Run(t.Context(), e.pool, collector.Registry{"lever": src}, collector.Config{Concurrency: 1}, quiet()); err != nil {
+		t.Fatalf("first Run: %v", err)
+	}
+	src[1].Payload = []byte(`{"id":"b","v":2}`)
+	res, err := collector.Run(t.Context(), e.pool, collector.Registry{"lever": src}, collector.Config{Concurrency: 1}, quiet())
+	if err != nil {
+		t.Fatalf("second Run: %v", err)
+	}
+	if res.New != 0 || res.Changed != 1 || res.Seen != 1 {
+		t.Errorf("result = %+v, want 0 new, 1 changed, 1 seen", res)
+	}
+	var changed, seen int
+	if err := e.pool.QueryRow(t.Context(),
+		`SELECT postings_changed, postings_seen FROM collector_runs WHERE id = $1`, res.RunID).Scan(&changed, &seen); err != nil {
+		t.Fatalf("reading run: %v", err)
+	}
+	if changed != 1 || seen != 1 {
+		t.Errorf("collector_runs postings_changed=%d postings_seen=%d, want 1 and 1", changed, seen)
+	}
+}
