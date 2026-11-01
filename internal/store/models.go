@@ -8,6 +8,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type CollectorRun struct {
+	ID                 int64
+	StartedAt          pgtype.Timestamptz
+	EndedAt            pgtype.Timestamptz
+	Outcome            pgtype.Text
+	CompaniesAttempted int32
+	CompaniesFailed    int32
+	CompaniesSkipped   int32
+	PostingsNew        int32
+	PostingsSeen       int32
+}
+
+type CollectorRunError struct {
+	RunID     int64
+	CompanyID int64
+	Error     string
+}
+
 type Company struct {
 	ID        int64
 	Name      string

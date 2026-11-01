@@ -122,6 +122,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0003 | Call the model provider SDK directly, no LangChain | Proposed |
 | 0004 | Use pgx, sqlc and goose for database access | Accepted |
 | 0005 | Companies table: track, active, one row per board, YAML watch list | Accepted |
+| 0006 | Record collector runs in Postgres from M1-02; goleak in tests | Accepted |
 
 ## Project skills
 

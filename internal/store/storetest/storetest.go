@@ -125,7 +125,8 @@ func Migrate(t *testing.T, dsn string) []int64 {
 	if err != nil {
 		t.Fatalf("opening owner connection: %v", err)
 	}
-	t.Cleanup(func() { _ = db.Close() }) // close error on a test connection changes nothing
+	// Closed before returning, not in t.Cleanup: goleak checks run before cleanups.
+	defer func() { _ = db.Close() }() // close error on a test connection changes nothing
 	applied, err := migrations.Up(t.Context(), db)
 	if err != nil {
 		t.Fatalf("migrations up: %v", err)

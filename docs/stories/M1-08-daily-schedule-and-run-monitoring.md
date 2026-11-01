@@ -15,6 +15,12 @@ it doesn't, so that I never trust stale data without knowing.
 Runs on the server. Keep it simple: a scheduled container (or systemd timer) invoking
 `collector run`, not an in-process cron library.
 
+`collector_runs` (with AC2's columns, plus `companies_skipped` and a `cancelled` outcome;
+`postings_seen` counts postings already stored and re-checked, and M1-07 adds
+`postings_changed` for real payload changes)
+and `collector_run_errors` already exist since M1-02 (ADR-0006); `collector run` writes
+them. This story adds the schedule and the healthchecks.io pings.
+
 ## Acceptance criteria
 
 1. **Given** the deployed stack
@@ -23,7 +29,7 @@ Runs on the server. Keep it simple: a scheduled container (or systemd timer) inv
 2. **Given** any run
    **When** it finishes
    **Then** a row in `collector_runs` records start, end, outcome (ok, partial, failed),
-   companies attempted, failed, and postings new/updated.
+   companies attempted, failed, and postings new/seen.
 3. **Given** a successful or partial run
    **When** it finishes
    **Then** it pings a healthchecks.io check; if no ping arrives within 26 hours, the

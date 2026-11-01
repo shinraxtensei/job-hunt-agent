@@ -27,11 +27,23 @@ const (
 	maxBody = 32 << 20
 )
 
-// Client talks to one Lever API host.
-// ponytail: one request per Fetch, no rate limiter or retries; M1-03 adds both.
+// Client talks to one Lever API host. It makes one request per Fetch; the collector
+// rate-limits per host (M1-02).
+// ponytail: no retries; M1-03 adds them.
 type Client struct {
 	base string
 	HTTP *http.Client
+}
+
+// Name is the board type this client serves.
+func (c *Client) Name() string { return "lever" }
+
+// Host is the API host requests go to, for per-host rate limiting.
+func (c *Client) Host() string {
+	if u, err := url.Parse(c.base); err == nil && u.Host != "" {
+		return u.Host
+	}
+	return c.base
 }
 
 // New returns a client for baseURL (BaseURL in production) with a 30s timeout.
