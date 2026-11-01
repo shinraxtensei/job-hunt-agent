@@ -29,7 +29,7 @@ func TestMakeHelpListsEveryCommand(t *testing.T) {
 	}
 	for _, target := range []string{
 		"check", "test-go", "test-integration", "test-py", "evals",
-		"lint", "sqlc", "sqlc-check", "migration", "vuln", "up", "down", "help",
+		"lint", "sqlc", "sqlc-check", "migration", "vuln", "up", "down", "fuzz", "help",
 	} {
 		if !strings.Contains(string(out), target) {
 			t.Errorf("make help does not list target %q\n%s", target, out)

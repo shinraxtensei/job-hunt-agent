@@ -71,6 +71,7 @@ testdata/            golden files (recorded board responses, sample postings)
 | Check committed sqlc code is current (part of `make check`) | `make sqlc-check` |
 | New migration | `make migration name=<snake_case>` |
 | Vulnerability scan | `make vuln` → govulncheck |
+| Fuzz the source parsers (30s each) | `make fuzz` |
 | Local stack | `make up` / `make down` |
 
 Never run `python` or `pytest` directly — always through `uv run`.

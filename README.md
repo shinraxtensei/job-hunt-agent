@@ -17,5 +17,5 @@ Week 0: walking skeleton.
 
 ## Supported sources
 
-- **Lever**: public Postings API (`api.lever.co/v0/postings/<site>`), one board per run
-  for now (M0-04).
+- **Lever**: public Postings API (`api.lever.co/v0/postings/<site>`): every Lever board on
+  the watch list, ≥1s between requests, up to 3 attempts with backoff (M1-03).

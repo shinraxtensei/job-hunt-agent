@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/goleak"
+	"golang.org/x/time/rate"
 
 	"github.com/shinraxtensei/job-hunter/internal/collector"
 	"github.com/shinraxtensei/job-hunter/internal/job"
@@ -48,7 +49,11 @@ func newFake(name, host string, tracker *[2]atomic.Int32) *fakeSource {
 func (f *fakeSource) Name() string { return f.name }
 func (f *fakeSource) Host() string { return f.host }
 
-func (f *fakeSource) Fetch(ctx context.Context, slug string) ([]job.Raw, int, error) {
+// Fetch waits on the host limiter first, as every Source must before each request.
+func (f *fakeSource) Fetch(ctx context.Context, slug string, limit *rate.Limiter) ([]job.Raw, int, error) {
+	if err := limit.Wait(ctx); err != nil {
+		return nil, 0, err
+	}
 	f.mu.Lock()
 	f.calls = append(f.calls, call{slug, time.Now()})
 	f.mu.Unlock()

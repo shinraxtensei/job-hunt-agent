@@ -1,6 +1,6 @@
 # M1-03: Lever adapter
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M1 — Collector
 - **Linear:** [HAM-22](https://linear.app/hamid-corp/issue/HAM-22/m1-03-lever-adapter)
 - **Estimate:** ½ day
@@ -46,5 +46,17 @@ M0-04 started this adapter; this story completes it to the skill's standard. Fol
 
 ## Security notes
 
-Endpoint, terms and robots status: _fill in at story start._
+Re-verified 2026-11-01 (same day as M0-04's step 0, recorded in
+`docs/stories/M0-04-first-lever-posting-end-to-end.md`); nothing changed:
+
+- **Endpoint:** `GET https://api.lever.co/v0/postings/<site>?mode=json`, the official public
+  Postings API documented in [lever/postings-api](https://github.com/lever/postings-api)
+  (repo last pushed 2026-04-23, not archived). No key for reads. One request returns the
+  whole board (`skip`/`limit` exist; not needed: the largest board seen, 301 postings, came
+  back in one response).
+- **Terms:** published postings "are publicly viewable" and "may be scraped by third
+  parties". The only documented rate limit is on application POSTs, which we never send.
+- **robots.txt** (`api.lever.co`): `User-agent: * / Allow: / / Crawl-delay: 1`. Every
+  request, retries included, waits on the collector's per-host limiter (≥1s).
+- **Login:** none. **Anti-bot:** none on the JSON API.
 No login, no bypassing blocks. Raw payloads stored, never logged in full.

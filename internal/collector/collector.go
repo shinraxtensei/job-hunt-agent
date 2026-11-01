@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/time/rate"
 
 	"github.com/shinraxtensei/job-hunter/internal/job"
 	"github.com/shinraxtensei/job-hunter/internal/store"
@@ -20,8 +22,9 @@ type Source interface {
 	// Host is the API host it calls; Run rate-limits per host.
 	Host() string
 	// Fetch returns every published posting on slug's board and how many entries it
-	// skipped as malformed. It makes one HTTP request (Run's limiter counts on that).
-	Fetch(ctx context.Context, slug string) ([]job.Raw, int, error)
+	// skipped as malformed or unstorable. It must wait on limit before every HTTP
+	// request it makes, retries included: limit is shared by every company on Host.
+	Fetch(ctx context.Context, slug string, limit *rate.Limiter) ([]job.Raw, int, error)
 }
 
 // beginner opens transactions: *pgx.Conn and *pgxpool.Pool both are.
@@ -34,9 +37,11 @@ type Result struct{ Fetched, New, Existing, Skipped int }
 
 // Once fetches one board by slug and stores every posting in one transaction, creating
 // the company row if needed (with no track: it is not on the watch list). A failure at
-// any point writes nothing. Connect as the app role (ADR-0004).
+// any point writes nothing. Connect as the app role (ADR-0004). Requests (retries
+// included) are spaced at least 1s apart, Lever's Crawl-delay.
 func Once(ctx context.Context, db beginner, src Source, slug string, log *slog.Logger) (Result, error) {
-	return collect(ctx, db, src, slug, log, func(q *store.Queries) (int64, error) {
+	limit := rate.NewLimiter(rate.Every(time.Second), 1)
+	return collect(ctx, db, src, slug, limit, log, func(q *store.Queries) (int64, error) {
 		return companyID(ctx, q, src.Name(), slug)
 	})
 }
@@ -45,10 +50,10 @@ func Once(ctx context.Context, db beginner, src Source, slug string, log *slog.L
 // that companyID returns. Fetch comes first, so a failed fetch touches nothing.
 //
 // Logs carry counts and IDs only: posting text is untrusted and never logged.
-func collect(ctx context.Context, db beginner, src Source, slug string, log *slog.Logger,
-	companyID func(*store.Queries) (int64, error),
+func collect(ctx context.Context, db beginner, src Source, slug string, limit *rate.Limiter,
+	log *slog.Logger, companyID func(*store.Queries) (int64, error),
 ) (Result, error) {
-	raws, skipped, err := src.Fetch(ctx, slug)
+	raws, skipped, err := src.Fetch(ctx, slug, limit)
 	if err != nil {
 		return Result{}, err // adapters name the company
 	}

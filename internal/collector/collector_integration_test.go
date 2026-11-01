@@ -5,6 +5,7 @@ package collector_test
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -16,8 +17,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/time/rate"
 
 	"github.com/shinraxtensei/job-hunter/internal/collector"
+	"github.com/shinraxtensei/job-hunter/internal/job"
 	"github.com/shinraxtensei/job-hunter/internal/source/lever"
 	"github.com/shinraxtensei/job-hunter/internal/store/storetest"
 )
@@ -244,26 +247,39 @@ func TestOnceLogsCountsAndIDsNeverPostingText(t *testing.T) {
 	}
 }
 
-// AC4: a failure partway through storing rolls back everything, including the
-// postings and the company row written before it. Postgres rejects NUL in text, so
-// the second posting's insert fails after the first succeeded.
-func TestOnceRollsBackOnFailureMidway(t *testing.T) {
-	_, company, ids, body := board(t)
-	broken := strings.Replace(body, `"text": "AV Engineer - Platform"`, `"text": "AV Engineer\u0000"`, 1)
-	if broken == body {
-		t.Fatal("fixture did not change; update the replacement")
+// rawsSource returns fixed records for any board, waiting on the limiter like a real
+// adapter.
+type rawsSource []job.Raw
+
+func (rawsSource) Name() string { return "lever" }
+func (rawsSource) Host() string { return "raws.test" }
+func (s rawsSource) Fetch(ctx context.Context, _ string, limit *rate.Limiter) ([]job.Raw, int, error) {
+	if err := limit.Wait(ctx); err != nil {
+		return nil, 0, err
 	}
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(broken)) // a failed write shows up as a fetch error
-	}))
-	t.Cleanup(srv.Close)
+	return s, 0, nil
+}
+
+// M0-04 AC4: a failure partway through storing rolls back everything, including the
+// postings and the company row written before it. The second record's payload is not
+// JSON, so Postgres rejects its insert after the first one succeeded. (Until M1-03 this
+// used a NUL in a title; the adapter now skips those, see TestOnceSkipsNULPosting.)
+func TestOnceRollsBackOnFailureMidway(t *testing.T) {
+	n := time.Now().UnixNano()
+	company := fmt.Sprintf("midway-%d", n)
+	ids := []string{fmt.Sprintf("ok-%d", n), fmt.Sprintf("bad-%d", n)}
+	src := rawsSource{
+		{Source: "lever", SourceID: ids[0], URL: "https://example.test/ok", Title: "Ok", Payload: []byte(`{"id":"ok"}`)},
+		{Source: "lever", SourceID: ids[1], URL: "https://example.test/bad", Title: "Bad", Payload: []byte(`{not json`)},
+	}
+	storetest.Migrate(t, storetest.OwnerURL)
+	conn := storetest.Connect(t, storetest.AppURL)
 
 	var logs bytes.Buffer
-	_, err := once(t, srv.URL, company, &logs)
+	_, err := collector.Once(t.Context(), conn, src, company, slog.New(slog.NewJSONHandler(&logs, nil)))
 	if err == nil || !strings.Contains(err.Error(), company) {
 		t.Fatalf("Once error = %v, want one naming %q", err, company)
 	}
-	conn := storetest.Connect(t, storetest.AppURL)
 	var companies, postings int
 	if err := conn.QueryRow(t.Context(),
 		`SELECT (SELECT count(*) FROM companies WHERE board_slug = $1),
@@ -276,6 +292,48 @@ func TestOnceRollsBackOnFailureMidway(t *testing.T) {
 	}
 	if strings.Contains(logs.String(), "new posting") {
 		t.Errorf("logged new postings that were rolled back:\n%s", logs.String())
+	}
+}
+
+// M1-03 AC6: a posting containing NUL is skipped and counted, and the rest of the
+// company's postings are stored.
+func TestOnceSkipsNULPosting(t *testing.T) {
+	b, err := os.ReadFile("../source/lever/testdata/nul_posting.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := time.Now().UnixNano()
+	body := string(b)
+	ids := make([]string, len(goldenIDs))
+	for i, id := range goldenIDs {
+		ids[i] = fmt.Sprintf("%s-%d", id, n)
+		body = strings.ReplaceAll(body, id, ids[i])
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(body)) // a failed write shows up as a fetch error
+	}))
+	t.Cleanup(srv.Close)
+	company := fmt.Sprintf("nul-%d", n)
+
+	var logs bytes.Buffer
+	res, err := once(t, srv.URL, company, &logs)
+	if err != nil {
+		t.Fatalf("Once: %v (one NUL posting must not fail the board)", err)
+	}
+	if res.Skipped != 1 || res.New != 2 {
+		t.Errorf("result = %+v, want 2 new, 1 skipped", res)
+	}
+	if s := summary(t, &logs); s["skipped"] != 1.0 {
+		t.Errorf("summary log = %v, want skipped=1", s)
+	}
+	conn := storetest.Connect(t, storetest.AppURL)
+	var stored int
+	if err := conn.QueryRow(t.Context(),
+		`SELECT count(*) FROM postings WHERE source = 'lever' AND source_posting_id = ANY($1)`, ids).Scan(&stored); err != nil {
+		t.Fatalf("counting postings: %v", err)
+	}
+	if stored != 2 {
+		t.Errorf("stored %d of the company's well-formed postings, want 2", stored)
 	}
 }
 

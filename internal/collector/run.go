@@ -91,13 +91,10 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 	g.SetLimit(max(cfg.Concurrency, 1))
 	for _, w := range todo {
 		g.Go(func() error {
-			var r Result
-			err := w.limiter.Wait(ctx)
-			if err == nil {
-				r, err = collect(ctx, db, w.src, w.co.BoardSlug, log, func(*store.Queries) (int64, error) {
-					return w.co.ID, nil
-				})
-			}
+			// The source waits on its host's limiter before each request it makes.
+			r, err := collect(ctx, db, w.src, w.co.BoardSlug, w.limiter, log, func(*store.Queries) (int64, error) {
+				return w.co.ID, nil
+			})
 			mu.Lock()
 			defer mu.Unlock()
 			switch {
