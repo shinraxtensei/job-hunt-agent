@@ -12,7 +12,8 @@ UPDATE collector_runs
 SET ended_at = now(), outcome = @outcome,
 	companies_attempted = @companies_attempted, companies_failed = @companies_failed,
 	companies_skipped = @companies_skipped,
-	postings_new = @postings_new, postings_seen = @postings_seen, postings_changed = @postings_changed
+	postings_new = @postings_new, postings_seen = @postings_seen, postings_changed = @postings_changed,
+	jobs_failed = @jobs_failed
 WHERE id = @id;
 
 -- name: AddRunError :exec

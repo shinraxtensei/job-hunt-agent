@@ -1,0 +1,364 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "30600762-62fe-4ffb-9b6e-98f145329ea3",
+      "team": "Marketing ",
+      "title": "Technical Executive Communications, Senior Manager",
+      "jobUrl": "https://jobs.ashbyhq.com/temporal/30600762-62fe-4ffb-9b6e-98f145329ea3",
+      "address": {
+        "postalAddress": {
+          "addressCountry": "United States"
+        }
+      },
+      "applyUrl": "https://jobs.ashbyhq.com/temporal/30600762-62fe-4ffb-9b6e-98f145329ea3/application",
+      "isListed": true,
+      "isRemote": true,
+      "location": "San Francisco, California",
+      "department": "Marketing",
+      "publishedAt": "2026-09-02T17:39:36.525+00:00",
+      "compensation": {
+        "compensationTiers": [
+          {
+            "id": "c6ab2f08-c6e6-4d9c-a3fc-927cb7def3a9",
+            "title": "US - Tier 1",
+            "components": [
+              {
+                "id": "d61aacd5-43ac-4110-a9b6-c6b8fc793cbc",
+                "summary": "Salary $216,000 – $283,500",
+                "interval": "1 YEAR",
+                "maxValue": 283500,
+                "minValue": 216000,
+                "currencyCode": "USD",
+                "compensationType": "Salary"
+              },
+              {
+                "id": "bd00efe1-000b-400b-8753-bbe64776aaa9",
+                "summary": "Offers Equity",
+                "interval": "1 YEAR",
+                "maxValue": null,
+                "minValue": null,
+                "currencyCode": "USD",
+                "compensationType": "EquityCashValue"
+              }
+            ],
+            "tierSummary": "Salary $216,000 – $283,500 • Offers Equity",
+            "additionalInformation": null
+          },
+          {
+            "id": "6dd38c16-a9f9-4cd4-9180-ee21f9c930de",
+            "title": "US - Tier 2",
+            "components": [
+              {
+                "id": "ba25b622-64d4-47f8-90fd-7d1ba17565c3",
+                "summary": "Salary $194,400 – $255,150",
+                "interval": "1 YEAR",
+                "maxValue": 255150,
+                "minValue": 194400,
+                "currencyCode": "USD",
+                "compensationType": "Salary"
+              },
+              {
+                "id": "2a43d7b1-859a-4176-8cd2-bc680c9ada15",
+                "summary": "Offers Equity",
+                "interval": "1 YEAR",
+                "maxValue": null,
+                "minValue": null,
+                "currencyCode": "USD",
+                "compensationType": "EquityCashValue"
+              }
+            ],
+            "tierSummary": "Salary $194,400 – $255,150 • Offers Equity",
+            "additionalInformation": null
+          },
+          {
+            "id": "a7a62adf-4edd-46ef-8852-03504051ba78",
+            "title": "US - Tier 3",
+            "components": [
+              {
+                "id": "dbd879a3-4b66-44b4-ae03-acca9bb4a3df",
+                "summary": "Salary $172,800 – $226,800",
+                "interval": "1 YEAR",
+                "maxValue": 226800,
+                "minValue": 172800,
+                "currencyCode": "USD",
+                "compensationType": "Salary"
+              },
+              {
+                "id": "da84cb79-04b8-4ccb-afb3-e9ef6a03e1f1",
+                "summary": "Offers Equity",
+                "interval": "1 YEAR",
+                "maxValue": null,
+                "minValue": null,
+                "currencyCode": "USD",
+                "compensationType": "EquityCashValue"
+              }
+            ],
+            "tierSummary": "Salary $172,800 – $226,800 • Offers Equity",
+            "additionalInformation": null
+          }
+        ],
+        "summaryComponents": [
+          {
+            "interval": "1 YEAR",
+            "maxValue": 283500,
+            "minValue": 172800,
+            "currencyCode": "USD",
+            "compensationType": "Salary"
+          },
+          {
+            "interval": "1 YEAR",
+            "maxValue": null,
+            "minValue": null,
+            "compensationType": "EquityCashValue"
+          }
+        ],
+        "compensationTierSummary": "$172.8K – $283.5K • Offers Equity • Multiple Ranges",
+        "scrapeableCompensationSalarySummary": "$172,800 - $283,500"
+      },
+      "workplaceType": "Hybrid",
+      "employmentType": "FullTime",
+      "descriptionHtml": "<p style=\"min-height:1.5em\"><strong>Role summary</strong></p><p style=\"min-height:1.5em\">We're looking for a technical s [trimmed]",
+      "descriptionPlain": "Role summary\n\nWe're looking for a technical storyteller to own the external voice of our co-founder and CEO, Samar Abbas [trimmed]",
+      "secondaryLocations": [
+        {
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Washington",
+              "addressCountry": "United States",
+              "addressLocality": "Seattle"
+            }
+          },
+          "location": "Seattle, Washington"
+        }
+      ],
+      "shouldDisplayCompensationOnJobPostings": true
+    },
+    {
+      "id": "1464036f-94d5-4dbd-aef8-fe99246a26d4",
+      "team": "Cloud Foundations",
+      "title": "Site Reliability Engineer (US - Pacific time)",
+      "jobUrl": "https://jobs.ashbyhq.com/posthog/1464036f-94d5-4dbd-aef8-fe99246a26d4",
+      "address": {
+        "postalAddress": {
+          "addressRegion": "California",
+          "addressCountry": "United States",
+          "addressLocality": "San Francisco"
+        }
+      },
+      "applyUrl": "https://jobs.ashbyhq.com/posthog/1464036f-94d5-4dbd-aef8-fe99246a26d4/application",
+      "isListed": true,
+      "isRemote": false,
+      "location": "San Francisco, CA",
+      "department": "Engineering",
+      "publishedAt": "2026-08-06T08:48:53.622+00:00",
+      "compensation": {
+        "compensationTiers": [],
+        "summaryComponents": [],
+        "compensationTierSummary": null,
+        "scrapeableCompensationSalarySummary": null
+      },
+      "workplaceType": "OnSite",
+      "employmentType": "FullTime",
+      "descriptionHtml": "<h2>About PostHog</h2><p style=\"min-height:1.5em\">PostHog is your product’s context layer. It ingests and stores your an [trimmed]",
+      "descriptionPlain": "ABOUT POSTHOG\n\nPostHog is your product’s context layer. It ingests and stores your analytics, errors, replays, and busin [trimmed]",
+      "secondaryLocations": [
+        {
+          "address": {
+            "postalAddress": {
+              "addressCountry": "United States"
+            }
+          },
+          "location": "Remote (US)"
+        }
+      ],
+      "shouldDisplayCompensationOnJobPostings": false
+    },
+    {
+      "id": "915faccb-5bf1-4a1c-9a2d-ccad28fd48f7",
+      "team": "Customer Support",
+      "title": "Senior Developer Success Engineer - West",
+      "jobUrl": "https://jobs.ashbyhq.com/temporal/915faccb-5bf1-4a1c-9a2d-ccad28fd48f7",
+      "address": {
+        "postalAddress": {
+          "addressCountry": "United States"
+        }
+      },
+      "applyUrl": "https://jobs.ashbyhq.com/temporal/915faccb-5bf1-4a1c-9a2d-ccad28fd48f7/application",
+      "isListed": true,
+      "isRemote": true,
+      "location": "United States (Remote)",
+      "department": "Customer Support",
+      "publishedAt": "2026-06-12T18:12:56.259+00:00",
+      "compensation": {
+        "compensationTiers": [
+          {
+            "id": "e614660b-fc82-427f-8083-173c8c4e0fdd",
+            "title": "US - Tier 1",
+            "components": [
+              {
+                "id": "0da64000-a203-4cb3-a78b-3c2279f1cd45",
+                "summary": "Offers Equity",
+                "interval": "1 YEAR",
+                "maxValue": null,
+                "minValue": null,
+                "currencyCode": "USD",
+                "compensationType": "EquityCashValue"
+              },
+              {
+                "id": "282fa7e5-e837-40c6-a954-9ead72b011b6",
+                "summary": "Salary $144K – $189K",
+                "interval": "1 YEAR",
+                "maxValue": 189000,
+                "minValue": 144000,
+                "currencyCode": "USD",
+                "compensationType": "Salary"
+              }
+            ],
+            "tierSummary": "Salary $144K – $189K • Offers Equity",
+            "additionalInformation": null
+          },
+          {
+            "id": "2e6d80d4-8fae-471e-a470-4ee9aa997dc8",
+            "title": "US - Tier 2",
+            "components": [
+              {
+                "id": "8f2a3999-66fa-473a-bc4b-a0d9223e8523",
+                "summary": "Offers Equity",
+                "interval": "1 YEAR",
+                "maxValue": null,
+                "minValue": null,
+                "currencyCode": "USD",
+                "compensationType": "EquityCashValue"
+              },
+              {
+                "id": "af88abc0-a273-4a46-b78e-c36e6afa0e9c",
+                "summary": "Salary $129.6K – $170.1K",
+                "interval": "1 YEAR",
+                "maxValue": 170100,
+                "minValue": 129600,
+                "currencyCode": "USD",
+                "compensationType": "Salary"
+              }
+            ],
+            "tierSummary": "Salary $129.6K – $170.1K • Offers Equity",
+            "additionalInformation": null
+          },
+          {
+            "id": "aa7e1f3f-9970-46b2-8d81-6f6b14d2a35e",
+            "title": "US - Tier 3",
+            "components": [
+              {
+                "id": "88c0887e-6cf2-4762-9a50-4af756fe52b3",
+                "summary": "Offers Equity",
+                "interval": "1 YEAR",
+                "maxValue": null,
+                "minValue": null,
+                "currencyCode": "USD",
+                "compensationType": "EquityCashValue"
+              },
+              {
+                "id": "9738dfb0-165a-4320-81ec-9632d6c7384b",
+                "summary": "Salary $115.2K – $151.2K",
+                "interval": "1 YEAR",
+                "maxValue": 151200,
+                "minValue": 115200,
+                "currencyCode": "USD",
+                "compensationType": "Salary"
+              }
+            ],
+            "tierSummary": "Salary $115.2K – $151.2K • Offers Equity",
+            "additionalInformation": null
+          }
+        ],
+        "summaryComponents": [
+          {
+            "interval": "1 YEAR",
+            "maxValue": null,
+            "minValue": null,
+            "compensationType": "EquityCashValue"
+          },
+          {
+            "interval": "1 YEAR",
+            "maxValue": 189000,
+            "minValue": 115200,
+            "currencyCode": "USD",
+            "compensationType": "Salary"
+          }
+        ],
+        "compensationTierSummary": "$115.2K – $189K • Offers Equity • Multiple Ranges",
+        "scrapeableCompensationSalarySummary": "$115.2K - $189K"
+      },
+      "workplaceType": "Remote",
+      "employmentType": "FullTime",
+      "descriptionHtml": "<h2><strong>Role Summary</strong></h2><p style=\"min-height:1.5em\">The <strong>Senior Developer Success Engineer</strong> [trimmed]",
+      "descriptionPlain": "ROLE SUMMARY\n\nThe Senior Developer Success Engineer - West will be the frontline technical expert for our developer comm [trimmed]",
+      "secondaryLocations": [
+        {
+          "address": {
+            "postalAddress": {
+              "addressRegion": "California",
+              "addressCountry": "United States",
+              "addressLocality": "Los Angeles"
+            }
+          },
+          "location": "Los Angeles, California"
+        },
+        {
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Washington",
+              "addressCountry": "United States",
+              "addressLocality": "Seattle"
+            }
+          },
+          "location": "Seattle, Washington"
+        },
+        {
+          "address": {
+            "postalAddress": {
+              "addressCountry": "United States"
+            }
+          },
+          "location": "San Francisco, California"
+        },
+        {
+          "address": {
+            "postalAddress": {
+              "addressRegion": "Oregon",
+              "addressCountry": "United States",
+              "addressLocality": "Portland"
+            }
+          },
+          "location": "Portland, Oregon"
+        }
+      ],
+      "shouldDisplayCompensationOnJobPostings": true
+    },
+    {
+      "id": "db498a8c-c8d8-405b-b86a-0943a5122e7d",
+      "team": "Cloud Engineering",
+      "title": "Senior Cloud Software Engineer - Efficiency Engineering",
+      "jobUrl": "https://jobs.ashbyhq.com/clickhouse/db498a8c-c8d8-405b-b86a-0943a5122e7d",
+      "address": null,
+      "applyUrl": "https://jobs.ashbyhq.com/clickhouse/db498a8c-c8d8-405b-b86a-0943a5122e7d/application",
+      "isListed": true,
+      "isRemote": null,
+      "location": "NAMER and LatAm",
+      "department": "Engineering",
+      "publishedAt": "2026-08-13T06:40:24.278+00:00",
+      "compensation": {
+        "compensationTiers": [],
+        "summaryComponents": [],
+        "compensationTierSummary": null,
+        "scrapeableCompensationSalarySummary": null
+      },
+      "workplaceType": null,
+      "employmentType": "FullTime",
+      "descriptionHtml": "<p style=\"min-height:1.5em\"><strong>About the Team</strong></p><p style=\"min-height:1.5em\">The Cloud Infrastructure Engi [trimmed]",
+      "descriptionPlain": "About the Team\n\nThe Cloud Infrastructure Engineering team builds and manages the foundational blocks of ClickHouse Cloud [trimmed]",
+      "secondaryLocations": [],
+      "shouldDisplayCompensationOnJobPostings": true
+    }
+  ]
+}

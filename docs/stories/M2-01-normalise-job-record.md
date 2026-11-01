@@ -1,6 +1,6 @@
 # M2-01: Normalise postings into the job record
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M2 — Rules and a plain tracker
 - **Linear:** [HAM-30](https://linear.app/hamid-corp/issue/HAM-30/m2-01-normalise-postings-into-the-job-record)
 - **Estimate:** 1 day

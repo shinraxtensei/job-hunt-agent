@@ -25,7 +25,7 @@ ON CONFLICT (source, source_posting_id) DO UPDATE SET
 	title           = EXCLUDED.title,
 	last_changed_at = CASE WHEN postings.content_hash = EXCLUDED.content_hash
 		THEN postings.last_changed_at ELSE now() END
-RETURNING (xmax = 0)::boolean AS inserted,
+RETURNING id, content_hash, (xmax = 0)::boolean AS inserted,
 	(xmax <> 0 AND (SELECT content_hash FROM old) IS DISTINCT FROM content_hash)::boolean AS changed
 `
 
@@ -39,8 +39,10 @@ type UpsertPostingParams struct {
 }
 
 type UpsertPostingRow struct {
-	Inserted bool
-	Changed  bool
+	ID          int64
+	ContentHash []byte
+	Inserted    bool
+	Changed     bool
 }
 
 // Stores one posting (ADR-0007). New: inserted with its hash. Already stored: the
@@ -59,6 +61,11 @@ func (q *Queries) UpsertPosting(ctx context.Context, arg UpsertPostingParams) (U
 		arg.RawPayload,
 	)
 	var i UpsertPostingRow
-	err := row.Scan(&i.Inserted, &i.Changed)
+	err := row.Scan(
+		&i.ID,
+		&i.ContentHash,
+		&i.Inserted,
+		&i.Changed,
+	)
 	return i, err
 }

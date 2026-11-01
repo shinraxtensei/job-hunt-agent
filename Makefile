@@ -71,10 +71,11 @@ migration: ## New goose migration: make migration name=<snake_case>
 	@f="$(MIGRATIONS_DIR)/$$(date -u +%Y%m%d%H%M%S)_$(name).sql"; \
 	printf -- '-- +goose Up\n' > "$$f" && echo "created $$f"
 
-fuzz: ## Fuzz the source parsers for 30s each (not part of check; CI runs the seeds)
+fuzz: ## Fuzz the source parsers and the normaliser for 30s each (not part of check; CI runs the seeds)
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/lever/
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/greenhouse/
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/ashby/
+	go test -run '^$$' -fuzz=FuzzNormalise -fuzztime=30s ./internal/job/
 
 vuln: ## Scan dependencies for known vulnerabilities
 	$(TOOL) govulncheck ./...

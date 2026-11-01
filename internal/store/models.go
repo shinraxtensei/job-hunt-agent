@@ -19,6 +19,7 @@ type CollectorRun struct {
 	PostingsNew        int32
 	PostingsSeen       int32
 	PostingsChanged    int32
+	JobsFailed         int32
 }
 
 type CollectorRunError struct {
@@ -36,6 +37,23 @@ type Company struct {
 	CreatedAt pgtype.Timestamptz
 	Track     pgtype.Text
 	Active    bool
+}
+
+type Job struct {
+	PostingID         int64
+	CompanyID         int64
+	Title             string
+	Url               string
+	Locations         []string
+	CountryCodes      []string
+	Workplace         string
+	Team              string
+	Department        string
+	EmploymentType    string
+	PublishedAt       pgtype.Timestamptz
+	NormaliserVersion int32
+	PostingHash       []byte
+	NormalisedAt      pgtype.Timestamptz
 }
 
 type Posting struct {

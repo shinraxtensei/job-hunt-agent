@@ -32,6 +32,7 @@ type RunResult struct {
 	RunID                                          int64
 	Outcome                                        string // ok, partial, failed or cancelled
 	Attempted, Failed, Skipped, New, Changed, Seen int    // Changed: payload differed; Seen: identical
+	JobsFailed                                     int    // stored but not normalised (ADR-0008)
 }
 
 // DB is what Run needs from the database: queries and transactions, concurrently
@@ -101,6 +102,7 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 			case err == nil:
 				res.New += r.New
 				res.Changed += r.Changed
+				res.JobsFailed += r.JobsFailed
 				res.Seen += r.Seen
 			case ctx.Err() != nil:
 				// Stopped by cancellation, not a board failure; the run is "cancelled".
@@ -128,7 +130,7 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 		return res, err
 	}
 	log.Info("run finished", "run_id", res.RunID, "outcome", res.Outcome, "attempted", res.Attempted,
-		"failed", res.Failed, "skipped", res.Skipped, "new", res.New, "changed", res.Changed, "seen", res.Seen)
+		"failed", res.Failed, "skipped", res.Skipped, "new", res.New, "changed", res.Changed, "seen", res.Seen, "jobs_failed", res.JobsFailed)
 	return res, nil
 }
 
@@ -192,12 +194,13 @@ func finish(ctx context.Context, db DB, res *RunResult, failures []failure) erro
 		return q.FinishRun(fctx, store.FinishRunParams{
 			ID:                 res.RunID,
 			Outcome:            pgtype.Text{String: res.Outcome, Valid: true},
-			CompaniesAttempted: int32(res.Attempted), //nolint:gosec // bounded by the company count
-			CompaniesFailed:    int32(res.Failed),    //nolint:gosec // as above
-			CompaniesSkipped:   int32(res.Skipped),   //nolint:gosec // as above
-			PostingsNew:        int32(res.New),       //nolint:gosec // postings per run, far below 2^31
-			PostingsSeen:       int32(res.Seen),      //nolint:gosec // as above
-			PostingsChanged:    int32(res.Changed),   //nolint:gosec // as above
+			CompaniesAttempted: int32(res.Attempted),  //nolint:gosec // bounded by the company count
+			CompaniesFailed:    int32(res.Failed),     //nolint:gosec // as above
+			CompaniesSkipped:   int32(res.Skipped),    //nolint:gosec // as above
+			PostingsNew:        int32(res.New),        //nolint:gosec // postings per run, far below 2^31
+			PostingsSeen:       int32(res.Seen),       //nolint:gosec // as above
+			PostingsChanged:    int32(res.Changed),    //nolint:gosec // as above
+			JobsFailed:         int32(res.JobsFailed), //nolint:gosec // as above
 		})
 	})
 	if err != nil {

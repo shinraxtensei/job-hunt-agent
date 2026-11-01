@@ -3,6 +3,7 @@
 //	collector run              every active, non-excluded company, concurrently
 //	collector once             one Lever board (COLLECTOR_LEVER_COMPANY)
 //	collector companies sync   data/companies.yaml into the companies table
+//	collector normalise        (re)build missing or stale job records (ADR-0008)
 //
 // Environment: DATABASE_URL (app role, required); COLLECTOR_CONCURRENCY (default 8);
 // COLLECTOR_HOST_INTERVAL (minimum gap per host, default and minimum 1s);
@@ -32,7 +33,10 @@ import (
 )
 
 const (
-	usage = "usage: collector run | collector once | collector companies sync"
+	usage = "usage: collector run | collector once | collector companies sync | collector normalise"
+
+	// normaliseBatch is how many postings `collector normalise` writes per transaction.
+	normaliseBatch = 500
 
 	// watchListPath is relative to the working directory: run from the repo root.
 	watchListPath = "data/companies.yaml"
@@ -97,6 +101,18 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 			return 1, err
 		}
 		return exitCode(res.Outcome), nil
+
+	case "normalise":
+		pool, err := pgxpool.New(ctx, dsn)
+		if err != nil {
+			return 1, fmt.Errorf("connecting to database: %w", err)
+		}
+		defer pool.Close()
+		// Failures are counted in the report; they don't fail the command.
+		if _, err := collector.NormaliseStored(ctx, pool, normaliseBatch, log); err != nil {
+			return 1, err
+		}
+		return 0, nil
 
 	case "once":
 		company := getenv("COLLECTOR_LEVER_COMPANY")

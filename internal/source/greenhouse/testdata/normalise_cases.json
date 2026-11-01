@@ -1,0 +1,197 @@
+{
+  "jobs": [
+    {
+      "id": 4463390009,
+      "title": "AI Developer Experience Engineer",
+      "content": "&lt;h2&gt;About the role&lt;/h2&gt;\n&lt;p&gt;More and more PlanetScale databases are created, connected and queried by A [trimmed]",
+      "offices": [
+        {
+          "id": 4006144009,
+          "name": "Remote - US",
+          "location": null,
+          "child_ids": [],
+          "parent_id": 4006143009
+        }
+      ],
+      "language": "en",
+      "location": {
+        "name": "Remote US "
+      },
+      "metadata": null,
+      "updated_at": "2026-10-21T18:57:46-04:00",
+      "departments": [
+        {
+          "id": 4013153009,
+          "name": "Marketing",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ],
+      "absolute_url": "https://job-boards.greenhouse.io/planetscale/jobs/4463390009",
+      "company_name": "PlanetScale",
+      "ai_disclaimer": null,
+      "requisition_id": "37",
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "retention_period": null,
+          "requires_retention_consent": false,
+          "requires_processing_consent": false,
+          "demographic_data_consent_applies": false
+        }
+      ],
+      "first_published": "2026-10-21T18:57:46-04:00",
+      "internal_job_id": 4282908009,
+      "application_deadline": null,
+      "include_ai_disclaimer": null,
+      "ai_opt_out_request_url": "http://app9.greenhouse.io/ai_opt_out_request/job_post/4463390009/ai_opt_out"
+    },
+    {
+      "id": 5999792004,
+      "title": "Account Executive, Majors",
+      "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;h2&gt;About Vercel:&lt;/h2&gt;\n&lt;p&gt;&lt;span data-sheets-root=&quot;1 [trimmed]",
+      "offices": [
+        {
+          "id": 4091069004,
+          "name": "Office - London",
+          "location": "London, England, United Kingdom",
+          "child_ids": [],
+          "parent_id": 4014161004
+        }
+      ],
+      "language": "en",
+      "location": {
+        "name": "Hybrid - London"
+      },
+      "metadata": [
+        {
+          "id": 18783104004,
+          "name": "Career Site Categories",
+          "value": "Sales",
+          "value_type": "single_select"
+        }
+      ],
+      "updated_at": "2026-10-30T14:45:41-04:00",
+      "departments": [
+        {
+          "id": 4085775004,
+          "name": "Account Executive",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ],
+      "absolute_url": "https://job-boards.greenhouse.io/vercel/jobs/5999792004",
+      "company_name": "Vercel",
+      "ai_disclaimer": null,
+      "requisition_id": "1240",
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "retention_period": null,
+          "requires_retention_consent": false,
+          "requires_processing_consent": false,
+          "demographic_data_consent_applies": true
+        }
+      ],
+      "first_published": "2026-05-21T09:26:09-04:00",
+      "internal_job_id": 5156316004,
+      "application_deadline": null,
+      "include_ai_disclaimer": null,
+      "ai_opt_out_request_url": "http://app4.greenhouse.io/ai_opt_out_request/job_post/5999792004/ai_opt_out"
+    },
+    {
+      "id": 5010674101,
+      "title": "E&S and OHS Manager - Group - Jumia ( Fulltime)",
+      "content": "&lt;div class=&quot;content-intro&quot;&gt;&lt;p&gt;&lt;strong&gt;About Jumia&lt;/strong&gt;:&lt;/p&gt;\n&lt;p&gt;Jumia&a [trimmed]",
+      "offices": [
+        {
+          "id": 4001562101,
+          "name": "Ghana",
+          "location": null,
+          "child_ids": [],
+          "parent_id": 4001554101
+        },
+        {
+          "id": 4001563101,
+          "name": "Ivory Coast",
+          "location": null,
+          "child_ids": [],
+          "parent_id": 4001554101
+        },
+        {
+          "id": 4001564101,
+          "name": "Kenya",
+          "location": null,
+          "child_ids": [],
+          "parent_id": 4001554101
+        },
+        {
+          "id": 4001566101,
+          "name": "Nigeria",
+          "location": null,
+          "child_ids": [],
+          "parent_id": 4001554101
+        }
+      ],
+      "language": "en",
+      "location": {
+        "name": "Africa"
+      },
+      "metadata": [
+        {
+          "id": 4016169101,
+          "name": "Employment Type",
+          "value": "Full-time",
+          "value_type": "single_select"
+        },
+        {
+          "id": 4026217101,
+          "name": "Seniority",
+          "value": "Manager",
+          "value_type": "single_select"
+        }
+      ],
+      "updated_at": "2026-10-21T07:02:44-04:00",
+      "departments": [
+        {
+          "id": 4005265101,
+          "name": "Supply Chain",
+          "child_ids": [
+            4005267101,
+            4005285101,
+            4005277101,
+            4005268101,
+            4029308101,
+            4029309101,
+            4029310101
+          ],
+          "parent_id": null
+        }
+      ],
+      "absolute_url": "https://job-boards.eu.greenhouse.io/jumia/jobs/5010674101",
+      "company_name": "Jumia",
+      "ai_disclaimer": null,
+      "requisition_id": "4402",
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "retention_period": null,
+          "requires_retention_consent": false,
+          "requires_processing_consent": false,
+          "demographic_data_consent_applies": false
+        }
+      ],
+      "first_published": "2026-10-21T07:02:44-04:00",
+      "internal_job_id": 4539491101,
+      "application_deadline": null,
+      "include_ai_disclaimer": null,
+      "ai_opt_out_request_url": null
+    }
+  ],
+  "meta": {
+    "total": 3
+  }
+}

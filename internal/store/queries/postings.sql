@@ -20,5 +20,5 @@ ON CONFLICT (source, source_posting_id) DO UPDATE SET
 	title           = EXCLUDED.title,
 	last_changed_at = CASE WHEN postings.content_hash = EXCLUDED.content_hash
 		THEN postings.last_changed_at ELSE now() END
-RETURNING (xmax = 0)::boolean AS inserted,
+RETURNING id, content_hash, (xmax = 0)::boolean AS inserted,
 	(xmax <> 0 AND (SELECT content_hash FROM old) IS DISTINCT FROM content_hash)::boolean AS changed;

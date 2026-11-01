@@ -31,8 +31,9 @@ UPDATE collector_runs
 SET ended_at = now(), outcome = $1,
 	companies_attempted = $2, companies_failed = $3,
 	companies_skipped = $4,
-	postings_new = $5, postings_seen = $6, postings_changed = $7
-WHERE id = $8
+	postings_new = $5, postings_seen = $6, postings_changed = $7,
+	jobs_failed = $8
+WHERE id = $9
 `
 
 type FinishRunParams struct {
@@ -43,6 +44,7 @@ type FinishRunParams struct {
 	PostingsNew        int32
 	PostingsSeen       int32
 	PostingsChanged    int32
+	JobsFailed         int32
 	ID                 int64
 }
 
@@ -55,6 +57,7 @@ func (q *Queries) FinishRun(ctx context.Context, arg FinishRunParams) error {
 		arg.PostingsNew,
 		arg.PostingsSeen,
 		arg.PostingsChanged,
+		arg.JobsFailed,
 		arg.ID,
 	)
 	return err

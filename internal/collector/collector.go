@@ -32,8 +32,9 @@ type beginner interface {
 	Begin(context.Context) (pgx.Tx, error)
 }
 
-// Result counts what one company's collection saw.
-type Result struct{ Fetched, New, Changed, Seen, Skipped int }
+// Result counts what one company's collection saw. JobsFailed counts new or changed
+// postings that were stored but could not be normalised (ADR-0008).
+type Result struct{ Fetched, New, Changed, Seen, Skipped, JobsFailed int }
 
 // Once fetches one board by slug and stores every posting in one transaction, creating
 // the company row if needed (with no track: it is not on the watch list). A failure at
@@ -83,6 +84,16 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 				newIDs = append(newIDs, r.SourceID)
 			case r2.Changed:
 				res.Changed++
+			default:
+				continue // unchanged: its job record is current, leave it alone
+			}
+			// New or changed: (re)write its job record in this same transaction.
+			ok, err := writeJob(ctx, q, r2.ID, co, r.Source, r.Payload, r2.ContentHash, log)
+			if err != nil {
+				return err
+			}
+			if !ok {
+				res.JobsFailed++
 			}
 		}
 		return nil
@@ -98,7 +109,8 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 	res.New = len(newIDs)
 	res.Seen = res.Fetched - res.New - res.Changed
 	log.Info("collect finished", "source", src.Name(), "company", slug,
-		"fetched", res.Fetched, "new", res.New, "changed", res.Changed, "seen", res.Seen, "skipped", res.Skipped)
+		"fetched", res.Fetched, "new", res.New, "changed", res.Changed, "seen", res.Seen, "skipped", res.Skipped,
+		"jobs_failed", res.JobsFailed)
 	return res, nil
 }
 

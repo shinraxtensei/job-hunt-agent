@@ -125,6 +125,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0005 | Companies table: track, active, one row per board, YAML watch list | Accepted |
 | 0006 | Record collector runs in Postgres from M1-02; goleak in tests | Accepted |
 | 0007 | Track posting changes with a content hash; keep the latest payload | Accepted |
+| 0008 | A `jobs` table, 1:1 with `postings`, holds the normalised job record | Accepted |
 
 ## Project skills
 
