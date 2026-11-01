@@ -1,5 +1,10 @@
 version: "2"
 
+run:
+  # Lint the integration tests too (they are excluded from plain builds).
+  build-tags:
+    - integration
+
 linters:
   # standard = errcheck, govet, ineffassign, staticcheck, unused.
   default: standard

@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -28,7 +29,7 @@ func TestMakeHelpListsEveryCommand(t *testing.T) {
 	}
 	for _, target := range []string{
 		"check", "test-go", "test-integration", "test-py", "evals",
-		"lint", "sqlc", "migration", "vuln", "up", "down", "help",
+		"lint", "sqlc", "sqlc-check", "migration", "vuln", "up", "down", "help",
 	} {
 		if !strings.Contains(string(out), target) {
 			t.Errorf("make help does not list target %q\n%s", target, out)
@@ -38,7 +39,7 @@ func TestMakeHelpListsEveryCommand(t *testing.T) {
 
 // AC4: targets that are not built yet say so and exit 1, instead of failing silently.
 func TestUnimplementedTargetsExitNonZero(t *testing.T) {
-	for _, target := range []string{"test-integration", "test-py", "evals", "sqlc", "migration", "up", "down"} {
+	for _, target := range []string{"test-py", "evals"} {
 		t.Run(target, func(t *testing.T) {
 			out, err := exec.Command("make", "-C", repoRoot(t), target).CombinedOutput()
 			if err == nil {
@@ -108,5 +109,42 @@ func TestLintCatchesUncheckedError(t *testing.T) {
 	named := strings.Contains(string(out), "errcheck") || strings.Contains(string(out), "G104")
 	if !strings.Contains(string(out), "bad.go") || !named {
 		t.Errorf("golangci-lint output does not name the file and the rule\n%s", out)
+	}
+}
+
+// M0-03 AC4: `make migration name=add_x` creates one timestamped goose SQL file.
+func TestMakeMigrationCreatesTimestampedFile(t *testing.T) {
+	dir := t.TempDir()
+	out, err := exec.Command("make", "-C", repoRoot(t), "migration", "name=add_x", "MIGRATIONS_DIR="+dir).CombinedOutput()
+	if err != nil {
+		t.Fatalf("make migration: %v\n%s", err, out)
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", dir, err)
+	}
+	if len(entries) != 1 || !regexp.MustCompile(`^\d{14}_add_x\.sql$`).MatchString(entries[0].Name()) {
+		t.Fatalf("want one file named <YYYYMMDDHHMMSS>_add_x.sql, got %v", entries)
+	}
+	body, err := os.ReadFile(filepath.Join(dir, entries[0].Name()))
+	if err != nil {
+		t.Fatalf("reading migration: %v", err)
+	}
+	if !strings.Contains(string(body), "-- +goose Up") {
+		t.Errorf("migration has no goose Up annotation:\n%s", body)
+	}
+}
+
+// M0-03 AC4: a missing or non-snake_case name is rejected and creates nothing.
+func TestMakeMigrationRejectsBadName(t *testing.T) {
+	for _, name := range []string{"", "Add-X", "../x"} {
+		dir := t.TempDir()
+		out, err := exec.Command("make", "-C", repoRoot(t), "migration", "name="+name, "MIGRATIONS_DIR="+dir).CombinedOutput()
+		if err == nil {
+			t.Errorf("make migration name=%q exited 0\n%s", name, out)
+		}
+		if entries, _ := os.ReadDir(dir); len(entries) != 0 {
+			t.Errorf("make migration name=%q created %v", name, entries)
+		}
 	}
 }

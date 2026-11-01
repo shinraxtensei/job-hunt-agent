@@ -1,0 +1,28 @@
+name: jobhunt
+
+services:
+  postgres:
+    # Major version tag for readability; the digest is what is actually pulled.
+    image: postgres:18@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jobhunt
+      # Bootstrap superuser: used only by the init script and for admin by hand.
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      JOBHUNT_OWNER_PASSWORD: ${JOBHUNT_OWNER_PASSWORD:?set in .env}
+      JOBHUNT_APP_PASSWORD: ${JOBHUNT_APP_PASSWORD:?set in .env}
+    ports:
+      - "127.0.0.1:5432:5432" # loopback only
+    volumes:
+      # Postgres 18+ images keep data under /var/lib/postgresql/<major>/docker.
+      - pgdata:/var/lib/postgresql
+      - ./postgres/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d jobhunt"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  pgdata:

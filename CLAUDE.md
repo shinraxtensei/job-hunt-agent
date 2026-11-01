@@ -57,14 +57,15 @@ testdata/            golden files (recorded board responses, sample postings)
 
 | Task | Command |
 |---|---|
-| Everything CI runs | `make check` |
+| Everything CI runs (needs Docker: includes integration tests) | `make check` |
 | Go tests (always with race detector) | `make test-go` → `go test -race ./...` |
-| Go integration tests (testcontainers) | `make test-integration` |
+| All Go tests + integration tests (testcontainers) | `make test-integration` → `go test -race -tags integration ./...` |
 | Python tests | `make test-py` → `uv run pytest` |
 | Agent evals | `make evals` |
 | Lint | `make lint` → golangci-lint, ruff, pyright |
 | Format Go / check formatting | `make fmt` / `make fmt-check` |
 | Regenerate sqlc | `make sqlc` |
+| Check committed sqlc code is current (part of `make check`) | `make sqlc-check` |
 | New migration | `make migration name=<snake_case>` |
 | Vulnerability scan | `make vuln` → govulncheck |
 | Local stack | `make up` / `make down` |
@@ -97,7 +98,8 @@ Never run `python` or `pytest` directly — always through `uv run`.
 - Domain logic: table-driven tests. Target ~80% coverage on `internal/job` and agent logic.
 - Adapters: golden files in `testdata/`, served by `httptest`. CI never hits live sites.
 - Parsers: fuzz tests.
-- Store/queue: real Postgres via testcontainers-go. Do not mock SQL.
+- Store/queue: real Postgres via testcontainers-go. Do not mock SQL. Integration test files
+  start with `//go:build integration` and use the image pinned in `deploy/compose.yaml`.
 - Agents: changes to prompts or models must not lower eval scores (`make evals`).
 
 ## Definition of Done
@@ -115,6 +117,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0001 | Use PostgreSQL as the work queue instead of Redis | Proposed |
 | 0002 | No built-in auth; restrict access with Tailscale | Proposed |
 | 0003 | Call the model provider SDK directly, no LangChain | Proposed |
+| 0004 | Use pgx, sqlc and goose for database access | Accepted |
 
 ## Project skills
 
