@@ -38,18 +38,21 @@ M0-05 (server and deploy) moved to **D: Deploy**, after M2.
 
 ## M1: Collector
 
-**Goal:** postings from a 50-company watch list on the four big ATS boards are collected
-daily, stored raw, and never lost.
+**Goal:** postings from a 50-company watch list on Lever, Greenhouse and Ashby are
+collected daily, stored raw, and never lost.
 
 **Exit criteria**
 - 50 watch-list companies in the database, loaded from a reviewed seed file.
-- Lever, Greenhouse, Ashby and Workable adapters pass golden, error and fuzz tests.
+- Lever, Greenhouse and Ashby adapters pass golden, error and fuzz tests.
 - One `collector run` collects all companies concurrently with per-host rate limits;
   failures for one company don't stop the others. Run by hand, locally.
 
 **Stories:** M1-01 Watch list seed and companies sync · M1-02 Concurrent collector run ·
 M1-03 Lever adapter, complete · M1-04 Greenhouse adapter · M1-05 Ashby adapter ·
-M1-06 Workable adapter · M1-07 Idempotent posting upsert
+M1-07 Idempotent posting upsert
+
+M1-06 (Workable adapter) moved to the **M7** backlog: no active watch-list company posts
+on Workable (see the change log).
 
 M1-08 (daily schedule and monitoring) and M1-09 (backups) moved to **D: Deploy**: both
 only make sense on an always-on server.
@@ -153,7 +156,12 @@ contacts · M6-04 Follow-up reminders · M6-05 Skip reasons
 - Adapters for at least two remote boards and one Moroccan board whose terms allow it.
 
 **Stories:** M7-01 Choose digest channel (ADR) · M7-02 Morning digest · M7-03 Remote
-board adapters · M7-04 Moroccan board adapter
+board adapters · M7-04 Moroccan board adapter · M1-06 Workable adapter (moved from M1)
+
+**M1-06 Workable adapter (backlog).** Pull it in when a company we want posts on Workable.
+Its first task is still open: find a public endpoint that actually lists jobs (the widget
+endpoint returned 0 jobs for every account in M1-01, Vinted included; see the story).
+The Workable accounts in the backlog below are its candidates.
 
 **First new adapter: Moroccan companies.** M1-01 found only one Moroccan company (Jumia)
 on Lever, Greenhouse or Ashby; Moroccan employers mostly post elsewhere. Before building,
@@ -192,3 +200,4 @@ M8-03 Public README and architecture write-up · M8-04 Threat model review
 |---|---|---|
 | 2026-11-01 | Roadmap created from the PRD; added M0 walking skeleton; Redis removed (ADR-0001) | Initial plan |
 | 2026-11-01 | Local first: M0-05, M1-08 and M1-09 moved to a new milestone **D: Deploy** after M2. M0 and M1 now end with everything working locally. | Hetzner's budget VPS line is sold out; the owner prefers to see the whole pipeline working locally before paying for a server. Deploying after M2 means deploying something already usable. |
+| 2026-11-01 | M1-06 Workable adapter moved from M1 to the M7 backlog; M1 now covers Lever, Greenhouse and Ashby. | No active watch-list company uses Workable: the only Workable entry is Yassir, which is excluded and never collected. The public endpoint also listed 0 jobs for every account tried (M1-01), so the adapter's first task is unsolved. All 50 active companies are collected without it. |

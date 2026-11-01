@@ -1,7 +1,7 @@
 # M1-06: Workable adapter
 
-- **Status:** Ready
-- **Milestone:** M1 — Collector
+- **Status:** Backlog
+- **Milestone:** M7 — Digest and more sources (moved from M1 on 2026-11-01; see the roadmap change log)
 - **Linear:** [HAM-25](https://linear.app/hamid-corp/issue/HAM-25/m1-06-workable-adapter)
 - **Estimate:** ½ day
 
