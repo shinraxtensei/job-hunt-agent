@@ -42,8 +42,12 @@ multiple users, billing, public sign-up; a mobile app (the web UI must work on a
 
 ## Scoring
 
-Hard rules: company not excluded; location acceptable (remote from Morocco, accepted city,
-or relocation offered); posting open; required experience ≤ 2 years above the owner's.
+Filters, not hard rules (changed 2026-11-01, see roadmap M2-03): every job is classified
+(role family, seniority, location and remote scope, explicit experience minimum, open or
+closed) and filter presets decide what is shown. The owner's profile is the default
+preset: target engineering roles, junior to senior, remote from Morocco or an accepted
+city, or relocation offered, open, explicit experience minimum under 6 years. Nothing is
+deleted; hidden jobs and the filter that hid them stay viewable.
 
 | Factor | Weight |
 |---|---|

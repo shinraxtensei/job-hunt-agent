@@ -59,19 +59,27 @@ only make sense on an always-on server.
 
 ## M2: Rules and a plain tracker (usable from here)
 
-**Goal:** the owner opens one page each morning and sees today's new, relevant leads.
+**Goal:** the owner opens one page each morning and sees today's new leads that fit his
+profile, and can widen any filter with one click.
 
 **Exit criteria**
 - Every posting is normalised into the common job record.
-- The same role seen twice (or on two sources) appears once.
-- Hard rules drop excluded companies, wrong locations, closed postings and roles more
-  than 2 years above the owner's experience, each with a recorded reason.
-- A read-only web table lists new leads, newest first, filterable by company and status.
-- Closed postings are detected by a liveness recheck every 2 days.
+- The same role seen twice appears once.
+- Every job is classified: role family, seniority, workplace and remote scope, location,
+  explicit experience minimum, closed. Nothing is deleted or marked dropped.
+- Filter presets in `data/presets/` decide what is shown; `default.yaml` holds the
+  owner's profile. The hidden jobs, and which filter hid each one, are always viewable.
+- A posting missing from a successful full-board fetch is marked closed; manually added
+  board postings are rechecked every 2 days.
+- A read-only web page lists jobs newest first, with the default preset applied and
+  every facet filterable, usable on a phone.
 
-**Stories:** M2-01 Normalise to the job record · M2-02 Deduplication · M2-03 Hard-rule
-filter with reasons · M2-04 Liveness recheck · M2-05 Leads API (Go) · M2-06 Plain
-tracker table (TypeScript) · M2-07 Manual add by link
+**Stories:** M2-01 Normalise to the job record · M2-02 Deduplication · M2-03 Classify
+jobs and filter with presets · M2-04 Closed-posting detection · M2-05 Leads API (Go) ·
+M2-06 Plain tracker table (TypeScript) · M2-07 Manual add by link
+
+Order: M2-01 → M2-02 → M2-03 (uses M2-04's `closed` facet, can start before it) →
+M2-05 → M2-06. M2-04 and M2-07 can go any time after M2-01.
 
 ## D: Deploy (after M2)
 
@@ -85,6 +93,25 @@ collects every morning on its own, and its data is backed up.
 
 **Stories:** M0-05 Server, Tailscale and deploy · M1-08 Daily schedule and run monitoring ·
 M1-09 Nightly backup and tested restore (story IDs kept from their original milestones)
+
+## S: Sharing with friends (after D, not scheduled)
+
+**Goal:** a few friends, possibly in other fields (sales, marketing...), use the tracker
+with their own filters, without seeing anything private of the owner's.
+
+**Before anything is shared:**
+- **Access:** ADR-0002 (no auth, Tailscale only) must be revisited. The cheapest option
+  is sharing the server's Tailscale node with each friend (no auth code); the
+  alternative is real accounts. Decide in a new ADR.
+- **Privacy boundary:** collected jobs and facets are shared data; the owner's CV,
+  evidence bank, scores, tailored documents and applications are never visible to
+  anyone else. Needs a threat-model update.
+- **Per-user presets:** a friend's filters are theirs (saved per user, not in the repo).
+- **Coverage:** the watch list is chosen for the owner's targets; friends in other fields
+  may want more companies. Collection stays one shared watch list.
+- Scoring, tailoring and documents (M3–M5) stay owner-only.
+
+**Stories:** written when this milestone is scheduled.
 
 ## M3: Extraction and scoring
 
@@ -201,3 +228,5 @@ M8-03 Public README and architecture write-up · M8-04 Threat model review
 | 2026-11-01 | Roadmap created from the PRD; added M0 walking skeleton; Redis removed (ADR-0001) | Initial plan |
 | 2026-11-01 | Local first: M0-05, M1-08 and M1-09 moved to a new milestone **D: Deploy** after M2. M0 and M1 now end with everything working locally. | Hetzner's budget VPS line is sold out; the owner prefers to see the whole pipeline working locally before paying for a server. Deploying after M2 means deploying something already usable. |
 | 2026-11-01 | M1-06 Workable adapter moved from M1 to the M7 backlog; M1 now covers Lever, Greenhouse and Ashby. | No active watch-list company uses Workable: the only Workable entry is Yassir, which is excluded and never collected. The public endpoint also listed 0 jobs for every account tried (M1-01), so the adapter's first task is unsolved. All 50 active companies are collected without it. |
+| 2026-11-01 | M2 stories written. Liveness: closure is detected from full-board fetches; only manually added postings get the 2-day recheck. | The collector already fetches whole boards, so a per-posting recheck would only duplicate requests. |
+| 2026-11-01 | M2-03: hard rules that drop postings replaced by classification plus filter presets; the owner's profile is the `default` preset. New milestone **S: Sharing with friends**, unscheduled, after D. | The owner wants to widen filters at will (seniority included) and to share the tracker with friends in other fields, who need the same data with different filters. Dropping would lose exactly the jobs they want. Sharing changes the trust boundary (ADR-0002), so it gets its own milestone. |
