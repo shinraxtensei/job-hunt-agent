@@ -21,3 +21,5 @@ Week 0: walking skeleton.
   the watch list, ≥1s between requests, up to 3 attempts with backoff (M1-03).
 - **Greenhouse**: public Job Board API (`boards-api.greenhouse.io/v1/boards/<token>/jobs`),
   descriptions included, same politeness (M1-04).
+- **Ashby**: public job posting API (`api.ashbyhq.com/posting-api/job-board/<board>`),
+  listed jobs only, descriptions and compensation included, same politeness (M1-05).

@@ -74,6 +74,7 @@ migration: ## New goose migration: make migration name=<snake_case>
 fuzz: ## Fuzz the source parsers for 30s each (not part of check; CI runs the seeds)
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/lever/
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/greenhouse/
+	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/ashby/
 
 vuln: ## Scan dependencies for known vulnerabilities
 	$(TOOL) govulncheck ./...

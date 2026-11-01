@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/shinraxtensei/job-hunter/internal/collector"
+	"github.com/shinraxtensei/job-hunter/internal/source/ashby"
 	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
 	"github.com/shinraxtensei/job-hunter/internal/source/lever"
 	"github.com/shinraxtensei/job-hunter/internal/watchlist"
@@ -89,6 +90,7 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 		reg := collector.Registry{
 			"lever":      lever.New(leverURL),
 			"greenhouse": greenhouse.New(greenhouse.BaseURL),
+			"ashby":      ashby.New(ashby.BaseURL),
 		}
 		res, err := collector.Run(ctx, pool, reg, cfg, log)
 		if err != nil {

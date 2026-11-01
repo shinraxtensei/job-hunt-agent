@@ -1,7 +1,6 @@
 package greenhouse_test
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -18,12 +17,10 @@ import (
 	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
 )
 
-// client is a Greenhouse client with a 1ms retry backoff, so retry tests stay fast.
-func client(baseURL string) *greenhouse.Client {
-	c := greenhouse.New(baseURL)
-	c.Backoff = time.Millisecond
-	return c
-}
+// These tests cover Greenhouse's URL, parsing and golden files. Retries, Retry-After,
+// the limiter and cancellation live in fetch.Client and are tested there.
+
+func client(baseURL string) *greenhouse.Client { return greenhouse.New(baseURL) }
 
 // noLimit is a limiter that never waits.
 func noLimit() *rate.Limiter { return rate.NewLimiter(rate.Inf, 1) }
@@ -137,9 +134,6 @@ func TestNameAndHost(t *testing.T) {
 	if c.Name() != "greenhouse" || c.Host() != "boards-api.greenhouse.io" {
 		t.Errorf("Name, Host = %q, %q; want greenhouse, boards-api.greenhouse.io", c.Name(), c.Host())
 	}
-	if c.HTTP.Timeout <= 0 || c.HTTP.Timeout > time.Minute {
-		t.Errorf("timeout = %v, want a bounded timeout", c.HTTP.Timeout)
-	}
 }
 
 // AC3: empty board → empty slice, not an error.
@@ -186,69 +180,15 @@ func TestFetchRejectsResponseWithoutJobs(t *testing.T) {
 	}
 }
 
-// AC3: 404 → error naming the company, not retried; 500 → retried, at most 3 attempts.
-// Neither leaks the body.
-func TestFetchHTTPErrors(t *testing.T) {
-	for status, attempts := range map[int]int{http.StatusNotFound: 1, http.StatusInternalServerError: 3} {
-		srv, reqs, _ := server(t, nil, []int{status}, nil)
-		_, _, err := client(srv.URL).Fetch(t.Context(), "acme", noLimit())
-		if err == nil || !strings.Contains(err.Error(), "acme") || !strings.Contains(err.Error(), http.StatusText(status)) {
-			t.Errorf("%d: error = %v, want one naming acme and the status", status, err)
-		}
-		if err != nil && strings.Contains(err.Error(), "secret upstream detail") {
-			t.Errorf("%d: error leaks the response body", status)
-		}
-		if n := len(reqs()); n != attempts {
-			t.Errorf("%d: made %d requests, want %d", status, n, attempts)
-		}
+// AC3: a 404 is an error naming the board (the adapter's wrapping), without the body.
+func TestFetchErrorNamesCompany(t *testing.T) {
+	srv, _, _ := server(t, nil, []int{http.StatusNotFound}, nil)
+	_, _, err := client(srv.URL).Fetch(t.Context(), "acme", noLimit())
+	if err == nil || !strings.Contains(err.Error(), "greenhouse") || !strings.Contains(err.Error(), "acme") ||
+		!strings.Contains(err.Error(), "404") {
+		t.Fatalf("error = %v, want one naming greenhouse, acme and 404", err)
 	}
-}
-
-// AC3: a 429 with Retry-After is retried after that delay.
-func TestFetchHonoursRetryAfter(t *testing.T) {
-	srv, _, times := server(t, fixture(t, "cockroachlabs_jobs.json"), []int{429, 200}, http.Header{"Retry-After": {"1"}})
-	got, _, err := client(srv.URL).Fetch(t.Context(), "cockroachlabs", noLimit())
-	if err != nil {
-		t.Fatalf("Fetch: %v", err)
-	}
-	ts := times()
-	if len(ts) != 2 || len(got) != 2 {
-		t.Fatalf("got %d records after %d requests, want 2 after 2", len(got), len(ts))
-	}
-	if gap := ts[1].Sub(ts[0]); gap < time.Second {
-		t.Errorf("retried %v after a 429 with Retry-After: 1, want >= 1s", gap)
-	}
-}
-
-// Every attempt waits on the host's limiter; with a 1ms backoff only the limiter can
-// space requests 200ms apart.
-func TestFetchWaitsOnLimiterForEveryAttempt(t *testing.T) {
-	srv, _, times := server(t, fixture(t, "empty.json"), []int{500, 500, 200}, nil)
-	const every = 200 * time.Millisecond
-	if _, _, err := client(srv.URL).Fetch(t.Context(), "cockroachlabs", rate.NewLimiter(rate.Every(every), 1)); err != nil {
-		t.Fatalf("Fetch: %v", err)
-	}
-	ts := times()
-	for i := 1; i < len(ts); i++ {
-		if gap := ts[i].Sub(ts[i-1]); gap < every-10*time.Millisecond {
-			t.Errorf("attempts %d and %d were %v apart, want >= %v", i-1, i, gap, every)
-		}
-	}
-}
-
-// AC3: a cancelled context stops the fetch promptly.
-func TestFetchStopsOnCancelledContext(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-		<-r.Context().Done() // hang until the client gives up
-	}))
-	defer srv.Close()
-	ctx, cancel := context.WithCancel(t.Context())
-	go func() { time.Sleep(50 * time.Millisecond); cancel() }()
-	start := time.Now()
-	if _, _, err := client(srv.URL).Fetch(ctx, "cockroachlabs", noLimit()); err == nil {
-		t.Fatal("Fetch returned no error after cancellation")
-	}
-	if d := time.Since(start); d > time.Second {
-		t.Errorf("Fetch took %v after cancellation, want prompt", d)
+	if strings.Contains(err.Error(), "secret upstream detail") {
+		t.Errorf("error leaks the response body: %v", err)
 	}
 }
