@@ -10,8 +10,10 @@ import (
 	"fmt"
 	"io"
 	"math/rand/v2"
+	"net"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -37,11 +39,29 @@ type Client struct {
 	HTTP *http.Client
 	// Backoff is the first retry delay; each retry doubles it, plus up to 50% jitter.
 	Backoff time.Duration
+	// Stall is the longest gap allowed between bytes of a response body; a body that
+	// stops arriving fails then and is retried. A slow but steady body is fine (M1-10).
+	Stall time.Duration
+	// Ceiling bounds one attempt from request to last byte, so a pathological trickle
+	// still ends. Reaching it is not retried.
+	Ceiling time.Duration
 }
 
-// New returns a client with a 30s timeout and a 1s first retry delay.
+// New returns a client that fails fast on a dead server (10s to connect, 10s for TLS,
+// 20s for response headers) but lets a slow body finish: no total timeout, a 30s stall
+// timeout and a 10-minute ceiling per attempt. The largest Lever board (~3.3 MB) needed
+// ~290s at the 11.5 KB/s Lever sent on 2026-11-01. First retry delay: 1s.
 func New() *Client {
-	return &Client{HTTP: &http.Client{Timeout: 30 * time.Second}, Backoff: time.Second}
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.DialContext = (&net.Dialer{Timeout: 10 * time.Second, KeepAlive: 30 * time.Second}).DialContext
+	tr.TLSHandshakeTimeout = 10 * time.Second
+	tr.ResponseHeaderTimeout = 20 * time.Second
+	return &Client{
+		HTTP:    &http.Client{Transport: tr}, // no Timeout: it would cap the whole body
+		Backoff: time.Second,
+		Stall:   30 * time.Second,
+		Ceiling: 10 * time.Minute,
+	}
 }
 
 // Get returns the body of a 200 response to u.
@@ -82,9 +102,14 @@ func (c *Client) Get(ctx context.Context, u string, limit *rate.Limiter) ([]byte
 type permanent struct{ error }
 
 // get makes one request. It returns the body on 200; otherwise an error, and for 429
-// or 5xx the server's Retry-After, if any.
+// or 5xx the server's Retry-After, if any. The attempt ends at the ceiling, or when the
+// body stops arriving for Stall.
 func (c *Client) get(ctx context.Context, u string) ([]byte, time.Duration, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	attempt, cancel := context.WithTimeout(ctx, c.Ceiling)
+	defer cancel()
+	var stalled atomic.Bool
+
+	req, err := http.NewRequestWithContext(attempt, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, 0, permanent{err}
 	}
@@ -93,7 +118,7 @@ func (c *Client) get(ctx context.Context, u string) ([]byte, time.Duration, erro
 
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
-		return nil, 0, err // timeouts and network errors: retryable
+		return nil, 0, c.classify(ctx, attempt, &stalled, err) // dial/TLS/header timeouts: retryable
 	}
 	defer func() { _ = resp.Body.Close() }() // read-only body; a close error loses nothing
 
@@ -105,14 +130,48 @@ func (c *Client) get(ctx context.Context, u string) ([]byte, time.Duration, erro
 	default:
 		return nil, 0, permanent{fmt.Errorf("unexpected status %s", resp.Status)}
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBody+1))
+	// The stall timer restarts on every read that returns bytes; if it fires, it cancels
+	// the attempt, which aborts the read.
+	timer := time.AfterFunc(c.Stall, func() { stalled.Store(true); cancel() })
+	defer timer.Stop()
+	body, err := io.ReadAll(&progress{r: io.LimitReader(resp.Body, maxBody+1), timer: timer, stall: c.Stall})
 	if err != nil {
-		return nil, 0, fmt.Errorf("reading body: %w", err)
+		return nil, 0, fmt.Errorf("reading body: %w", c.classify(ctx, attempt, &stalled, err))
 	}
 	if len(body) > maxBody {
 		return nil, 0, permanent{fmt.Errorf("response larger than %d bytes", maxBody)}
 	}
 	return body, 0, nil
+}
+
+// classify names why an attempt ended early: the caller cancelled (returned as is), the
+// body stalled (retryable), or the attempt reached the ceiling (permanent).
+func (c *Client) classify(parent, attempt context.Context, stalled *atomic.Bool, err error) error {
+	switch {
+	case parent.Err() != nil:
+		return err
+	case stalled.Load():
+		return fmt.Errorf("stalled: no data for %v", c.Stall)
+	case errors.Is(attempt.Err(), context.DeadlineExceeded):
+		return permanent{fmt.Errorf("reached the %v ceiling for one request", c.Ceiling)}
+	default:
+		return err
+	}
+}
+
+// progress restarts the stall timer whenever a read returns bytes.
+type progress struct {
+	r     io.Reader
+	timer *time.Timer
+	stall time.Duration
+}
+
+func (p *progress) Read(b []byte) (int, error) {
+	n, err := p.r.Read(b)
+	if n > 0 {
+		p.timer.Reset(p.stall)
+	}
+	return n, err
 }
 
 // backoff is the delay before retry number attempt: Backoff * 2^(attempt-1), plus up to

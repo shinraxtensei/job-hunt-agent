@@ -74,9 +74,161 @@ func TestGetReturnsBodyAndIdentifiesUs(t *testing.T) {
 	}
 }
 
-func TestNewHasBoundedTimeout(t *testing.T) {
-	if d := fetch.New().HTTP.Timeout; d <= 0 || d > time.Minute {
-		t.Errorf("timeout = %v, want a bounded timeout", d)
+// M1-10: no cap on the whole transfer; instead fast connect/TLS/header timeouts, a stall
+// timeout for the body, and a generous per-attempt ceiling.
+func TestNewTimeouts(t *testing.T) {
+	c := fetch.New()
+	if c.HTTP.Timeout != 0 {
+		t.Errorf("http.Client.Timeout = %v, want 0: a total cap fails slow-but-progressing bodies", c.HTTP.Timeout)
+	}
+	tr := transport(t, c)
+	for name, d := range map[string]time.Duration{
+		"TLS handshake": tr.TLSHandshakeTimeout, "response header": tr.ResponseHeaderTimeout,
+	} {
+		if d <= 0 || d > 30*time.Second {
+			t.Errorf("%s timeout = %v, want set and <= 30s (fail fast on a dead server)", name, d)
+		}
+	}
+	if c.Stall <= 0 || c.Stall > time.Minute {
+		t.Errorf("Stall = %v, want set and <= 1m", c.Stall)
+	}
+	if c.Ceiling < 5*time.Minute || c.Ceiling > 15*time.Minute {
+		t.Errorf("Ceiling = %v, want generous (5-15m): the largest Lever board needs ~290s at 11.5 KB/s", c.Ceiling)
+	}
+}
+
+// transport returns the client's *http.Transport, failing the test if it has none.
+func transport(t *testing.T, c *fetch.Client) *http.Transport {
+	t.Helper()
+	tr, ok := c.HTTP.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("client transport is %T, want *http.Transport", c.HTTP.Transport)
+	}
+	return tr
+}
+
+// paced serves a body of chunks bytes, one byte-chunk of size n every gap, flushing each
+// one, so tests control exactly how fast the body arrives. stopAfter > 0 stops sending
+// (but keeps the connection open) after that many chunks.
+func paced(t *testing.T, chunks, n int, gap time.Duration, stopAfter int) (*httptest.Server, func() []time.Time) {
+	t.Helper()
+	var mu sync.Mutex
+	var times []time.Time
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		times = append(times, time.Now())
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		fl, _ := w.(http.Flusher) // httptest's ResponseWriter always flushes
+		chunk := []byte(strings.Repeat("x", n))
+		for i := 0; chunks == 0 || i < chunks; i++ {
+			if stopAfter > 0 && i == stopAfter {
+				<-r.Context().Done() // stall: connection open, no more bytes
+				return
+			}
+			if _, err := w.Write(chunk); err != nil {
+				return // client went away
+			}
+			fl.Flush()
+			select {
+			case <-time.After(gap):
+			case <-r.Context().Done():
+				return
+			}
+		}
+	}))
+	t.Cleanup(srv.Close)
+	return srv, func() []time.Time { mu.Lock(); defer mu.Unlock(); return append([]time.Time(nil), times...) }
+}
+
+// M1-10 AC1: a body that arrives steadily but slowly completes, even though it takes
+// longer than a total-transfer cap of the old kind would allow.
+func TestGetCompletesSlowSteadyBody(t *testing.T) {
+	srv, _ := paced(t, 30, 1024, 50*time.Millisecond, 0) // 30 KiB over ~1.5s
+	c := client()
+	c.Stall, c.Ceiling = 300*time.Millisecond, 10*time.Second
+	body, err := c.Get(t.Context(), srv.URL, noLimit())
+	if err != nil {
+		t.Fatalf("Get: %v (a steady body must complete)", err)
+	}
+	if len(body) != 30*1024 {
+		t.Errorf("got %d bytes, want %d", len(body), 30*1024)
+	}
+
+	old := client()
+	old.HTTP.Timeout = time.Second // what a total cap does to the same body
+	if _, err := old.Get(t.Context(), srv.URL, noLimit()); err == nil {
+		t.Error("sanity: a 1s total cap should have failed this 1.5s body")
+	}
+}
+
+// M1-10 AC2 + AC5: a body that stops arriving fails after the stall timeout, is retried
+// (3 attempts in all), and every attempt waits on the limiter.
+func TestGetFailsWhenBodyStalls(t *testing.T) {
+	srv, times := paced(t, 100, 1024, 10*time.Millisecond, 5) // 5 KiB, then silence
+	c := client()
+	c.Stall, c.Ceiling = 200*time.Millisecond, 10*time.Second
+	const every = 300 * time.Millisecond
+	start := time.Now()
+	_, err := c.Get(t.Context(), srv.URL, rate.NewLimiter(rate.Every(every), 1))
+	if err == nil || !strings.Contains(err.Error(), "stalled") {
+		t.Fatalf("error = %v, want one saying the body stalled", err)
+	}
+	ts := times()
+	if len(ts) != 3 {
+		t.Errorf("made %d attempts, want 3 (a stall is retried)", len(ts))
+	}
+	for i := 1; i < len(ts); i++ {
+		if gap := ts[i].Sub(ts[i-1]); gap < every-10*time.Millisecond {
+			t.Errorf("attempts %d and %d were %v apart, want >= %v (limiter)", i-1, i, gap, every)
+		}
+	}
+	if d := time.Since(start); d > 3*time.Second {
+		t.Errorf("took %v, want each attempt to end at the 200ms stall timeout", d)
+	}
+}
+
+// M1-10 AC3: a server that never sends headers fails each attempt at the header timeout,
+// long before the stall timeout or the ceiling.
+func TestGetFailsFastWhenServerNeverAnswers(t *testing.T) {
+	var n atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		n.Add(1)
+		<-r.Context().Done() // never answer
+	}))
+	defer srv.Close()
+	c := client()
+	c.Stall, c.Ceiling = 5*time.Second, time.Minute
+	transport(t, c).ResponseHeaderTimeout = 100 * time.Millisecond
+	start := time.Now()
+	if _, err := c.Get(t.Context(), srv.URL, noLimit()); err == nil {
+		t.Fatal("Get returned no error for a server that never answers")
+	}
+	if d := time.Since(start); d > 2*time.Second {
+		t.Errorf("took %v for %d attempts, want each to fail at the 100ms header timeout", d, n.Load())
+	}
+	if n.Load() != 3 {
+		t.Errorf("made %d attempts, want 3", n.Load())
+	}
+}
+
+// M1-10 AC4: a body that keeps trickling (never stalling) ends at the ceiling, and that
+// is not retried: a second attempt would trickle the same way.
+func TestGetCeilingEndsPathologicalTrickle(t *testing.T) {
+	srv, times := paced(t, 0, 1, 20*time.Millisecond, 0) // 1 byte every 20ms, forever
+	c := client()
+	c.Stall, c.Ceiling = 500*time.Millisecond, 300*time.Millisecond
+	start := time.Now()
+	_, err := c.Get(t.Context(), srv.URL, noLimit())
+	if err == nil || !strings.Contains(err.Error(), "ceiling") {
+		t.Fatalf("error = %v, want one saying the ceiling was reached", err)
+	}
+	if d := time.Since(start); d < 250*time.Millisecond || d > 1500*time.Millisecond {
+		t.Errorf("took %v, want about the 300ms ceiling", d)
+	}
+	if n := len(times()); n != 1 {
+		t.Errorf("made %d attempts, want 1 (hitting the ceiling is not retried)", n)
 	}
 }
 
@@ -154,11 +306,12 @@ func TestGetRetryAfterTooLongFailsFast(t *testing.T) {
 	}
 }
 
-func TestGetRetriesTimeout(t *testing.T) {
+// A server that misses the header timeout once and then answers is retried.
+func TestGetRetriesAfterHeaderTimeout(t *testing.T) {
 	var n atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if n.Add(1) == 1 {
-			select { // first request: slower than the client timeout
+			select { // first request: never sends headers within the timeout
 			case <-time.After(time.Second):
 			case <-r.Context().Done():
 			}
@@ -168,7 +321,7 @@ func TestGetRetriesTimeout(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := client()
-	c.HTTP.Timeout = 100 * time.Millisecond
+	transport(t, c).ResponseHeaderTimeout = 100 * time.Millisecond
 	if body, err := c.Get(t.Context(), srv.URL, noLimit()); err != nil || string(body) != okBody {
 		t.Fatalf("Get = %q, %v; want the body on the second attempt", body, err)
 	}

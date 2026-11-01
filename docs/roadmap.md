@@ -49,7 +49,7 @@ collected daily, stored raw, and never lost.
 
 **Stories:** M1-01 Watch list seed and companies sync · M1-02 Concurrent collector run ·
 M1-03 Lever adapter, complete · M1-04 Greenhouse adapter · M1-05 Ashby adapter ·
-M1-07 Idempotent posting upsert
+M1-07 Idempotent posting upsert · M1-10 Slow but progressing downloads
 
 M1-06 (Workable adapter) moved to the **M7** backlog: no active watch-list company posts
 on Workable (see the change log).
