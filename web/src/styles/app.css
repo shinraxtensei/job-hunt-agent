@@ -1,0 +1,734 @@
+/* Layout and components for the tracker page. Values come from tokens.css. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: var(--text-md) / var(--leading) var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+button {
+  touch-action: manipulation;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.skip {
+  position: absolute;
+  left: var(--space-2);
+  top: -40px;
+  z-index: 10;
+  background: var(--bg);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.skip:focus {
+  top: var(--space-2);
+}
+kbd {
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 0 5px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shell: sidebar or rail + main */
+.app {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+}
+.app.rail {
+  grid-template-columns: var(--rail-w) minmax(0, 1fr);
+}
+.sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  padding: var(--space-3) var(--space-2);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-1) var(--space-3) var(--space-2);
+  min-height: 28px;
+}
+.sidebar-head h1 {
+  font-size: var(--text-md);
+  font-weight: 600;
+  margin: 0;
+}
+.rail .sidebar-head {
+  justify-content: center;
+  padding: 0 0 var(--space-3);
+}
+.rail .sidebar-head h1 {
+  /* stays the page's h1 for assistive tech; only hidden visually */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.rail .nav-label,
+.rail .nav-count,
+.rail .nav-section {
+  display: none;
+}
+.nav-section {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--faint);
+  margin: var(--space-4) var(--space-2) var(--space-1);
+}
+.nav a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  text-decoration: none;
+}
+.rail .nav a {
+  justify-content: center;
+  padding: 7px 0;
+}
+.nav a:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.nav a[aria-current="page"] {
+  background: var(--hover);
+  color: var(--text);
+  font-weight: 500;
+}
+.nav-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-count {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.icon-button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+main {
+  min-width: 0;
+}
+
+/* Top bar */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.search {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-2);
+  background: var(--bg);
+}
+.search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 6px 0;
+  outline: none;
+}
+.search input::placeholder {
+  color: var(--faint);
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 30px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.button:hover {
+  background: var(--hover);
+}
+.link-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* Applied filter chips (desktop) */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 24px;
+  padding: 0 var(--space-1) 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+  max-width: 100%;
+}
+.chip.static {
+  padding-right: 10px;
+}
+.chip b {
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chip button {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.chip button:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.summary {
+  padding: var(--space-2) var(--space-4);
+  color: var(--muted);
+}
+.summary a {
+  color: var(--text);
+}
+.notice {
+  margin: var(--space-5) var(--space-4);
+  max-width: 60ch;
+  color: var(--muted);
+}
+.notice p {
+  margin: 0 0 var(--space-2);
+}
+.notice strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* The leads table */
+.leads {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.leads col.c-dot {
+  width: 28px;
+}
+.leads col.c-company {
+  width: 148px;
+}
+.leads col.c-place {
+  width: 30%;
+}
+.leads col.c-num {
+  width: 72px;
+}
+.leads col.c-age {
+  width: 52px;
+}
+.leads col.c-more {
+  width: 40px;
+}
+.leads th.group {
+  text-align: left;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted);
+  padding: var(--space-3) var(--space-4) var(--space-1);
+}
+.leads thead th {
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--faint);
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+.leads thead th.num {
+  text-align: right;
+}
+.row td {
+  height: var(--row-h);
+  padding: 0 var(--space-2);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.row:hover td {
+  background: var(--hover);
+}
+.row.focused td {
+  background: var(--row-focus);
+}
+.row.focused td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+/* Rows show focus with the focused-row style (background + accent bar), not an outline. */
+.row:focus {
+  outline: none;
+}
+.row:focus-visible td {
+  background: var(--row-focus);
+}
+.row:focus-visible td:first-child {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.row {
+  scroll-margin-top: 56px; /* the sticky top bar never covers the focused row */
+  scroll-margin-bottom: var(--space-4);
+}
+.row td.dot {
+  padding: 0 0 0 var(--space-4);
+}
+.new-dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.row .company {
+  color: var(--muted);
+}
+.row .title a {
+  color: var(--text);
+  text-decoration: none;
+}
+.row .title a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.row .reasons {
+  margin-left: var(--space-2);
+  color: var(--muted);
+}
+.row .place {
+  color: var(--muted);
+}
+.row .num,
+.row .age {
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.row td.more {
+  padding: 0 var(--space-2) 0 0;
+  text-align: right;
+}
+.more button {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.more button:hover {
+  background: var(--panel);
+  color: var(--text);
+}
+.more button .icon {
+  transition: transform var(--motion) var(--ease);
+}
+.more button[aria-expanded="true"] .icon {
+  transform: rotate(90deg);
+}
+.row.single .more button {
+  visibility: hidden;
+}
+.detail td {
+  padding: var(--space-1) var(--space-4) var(--space-3) calc(28px + 148px);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  animation: reveal var(--motion) var(--ease);
+}
+.detail dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-2);
+}
+.detail dt {
+  color: var(--faint);
+}
+.detail dd {
+  margin: 0 0 0 var(--space-1);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.detail .pair {
+  display: flex;
+}
+.detail ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.detail li {
+  padding: 2px 0;
+  overflow-wrap: anywhere;
+}
+.detail li a {
+  color: var(--text);
+}
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+.load-more {
+  margin: var(--space-3) var(--space-4) var(--space-5);
+}
+
+/* Filter sheet and shortcuts: native <dialog> */
+dialog {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  padding: 0;
+  overscroll-behavior: contain;
+}
+dialog::backdrop {
+  background: var(--scrim);
+}
+dialog[open] {
+  animation: reveal var(--motion) var(--ease);
+}
+.sheet {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(400px, 100vw);
+  max-height: 100vh;
+  height: 100vh;
+  border-radius: 0;
+  border-width: 0 0 0 1px;
+}
+.sheet-head {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.sheet-head h2,
+.shortcuts h2 {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin: 0;
+}
+.sheet-body {
+  padding: var(--space-2) var(--space-4) var(--space-5);
+}
+.sheet section {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+.sheet h3,
+.sheet legend {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+}
+.sheet fieldset {
+  border: 0;
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.applied {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+}
+.applied li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 3px 0;
+}
+.applied li span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 2px var(--space-3);
+}
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+  cursor: pointer;
+}
+.option input {
+  margin: 0;
+  accent-color: var(--text); /* the accent stays for focus and new leads only */
+}
+.option .name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.option .count {
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+}
+.field select,
+.field input[type="number"] {
+  height: 30px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+}
+.field input[type="number"] {
+  width: 72px;
+  font-variant-numeric: tabular-nums;
+}
+.shortcuts {
+  width: min(380px, calc(100vw - 32px));
+  padding: var(--space-4);
+}
+.shortcuts dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-3) 0;
+}
+.shortcuts dd {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Narrow screens: the sidebar is a rail (set in JS below 1024px); rows stack. */
+@media (max-width: 640px) {
+  .chips {
+    display: none;
+  }
+  .topbar {
+    padding: var(--space-2) var(--space-3);
+  }
+  .summary,
+  .notice {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+    margin-left: 0;
+    margin-right: 0;
+  }
+  .hide-narrow {
+    display: none;
+  }
+  .leads,
+  .leads tbody {
+    display: block;
+  }
+  .leads thead,
+  .leads colgroup {
+    display: none;
+  }
+  .leads th.group {
+    display: block;
+    padding: var(--space-3) var(--space-3) var(--space-1);
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) auto 32px;
+    grid-template-areas:
+      "dot company age more"
+      ". title title more"
+      ". place place more";
+    padding: var(--space-2) var(--space-1) var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--line);
+  }
+  .row td {
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  .row.focused,
+  .row:focus-visible {
+    background: var(--row-focus);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+  .row.focused td,
+  .row:focus-visible td,
+  .row:hover td {
+    background: none;
+  }
+  .row.focused td:first-child {
+    box-shadow: none;
+  }
+  .row td.dot {
+    grid-area: dot;
+    padding: 6px 0 0;
+  }
+  .row .company {
+    grid-area: company;
+  }
+  .row .title {
+    grid-area: title;
+    white-space: normal;
+  }
+  .row .place {
+    grid-area: place;
+  }
+  .row .age {
+    grid-area: age;
+  }
+  .row td.num {
+    display: none;
+  }
+  .row td.more {
+    grid-area: more;
+    align-self: center;
+    padding: 0;
+  }
+  .row.single .more button {
+    visibility: visible;
+  }
+  .detail {
+    display: block;
+  }
+  .detail td {
+    display: block;
+    padding: var(--space-1) var(--space-3) var(--space-3) calc(var(--space-3) + 14px);
+  }
+  .sheet {
+    inset: auto 0 0 0;
+    width: 100vw;
+    height: auto;
+    max-height: 85vh;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border-width: 1px 0 0;
+  }
+  .sheet-body {
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+  }
+}
+.button .count {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}

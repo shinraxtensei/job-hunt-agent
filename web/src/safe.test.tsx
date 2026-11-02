@@ -75,9 +75,11 @@ describe("untrusted posting text (AC4)", () => {
 });
 
 describe("duplicate groups (AC2c)", () => {
-  it("shows N postings only when a lead folds several", () => {
+  it("counts postings only when a lead folds several, and offers to show them", () => {
     const el = render([lead({ id: 1, members: 3 }), lead({ id: 2, members: 1 })]);
-    const buttons = [...el.querySelectorAll("button")].map((b) => b.textContent);
-    expect(buttons).toEqual(["3 postings"]);
+    const counts = [...el.querySelectorAll("tr.row td.num:nth-of-type(5)")].map((td) => td.textContent);
+    expect(counts).toEqual(["3", ""]);
+    const labels = [...el.querySelectorAll("tr.row button")].map((b) => b.getAttribute("aria-label"));
+    expect(labels).toEqual(["Show 3 postings", "Show details"]);
   });
 });

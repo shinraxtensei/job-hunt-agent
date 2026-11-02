@@ -1,53 +1,100 @@
-import { useCallback, useEffect, useState } from "react";
-import { apiQuery, get, type Facets, type Lead, type Members, type Page, type Preset, type Presets } from "./api";
-import { ExternalLink } from "./safe";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { apiQuery, get, type Facets, type Lead, type Page, type Presets } from "./api";
+import { FilterSheet } from "./FilterSheet";
+import { applied } from "./filters";
+import { Icon } from "./icons";
+import { isNew, LeadTable } from "./LeadTable";
+import { readPref, writePref } from "./prefs";
+import { safeHref } from "./safe";
 
-// Facets shown as checkbox groups, in the order the API documents them.
-const FACETS: [key: string, label: string][] = [
-  ["role_family", "Role family"],
-  ["seniority", "Seniority"],
-  ["workplace", "Workplace"],
-  ["remote_scope", "Remote scope"],
-  ["country", "Country"],
-  ["track", "Track"],
-  ["company", "Company"],
-];
+export { LeadTable } from "./LeadTable";
 
-const date = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
-const fmt = (iso: string | null) => (iso ? date.format(new Date(iso)) : "—");
+const num = new Intl.NumberFormat();
+// The shown view loads every lead (a few hundred) so search covers all of them; the
+// hidden view (thousands) pages.
+const SHOWN_PAGE = 200;
+const SHOWN_MAX_PAGES = 5;
+const HIDDEN_PAGE = 100;
 
-function current(): URLSearchParams {
-  return new URLSearchParams(window.location.search);
+type Theme = "system" | "light" | "dark";
+type Data = { leads: Lead[]; total: number; cursor?: string; facets: Facets; otherTotal: number };
+
+const current = () => new URLSearchParams(window.location.search);
+const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+
+function withParam(params: URLSearchParams, k: string, v: string | null): URLSearchParams {
+  const next = new URLSearchParams(params);
+  if (v === null || v === "") next.delete(k);
+  else next.set(k, v);
+  return next;
 }
-
-type Data = { page: Page; facets: Facets; otherTotal: number };
 
 export function App() {
   const [params, setParams] = useState(current);
   const [data, setData] = useState<Data | null>(null);
-  const [more, setMore] = useState<Lead[]>([]);
-  const [cursor, setCursor] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [presets, setPresets] = useState<Presets["presets"]>([]);
-  const hidden = params.get("view") === "hidden";
-  const key = params.toString();
+  const [query, setQueryState] = useState(() => current().get("q") ?? "");
+  // The search is in the URL too (q), replaced rather than pushed per keystroke.
+  const setQuery = useCallback((q: string) => {
+    setQueryState(q);
+    const next = withParam(current(), "q", q || null);
+    const s = next.toString();
+    window.history.replaceState(null, "", s ? `?${s}` : window.location.pathname);
+  }, []);
+  const [focus, setFocus] = useState(-1);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [sheet, setSheet] = useState(false);
+  const [help, setHelp] = useState(false);
+  const [rail, setRail] = useState(() => {
+    const saved = readPref("sidebar");
+    return saved ? saved === "rail" : window.innerWidth < 1024;
+  });
+  const [theme, setTheme] = useState<Theme>(() => (readPref("theme") as Theme | null) ?? "system");
+  const search = useRef<HTMLInputElement>(null);
+  const rows = useRef<(HTMLTableRowElement | null)[]>([]);
+  const helpRef = useRef<HTMLDialogElement>(null);
 
-  // Filter state lives in the URL only (AC2b): every change is a history entry.
-  const navigate = useCallback((next: URLSearchParams) => {
+  const hidden = params.get("view") === "hidden";
+  const key = withParam(params, "q", null).toString(); // q is searched here, not by the API
+  const now = useMemo(() => (data ? Date.now() : 0), [data]); // "now" is when the data arrived
+
+  // Filter state lives in the URL only: every change is a history entry.
+  const navigate = useCallback((to: URLSearchParams) => {
+    const next = withParam(to, "q", current().get("q")); // filters keep the current search
     const s = next.toString();
     window.history.pushState(null, "", s ? `?${s}` : window.location.pathname);
     setParams(next);
   }, []);
+  const set = (k: string, v: string | null) => navigate(withParam(params, k, v));
+  const reset = () => navigate(new URLSearchParams(hidden ? "view=hidden" : ""));
+  const follow = (to: URLSearchParams) => (e: MouseEvent) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+    e.preventDefault();
+    navigate(to);
+  };
 
   useEffect(() => {
-    const back = () => setParams(current());
+    const back = () => {
+      setParams(current());
+      setQueryState(current().get("q") ?? "");
+    };
     window.addEventListener("popstate", back);
     return () => window.removeEventListener("popstate", back);
   }, []);
 
   useEffect(() => {
-    get<Presets>("/api/presets").then((p) => setPresets(p.presets), () => setPresets([]));
+    get<Presets>("/api/presets").then(
+      (p) => setPresets(p.presets),
+      () => setPresets([]),
+    );
   }, []);
+
+  useEffect(() => {
+    if (theme === "system") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     const ctl = new AbortController();
@@ -55,255 +102,442 @@ export function App() {
     const view = p.get("view") === "hidden";
     setData(null);
     setError(null);
-    setMore([]);
-    Promise.all([
-      get<Page>(`/api/leads${view ? "/hidden" : ""}${apiQuery(p)}`, ctl.signal),
-      get<Facets>(`/api/facets${apiQuery(p)}`, ctl.signal),
-      get<Page>(`/api/leads${view ? "" : "/hidden"}${apiQuery(p, { limit: "1" })}`, ctl.signal),
-    ]).then(
-      ([page, facets, other]) => {
-        setData({ page, facets, otherTotal: other.total });
-        setCursor(page.next_cursor);
-      },
-      (e: unknown) => {
-        if (!ctl.signal.aborted) setError(e instanceof Error ? e.message : String(e));
-      },
-    );
+    setFocus(-1);
+    setExpanded(new Set());
+    (async () => {
+      const path = `/api/leads${view ? "/hidden" : ""}`;
+      const first = get<Page>(`${path}${apiQuery(p, { limit: String(view ? HIDDEN_PAGE : SHOWN_PAGE) })}`, ctl.signal);
+      const [page, facets, other] = await Promise.all([
+        first,
+        get<Facets>(`/api/facets${apiQuery(p)}`, ctl.signal),
+        get<Page>(`/api/leads${view ? "" : "/hidden"}${apiQuery(p, { limit: "1" })}`, ctl.signal),
+      ]);
+      let leads = page.leads;
+      let cursor = page.next_cursor;
+      for (let n = 1; !view && cursor && n < SHOWN_MAX_PAGES; n++) {
+        const more = await get<Page>(`${path}${apiQuery(p, { limit: String(SHOWN_PAGE), cursor })}`, ctl.signal);
+        leads = [...leads, ...more.leads];
+        cursor = more.next_cursor;
+      }
+      setData({ leads, total: page.total, cursor, facets, otherTotal: other.total });
+    })().catch((e: unknown) => {
+      if (!ctl.signal.aborted) setError(message(e));
+    });
     return () => ctl.abort();
-  }, [key]);
+  }, [key, attempt]);
 
   const loadMore = () => {
-    if (!cursor) return;
-    get<Page>(`/api/leads${hidden ? "/hidden" : ""}${apiQuery(params, { cursor })}`).then(
-      (p) => {
-        setMore((m) => [...m, ...p.leads]);
-        setCursor(p.next_cursor);
-      },
-      (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+    if (!data?.cursor) return;
+    const limit = String(hidden ? HIDDEN_PAGE : SHOWN_PAGE);
+    get<Page>(`/api/leads${hidden ? "/hidden" : ""}${apiQuery(params, { limit, cursor: data.cursor })}`).then(
+      (p) => setData((d) => d && { ...d, leads: [...d.leads, ...p.leads], cursor: p.next_cursor }),
+      (e: unknown) => setError(message(e)),
     );
   };
 
   const presetName = params.get("preset") ?? "default";
   const preset = presets.find((p) => p.id === presetName)?.preset;
-  const set = (k: string, v: string | null) => {
-    const next = new URLSearchParams(params);
-    if (v === null || v === "") next.delete(k);
-    else next.set(k, v);
-    navigate(next);
-  };
+  const chips = applied(params, preset);
+
+  const q = query.trim().toLowerCase();
+  const visible = useMemo(() => {
+    const leads = data?.leads ?? [];
+    if (!q) return leads;
+    return leads.filter((l) => [l.title, l.company.name, ...l.locations].some((s) => s.toLowerCase().includes(q)));
+  }, [data, q]);
+  // Rows render new first, then earlier: keyboard order follows the screen.
+  const ordered = useMemo(() => [...visible.filter((l) => isNew(l, now)), ...visible.filter((l) => !isNew(l, now))], [visible, now]);
+
+  const moveFocus = useCallback(
+    (i: number) => {
+      if (ordered.length === 0) return;
+      const next = Math.max(0, Math.min(ordered.length - 1, i));
+      setFocus(next);
+      rows.current[next]?.focus();
+      rows.current[next]?.scrollIntoView({ block: "nearest" });
+    },
+    [ordered.length],
+  );
+  const openLead = useCallback(
+    (i: number) => {
+      const href = ordered[i] && safeHref(ordered[i].url);
+      if (href) window.open(href, "_blank", "noopener,noreferrer");
+    },
+    [ordered],
+  );
+  const toggle = useCallback((id: number) => {
+    setExpanded((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  }, []);
+  const toggleRail = useCallback(() => {
+    setRail((r) => {
+      writePref("sidebar", r ? "full" : "rail");
+      return !r;
+    });
+  }, []);
+
+  // Keyboard: j/k move, o or Enter opens, e expands, / searches, Esc clears, ? helps,
+  // [ toggles the sidebar. Dialogs handle their own keys (Esc closes them).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || document.querySelector("dialog[open]")) return;
+      const t = e.target as HTMLElement | null;
+      const typing = !!t?.closest("input, select, textarea");
+      if (e.key === "Escape") {
+        if (t === search.current) {
+          if (query) setQuery("");
+          else search.current?.blur();
+          e.preventDefault();
+        } else if (focus >= 0 && ordered[focus] && expanded.has(ordered[focus].id)) {
+          toggle(ordered[focus].id);
+        }
+        return;
+      }
+      if (typing) return;
+      const onRowOrPage = !t || t === document.body || !!t.closest("tr.row");
+      switch (e.key) {
+        case "/":
+          e.preventDefault();
+          search.current?.focus();
+          break;
+        case "j":
+        case "ArrowDown":
+          if (e.key === "ArrowDown" && !onRowOrPage) return;
+          e.preventDefault();
+          moveFocus(focus + 1);
+          break;
+        case "k":
+        case "ArrowUp":
+          if (e.key === "ArrowUp" && !onRowOrPage) return;
+          e.preventDefault();
+          moveFocus(focus - 1);
+          break;
+        case "o":
+        case "Enter":
+          if (!onRowOrPage || focus < 0) return;
+          e.preventDefault();
+          openLead(focus);
+          break;
+        case "e":
+          if (focus >= 0 && ordered[focus]) toggle(ordered[focus].id);
+          break;
+        case "?":
+          setHelp(true);
+          break;
+        case "[":
+          toggleRail();
+          break;
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focus, ordered, expanded, query, setQuery, moveFocus, openLead, toggle, toggleRail]);
+
+  useEffect(() => {
+    const d = helpRef.current;
+    if (help && d && !d.open) d.showModal();
+  }, [help]);
+
+  const nextTheme: Record<Theme, Theme> = { system: "light", light: "dark", dark: "system" };
+  const view = (v: string | null) => withParam(params, "view", v);
+  const fresh = data && !hidden ? data.leads.filter((l) => isNew(l, now)).length : null;
 
   return (
-    <main>
-      <h1>{hidden ? "Hidden leads" : "Leads"}</h1>
-      <Filters params={params} preset={preset} presets={presets} facets={data?.facets} set={set} />
-      <p>
-        <button type="button" onClick={() => navigate(new URLSearchParams())}>
-          Reset to my defaults
-        </button>
-      </p>
-      {error && <p role="alert">Could not load leads: {error}</p>}
-      {!data && !error && <p aria-live="polite">Loading…</p>}
-      {data && (
-        <>
-          <p aria-live="polite">
-            {hidden ? (
-              <>
-                {data.page.total} leads hidden by these filters.{" "}
-                <a href={`?${withView(params, null)}`} onClick={follow(navigate, withView(params, null))}>
-                  Show the {data.otherTotal} shown leads
-                </a>
-              </>
+    <div className={`app${rail ? " rail" : ""}`}>
+      <a className="skip" href="#leads">
+        Skip to leads
+      </a>
+      <nav className="sidebar" aria-label="Views">
+        <div className="sidebar-head">
+          <h1>Leads</h1>
+          <button
+            type="button"
+            className="icon-button"
+            aria-label={rail ? "Expand sidebar ([)" : "Collapse sidebar ([)"}
+            aria-expanded={!rail}
+            onClick={toggleRail}
+          >
+            <Icon name="rail" />
+          </button>
+        </div>
+        <div className="nav">
+          <a href={`?${view(null)}`} onClick={follow(view(null))} aria-current={!hidden ? "page" : undefined} aria-label={rail ? "Shown" : undefined}>
+            <Icon name="inbox" />
+            <span className="nav-label">Shown</span>
+            <span className="nav-count">{data && !hidden ? num.format(data.total) : data ? num.format(data.otherTotal) : ""}</span>
+          </a>
+          <a
+            href={`?${withParam(view(null), "new", "true")}`}
+            onClick={follow(withParam(view(null), "new", "true"))}
+            aria-label={rail ? "New in the last 24 hours" : undefined}
+          >
+            <Icon name="new" />
+            <span className="nav-label">New</span>
+            <span className="nav-count">{fresh ?? ""}</span>
+          </a>
+          <a
+            href={`?${view("hidden")}`}
+            onClick={follow(view("hidden"))}
+            aria-current={hidden ? "page" : undefined}
+            aria-label={rail ? "Hidden by filters" : undefined}
+          >
+            <Icon name="hidden" />
+            <span className="nav-label">Hidden by filters</span>
+            <span className="nav-count">{data ? num.format(hidden ? data.total : data.otherTotal) : ""}</span>
+          </a>
+          <div className="nav-section">Presets</div>
+          {[...presets.filter((p) => p.preset).map((p) => p.id), "none"].map((id) => {
+            const to = withParam(new URLSearchParams(hidden ? "view=hidden" : ""), "preset", id === "default" ? null : id);
+            const label = id === "default" ? "My defaults" : id === "none" ? "No filters" : id;
+            return (
+              <a key={id} href={`?${to}`} onClick={follow(to)} aria-current={presetName === id ? "true" : undefined} aria-label={rail ? label : undefined}>
+                <Icon name="preset" />
+                <span className="nav-label">{label}</span>
+              </a>
+            );
+          })}
+        </div>
+      </nav>
+
+      <main id="leads">
+        <div className="topbar">
+          <div className="search">
+            <label htmlFor="search" className="visually-hidden">
+              Search {hidden ? "loaded hidden leads" : "leads"}
+            </label>
+            <input
+              id="search"
+              ref={search}
+              type="search"
+              name="search"
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="Search titles, companies, places…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <kbd aria-hidden="true">/</kbd>
+          </div>
+          <button type="button" className="button" onClick={() => setSheet(true)} aria-haspopup="dialog">
+            <Icon name="filter" /> Filters <span className="count">({chips.length})</span>
+          </button>
+          <button
+            type="button"
+            className="icon-button"
+            onClick={() => setTheme(nextTheme[theme])}
+            aria-label={`Theme: ${theme}. Switch to ${nextTheme[theme]}`}
+          >
+            <Icon name={theme === "dark" ? "moon" : theme === "light" ? "sun" : "system"} />
+          </button>
+          <button type="button" className="icon-button hide-narrow" onClick={() => setHelp(true)} aria-label="Keyboard shortcuts (?)">
+            ?
+          </button>
+        </div>
+
+        <div className="chips" role="group" aria-label="Applied filters">
+          {chips.map((c) =>
+            c.fromURL ? (
+              <span className="chip" key={c.key}>
+                {c.label} <b>{c.value}</b>
+                <button type="button" aria-label={`Remove ${c.label} filter`} onClick={() => set(c.key, null)}>
+                  <Icon name="close" />
+                </button>
+              </span>
             ) : (
-              <>
-                {data.page.total} leads. These filters hide {data.otherTotal}.{" "}
-                <a href={`?${withView(params, "hidden")}`} onClick={follow(navigate, withView(params, "hidden"))}>
-                  See what is hidden, and why
-                </a>
-              </>
-            )}
-          </p>
-          <LeadTable leads={[...data.page.leads, ...more]} hidden={hidden} />
-          {cursor && (
-            <button type="button" onClick={loadMore}>
-              Load more
+              <span className="chip static" key={c.key}>
+                {c.label} <b>{c.value}</b>
+              </span>
+            ),
+          )}
+          {params.toString() && params.toString() !== "view=hidden" && (
+            <button type="button" className="link-button" onClick={reset}>
+              Reset to my defaults
             </button>
           )}
-        </>
-      )}
-    </main>
-  );
-}
+        </div>
 
-function withView(params: URLSearchParams, view: string | null): URLSearchParams {
-  const next = new URLSearchParams(params);
-  if (view) next.set("view", view);
-  else next.delete("view");
-  return next;
-}
-
-// follow turns a same-page link into a pushState navigation, keeping the href for
-// middle-click and copying.
-function follow(navigate: (p: URLSearchParams) => void, to: URLSearchParams) {
-  return (e: React.MouseEvent) => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-    e.preventDefault();
-    navigate(to);
-  };
-}
-
-function Filters(props: {
-  params: URLSearchParams;
-  preset: Preset | undefined;
-  presets: Presets["presets"];
-  facets: Facets | undefined;
-  set: (k: string, v: string | null) => void;
-}) {
-  const { params, preset, presets, facets, set } = props;
-  // A facet's selection is its URL parameter, or else what the preset sets for it.
-  const selected = (k: string): string[] => {
-    const v = params.get(k);
-    if (v !== null) return v.split(",").filter(Boolean);
-    if (k === "role_family") return preset?.role_family ?? [];
-    if (k === "seniority") return preset?.seniority ?? [];
-    return [];
-  };
-  return (
-    <form aria-label="Filters" onSubmit={(e) => e.preventDefault()}>
-      <label>
-        Preset{" "}
-        <select value={params.get("preset") ?? "default"} onChange={(e) => set("preset", e.target.value === "default" ? null : e.target.value)}>
-          {presets.filter((p) => p.preset).map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.id}
-            </option>
-          ))}
-          <option value="none">none (no filters)</option>
-        </select>
-      </label>{" "}
-      <label>
-        Max experience (years){" "}
-        <input
-          type="number"
-          min={0}
-          max={20}
-          inputMode="numeric"
-          value={params.get("max_experience") ?? preset?.experience_max_years ?? ""}
-          onChange={(e) => set("max_experience", e.target.value)}
+        <Body
+          data={data}
+          error={error}
+          hidden={hidden}
+          query={query}
+          visible={ordered}
+          now={now}
+          focus={focus}
+          setFocus={setFocus}
+          expanded={expanded}
+          toggle={toggle}
+          rows={rows}
+          retry={() => setAttempt((a) => a + 1)}
+          reset={reset}
+          showHidden={follow(view("hidden"))}
+          showShown={follow(view(null))}
+          hiddenHref={`?${view("hidden")}`}
+          shownHref={`?${view(null)}`}
+          clearSearch={() => setQuery("")}
+          loadMore={loadMore}
         />
-      </label>{" "}
-      <label>
-        Closed{" "}
-        <select value={params.get("closed") ?? preset?.closed ?? ""} onChange={(e) => set("closed", e.target.value)}>
-          <option value="">any</option>
-          <option value="hide">hide</option>
-          <option value="show">show</option>
-          <option value="only">only</option>
-        </select>
-      </label>{" "}
-      <label>
-        <input type="checkbox" checked={params.get("new") === "true"} onChange={(e) => set("new", e.target.checked ? "true" : null)} /> New
-        (last 24 h)
-      </label>
-      {FACETS.map(([k, label]) => {
-        const sel = selected(k);
-        const counts = facets?.facets[k] ?? {};
-        const values = [...new Set([...Object.keys(counts), ...sel])].sort();
-        return (
-          <fieldset key={k}>
-            <legend>{label}</legend>
-            {values.map((v) => (
-              <label key={v}>
-                <input
-                  type="checkbox"
-                  checked={sel.includes(v)}
-                  onChange={(e) => {
-                    const next = e.target.checked ? [...sel, v] : sel.filter((s) => s !== v);
-                    set(k, next.join(","));
-                  }}
-                />{" "}
-                {v} ({counts[v] ?? 0}){" "}
-              </label>
-            ))}
-          </fieldset>
-        );
-      })}
-    </form>
+      </main>
+
+      <FilterSheet
+        open={sheet}
+        onClose={() => setSheet(false)}
+        params={params}
+        preset={preset}
+        presets={presets}
+        facets={data?.facets}
+        set={set}
+        reset={reset}
+      />
+      <dialog ref={helpRef} className="shortcuts" aria-labelledby="help-title" onClose={() => setHelp(false)}>
+        <h2 id="help-title">Keyboard shortcuts</h2>
+        <dl>
+          <dt><kbd>j</kbd> <kbd>k</kbd></dt>
+          <dd>Next and previous lead</dd>
+          <dt><kbd>o</kbd> <kbd>Enter</kbd></dt>
+          <dd>Open the posting in a new tab</dd>
+          <dt><kbd>e</kbd></dt>
+          <dd>Show or hide the lead's details and postings</dd>
+          <dt><kbd>/</kbd></dt>
+          <dd>Search</dd>
+          <dt><kbd>Esc</kbd></dt>
+          <dd>Clear the search, close details or a panel</dd>
+          <dt><kbd>[</kbd></dt>
+          <dd>Collapse or expand the sidebar</dd>
+          <dt><kbd>?</kbd></dt>
+          <dd>This list</dd>
+        </dl>
+        <form method="dialog">
+          <button type="submit" className="button">
+            Close
+          </button>
+        </form>
+      </dialog>
+    </div>
   );
 }
 
-export function LeadTable({ leads, hidden }: { leads: Lead[]; hidden: boolean }) {
-  if (leads.length === 0) return <p>No leads match these filters.</p>;
-  return (
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">Company</th>
-          <th scope="col">Title</th>
-          <th scope="col">Locations</th>
-          <th scope="col">Workplace</th>
-          <th scope="col">Published</th>
-          <th scope="col">First seen</th>
-          <th scope="col">Postings</th>
-          {hidden && <th scope="col">Hidden by</th>}
-        </tr>
-      </thead>
-      <tbody>
-        {leads.map((l) => (
-          <LeadRow key={l.id} lead={l} hidden={hidden} />
-        ))}
-      </tbody>
-    </table>
+function Body(props: {
+  data: Data | null;
+  error: string | null;
+  hidden: boolean;
+  query: string;
+  visible: Lead[];
+  now: number;
+  focus: number;
+  setFocus: (i: number) => void;
+  expanded: Set<number>;
+  toggle: (id: number) => void;
+  rows: React.RefObject<(HTMLTableRowElement | null)[]>;
+  retry: () => void;
+  reset: () => void;
+  showHidden: (e: MouseEvent) => void;
+  showShown: (e: MouseEvent) => void;
+  hiddenHref: string;
+  shownHref: string;
+  clearSearch: () => void;
+  loadMore: () => void;
+}) {
+  const { data, error, hidden, query, visible } = props;
+  if (error) {
+    return (
+      <div className="notice" role="alert">
+        <p>
+          <strong>Couldn’t load leads.</strong> The API answered: {error}
+        </p>
+        <p>Check that the API is running (go run ./cmd/api), then try again.</p>
+        <button type="button" className="button" onClick={props.retry}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+  if (!data) {
+    return (
+      <p className="summary" role="status" aria-busy="true">
+        Loading leads…
+      </p>
+    );
+  }
+  const summary = hidden ? (
+    <p className="summary" role="status">
+      {num.format(data.total)} hidden by these filters ·{" "}
+      <a href={props.shownHref} onClick={props.showShown}>
+        {num.format(data.otherTotal)} shown
+      </a>
+    </p>
+  ) : (
+    <p className="summary" role="status">
+      {num.format(data.total)} shown ·{" "}
+      <a href={props.hiddenHref} onClick={props.showHidden}>
+        {num.format(data.otherTotal)} hidden by these filters
+      </a>
+    </p>
   );
-}
-
-function LeadRow({ lead, hidden }: { lead: Lead; hidden: boolean }) {
-  const [members, setMembers] = useState<Members | null>(null);
-  const [open, setOpen] = useState(false);
-  const toggle = () => {
-    setOpen((o) => !o);
-    // members_url comes from our own API; only follow it when it is one of its paths.
-    if (!members && lead.members_url.startsWith("/api/")) get<Members>(lead.members_url).then(setMembers, () => setMembers(null));
-  };
-  const panel = `members-${lead.id}`;
+  if (data.total === 0) {
+    const everythingHidden = !hidden && data.otherTotal > 0;
+    return (
+      <>
+        {summary}
+        <div className="notice">
+          {everythingHidden ? (
+            <p>
+              <strong>Your filters hide all {num.format(data.otherTotal)} leads.</strong>{" "}
+              <a href={props.hiddenHref} onClick={props.showHidden}>
+                See what they hide and why
+              </a>
+              , or widen a filter.
+            </p>
+          ) : hidden ? (
+            <p>
+              <strong>These filters hide nothing.</strong> Every lead is in the shown list.
+            </p>
+          ) : (
+            <p>
+              <strong>No leads yet.</strong> Run the collector (go run ./cmd/collector run) to fetch postings.
+            </p>
+          )}
+          <button type="button" className="button" onClick={props.reset}>
+            Reset to my defaults
+          </button>
+        </div>
+      </>
+    );
+  }
   return (
     <>
-      <tr>
-        <td data-label="Company">{lead.company.name}</td>
-        <td data-label="Title">
-          <ExternalLink href={lead.url}>{lead.title}</ExternalLink>
-          {lead.closed && " (closed)"}
-        </td>
-        <td data-label="Locations">{lead.locations.join("; ")}</td>
-        <td data-label="Workplace">{lead.workplaces.join(", ")}</td>
-        <td data-label="Published">{fmt(lead.published_at)}</td>
-        <td data-label="First seen">{fmt(lead.first_seen_at)}</td>
-        <td data-label="Postings">
-          {lead.members > 1 && (
-            <button type="button" aria-expanded={open} aria-controls={panel} onClick={toggle}>
-              {lead.members} postings
-            </button>
-          )}
-        </td>
-        {hidden && <td data-label="Hidden by">{lead.hidden_by?.join(", ")}</td>}
-      </tr>
-      {open && (
-        <tr id={panel}>
-          <td colSpan={hidden ? 8 : 7}>
-            {members ? (
-              <ul>
-                {members.members.map((m) => (
-                  <li key={m.id}>
-                    <ExternalLink href={m.url}>{m.title}</ExternalLink> · {[m.team, m.department].filter(Boolean).join(" / ") || "no team"} ·{" "}
-                    {m.locations.join("; ") || "no location"} · {m.workplace} · first seen {fmt(m.first_seen_at)}
-                    {m.closed && " · closed"}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>Loading postings…</p>
-            )}
-          </td>
-        </tr>
+      {summary}
+      {visible.length === 0 ? (
+        <div className="notice">
+          <p>
+            <strong>Nothing matches “{query}”</strong> in the {num.format(data.leads.length)} loaded leads.
+          </p>
+          <button type="button" className="button" onClick={props.clearSearch}>
+            Clear search
+          </button>
+        </div>
+      ) : (
+        <LeadTable
+          leads={visible}
+          hidden={hidden}
+          now={props.now}
+          focus={props.focus}
+          onFocus={props.setFocus}
+          expanded={props.expanded}
+          onToggle={props.toggle}
+          rowRef={(i) => (el) => {
+            props.rows.current[i] = el;
+          }}
+        />
+      )}
+      {data.cursor && (
+        <button type="button" className="button load-more" onClick={props.loadMore}>
+          Load {hidden ? "more hidden leads" : "more"} ({num.format(data.total - data.leads.length)} left)
+        </button>
       )}
     </>
   );

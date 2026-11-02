@@ -1,6 +1,6 @@
 # M2-06: Plain tracker table (TypeScript)
 
-- **Status:** In progress
+- **Status:** Done
 - **Milestone:** M2 — Rules and a plain tracker
 - **Linear:** [HAM-35](https://linear.app/hamid-corp/issue/HAM-35/m2-06-plain-tracker-table-typescript)
 - **Estimate:** 1½ days (split into scaffold + table if it runs over)

@@ -30,54 +30,209 @@ async function noHorizontalScroll(page: Page) {
 
 async function noAxeViolations(page: Page) {
   const { violations } = await new AxeBuilder({ page }).analyze();
-  expect(violations.map((v) => `${v.id}: ${v.help} (${v.nodes.length})`)).toEqual([]);
+  expect(violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target).join(" ")})`)).toEqual([]);
 }
+
+const summary = (page: Page) => page.getByRole("status").filter({ hasText: "shown" });
 
 for (const width of [375, 1280]) {
-  test.describe(`at ${width}px`, () => {
-    test.use({ viewport: { width, height: 900 } });
+  for (const scheme of ["light", "dark"] as const) {
+    test.describe(`${width}px ${scheme}`, () => {
+      test.use({ viewport: { width, height: 900 }, colorScheme: scheme });
 
-    test("lists the default leads with filters, reset and the hidden line", async ({ page }) => {
-      await mockAPI(page);
-      await page.goto("/");
-      await expect(page.getByText("2 leads. These filters hide 3.")).toBeVisible();
-      await expect(page.getByRole("link", { name: "Senior Backend Engineer" })).toHaveAttribute("rel", "noopener noreferrer");
-      await expect(page.getByRole("checkbox", { name: /backend \(1\)/ })).toBeChecked(); // from the default preset
-      await expect(page.getByRole("button", { name: "Reset to my defaults" })).toBeVisible();
-      await noHorizontalScroll(page);
-      await noAxeViolations(page);
-    });
+      test("lists the default leads with the hidden count and no axe violations", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/");
+        await expect(summary(page)).toHaveText("2 shown · 3 hidden by these filters");
+        await expect(page.getByRole("link", { name: "Senior Backend Engineer" })).toHaveAttribute("rel", "noopener noreferrer");
+        await expect(page.getByRole("button", { name: /Filters \(5\)/ })).toBeVisible();
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+      });
 
-    test("filters live in the URL", async ({ page }) => {
-      await mockAPI(page);
-      await page.goto("/");
-      await page.getByRole("checkbox", { name: /New/ }).check();
-      await expect(page).toHaveURL(/new=true/);
-      await page.getByRole("button", { name: "Reset to my defaults" }).click();
-      await expect(page).toHaveURL(/\/$/);
-    });
+      test("the filter sheet lists what is applied and resets", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/?new=true");
+        await page.getByRole("button", { name: /Filters/ }).click();
+        const sheet = page.getByRole("dialog", { name: "Filters" });
+        await expect(sheet.getByText("New: last 24 h")).toBeVisible();
+        await expect(sheet.getByRole("checkbox", { name: /^backend/ })).toBeChecked(); // from the preset
+        await noAxeViolations(page);
+        await sheet.getByRole("button", { name: "Reset to my defaults" }).click();
+        await expect(page).toHaveURL(/\/$/);
+        await page.keyboard.press("Escape");
+        await expect(sheet).toBeHidden();
+        await noHorizontalScroll(page);
+      });
 
-    test("the hidden view says why each lead is hidden", async ({ page }) => {
-      await mockAPI(page);
-      await page.goto("/");
-      await page.getByRole("link", { name: "See what is hidden, and why" }).click();
-      await expect(page).toHaveURL(/view=hidden/);
-      await expect(page.getByText("role_family=sales, location")).toBeVisible();
-      await noHorizontalScroll(page);
-      await noAxeViolations(page);
-    });
+      test("the hidden view says why each lead is hidden", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/");
+        await page.getByRole("link", { name: "3 hidden by these filters" }).click();
+        await expect(page).toHaveURL(/view=hidden/);
+        await expect(page.getByText("hidden by role_family=sales, location")).toBeVisible();
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+      });
 
-    test("a lead with several postings expands to its members", async ({ page }) => {
-      await mockAPI(page);
-      await page.goto("/");
-      await page.getByRole("button", { name: "2 postings" }).click();
-      await expect(page.getByRole("button", { name: "2 postings" })).toHaveAttribute("aria-expanded", "true");
-      await expect(page.getByRole("listitem").filter({ hasText: "Remote - EMEA" })).toBeVisible(); // a member, not the row
-      await noHorizontalScroll(page);
-      await noAxeViolations(page);
+      test("a lead with several postings expands to its members", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/");
+        const button = page.getByRole("button", { name: "Show 2 postings" });
+        await button.click();
+        await expect(button).toHaveAttribute("aria-expanded", "true");
+        await expect(page.getByRole("list", { name: "2 postings of this role" }).getByText(/Remote - EMEA/)).toBeVisible();
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+      });
     });
-  });
+  }
 }
+
+test.describe("desktop behaviour", () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  test("chips show applied filters; removing one goes back to the preset", async ({ page }) => {
+    await mockAPI(page);
+    await page.goto("/?role_family=sales");
+    const chips = page.getByLabel("Applied filters");
+    await expect(chips.getByText("Role sales")).toBeVisible();
+    await expect(chips.getByText("Seniority junior, mid, senior, unknown")).toBeVisible(); // from the preset
+    await chips.getByRole("button", { name: "Remove Role filter" }).click();
+    await expect(page).toHaveURL(/\/$/);
+  });
+
+  test("keyboard: j/k move, Enter opens, e expands, / searches, Esc clears, ? helps", async ({ page, context }) => {
+    await mockAPI(page);
+    await page.goto("/");
+    await expect(summary(page)).toBeVisible();
+    await page.keyboard.press("j");
+    const rows = page.locator("tr.row");
+    await expect(rows.nth(0)).toBeFocused();
+    await page.keyboard.press("j");
+    await expect(rows.nth(1)).toBeFocused();
+    await expect(rows.nth(1)).toHaveClass(/focused/);
+    await page.keyboard.press("k");
+    await expect(rows.nth(0)).toBeFocused();
+
+    const opened = context.waitForEvent("page");
+    await page.keyboard.press("Enter");
+    expect((await opened).url()).toMatch(/^https:\/\/jobs\.lever\.co\/x\//);
+
+    await page.keyboard.press("e");
+    await expect(page.locator("tr.detail")).toHaveCount(1);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("tr.detail")).toHaveCount(0);
+
+    await page.keyboard.press("/");
+    await expect(page.getByRole("searchbox")).toBeFocused();
+    await page.keyboard.type("backend");
+    await expect(rows).toHaveCount(1);
+    await expect(page).toHaveURL(/q=backend/); // the search is in the URL too
+    await page.reload();
+    await expect(page.getByRole("searchbox")).toHaveValue("backend");
+    await expect(rows).toHaveCount(1);
+    await page.getByRole("searchbox").focus();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("searchbox")).toHaveValue("");
+    await expect(page).not.toHaveURL(/q=/);
+    await expect(rows).toHaveCount(2);
+
+    await page.getByRole("searchbox").blur();
+    await page.keyboard.press("?");
+    await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
+    await noAxeViolations(page);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeHidden();
+  });
+
+  test("the sidebar collapses to a rail with [ and remembers it", async ({ page }) => {
+    await mockAPI(page);
+    await page.goto("/");
+    await expect(page.locator(".app")).not.toHaveClass(/rail/);
+    await page.keyboard.press("[");
+    await expect(page.locator(".app")).toHaveClass(/rail/);
+    await page.reload();
+    await expect(page.locator(".app")).toHaveClass(/rail/);
+  });
+
+  test("works when localStorage throws", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "localStorage", { get: () => { throw new Error("blocked"); } });
+    });
+    await mockAPI(page);
+    await page.goto("/");
+    await expect(summary(page)).toBeVisible();
+    await page.keyboard.press("[");
+    await expect(page.locator(".app")).toHaveClass(/rail/);
+  });
+});
+
+test("the sidebar starts as a rail below 1024px", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 800 });
+  await mockAPI(page);
+  await page.goto("/");
+  await expect(page.locator(".app")).toHaveClass(/rail/);
+});
+
+test.describe("states", () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test("loading, then an error with a retry", async ({ page }) => {
+    let calls = 0;
+    await page.route("**/api/**", (route) => {
+      calls++;
+      return route.fulfill({ status: 500, contentType: "application/json", body: '{"error":{"message":"internal error"}}' });
+    });
+    await page.goto("/");
+    await expect(page.getByRole("alert")).toContainText("Couldn’t load leads.");
+    const before = calls;
+    await page.getByRole("button", { name: "Try again" }).click();
+    await expect.poll(() => calls).toBeGreaterThan(before);
+    await noAxeViolations(page);
+  });
+
+  test("everything hidden", async ({ page }) => {
+    await mockAPI(page, JSON.stringify({ total: 0, leads: [] }));
+    await page.goto("/");
+    await expect(page.getByText("Your filters hide all 3 leads.")).toBeVisible();
+    await noAxeViolations(page);
+  });
+});
+
+// WCAG AA for the token pairs used for text, in both themes (axe also checks the
+// rendered page above).
+test("token colours meet WCAG AA in light and dark", async ({ page }) => {
+  await mockAPI(page);
+  await page.goto("/");
+  for (const theme of ["light", "dark"]) {
+    const ratios = await page.evaluate((t) => {
+      document.documentElement.setAttribute("data-theme", t);
+      const css = getComputedStyle(document.documentElement);
+      const rgb = (name: string) => {
+        const hex = css.getPropertyValue(name).trim().slice(1);
+        return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+      };
+      const lum = (c: number[]) => {
+        const [r, g, b] = c.map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)) as [number, number, number];
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const ratio = (a: string, b: string) => {
+        const [x, y] = [lum(rgb(a)), lum(rgb(b))].sort((p, q) => q - p) as [number, number];
+        return (x + 0.05) / (y + 0.05);
+      };
+      const out: Record<string, number> = {};
+      for (const fg of ["--text", "--muted", "--faint"])
+        for (const bg of ["--bg", "--panel", "--hover", "--row-focus"]) out[`${fg} on ${bg}`] = ratio(fg, bg);
+      out["--accent on --bg (non-text, 3:1)"] = ratio("--accent", "--bg");
+      out["--accent on --row-focus (non-text, 3:1)"] = ratio("--accent", "--row-focus");
+      return out;
+    }, theme);
+    for (const [pair, r] of Object.entries(ratios)) {
+      expect(r, `${theme}: ${pair} = ${r.toFixed(2)}`).toBeGreaterThanOrEqual(pair.includes("3:1") ? 3 : 4.5);
+    }
+  }
+});
 
 // AC4: hostile posting text and URLs stay inert in the real browser.
 test("an HTML title and a javascript: URL are inert", async ({ page }) => {
@@ -95,5 +250,6 @@ test("an HTML title and a javascript: URL are inert", async ({ page }) => {
   await expect(page.locator("table img, table script")).toHaveCount(0);
   await expect(page.locator('a[href^="javascript:"]')).toHaveCount(0);
   await page.getByText(evil.leads[0].title).click();
+  await page.keyboard.press("Enter"); // o/Enter must not open a javascript: URL either
   expect(dialogs).toBe(0);
 });

@@ -62,7 +62,7 @@ testdata/            golden files (recorded board responses, sample postings)
 
 | Task | Command |
 |---|---|
-| Everything CI runs (needs Docker: includes integration tests) | `make check` |
+| Everything CI runs (needs Docker and Node 26: includes integration and Playwright tests) | `make check` |
 | Go tests (always with race detector) | `make test-go` → `go test -race ./...` |
 | All Go tests + integration tests (testcontainers) | `make test-integration` → `go test -race -tags integration ./...` |
 | Python tests | `make test-py` → `uv run pytest` |
@@ -75,6 +75,9 @@ testdata/            golden files (recorded board responses, sample postings)
 | Vulnerability scan | `make vuln` → govulncheck |
 | Fuzz the source parsers (30s each) | `make fuzz` |
 | Local stack | `make up` / `make down` |
+| Web checks: audit, types, lint, unit, build, Playwright + axe (Node 26, `web/.nvmrc`) | `make web-check` |
+| Build the tracker page into the API binary | `make web-build` |
+| Tracker page dev server (proxies `/api` to 127.0.0.1:8080) | `make web-dev` |
 
 Never run `python` or `pytest` directly — always through `uv run`.
 

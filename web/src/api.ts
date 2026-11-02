@@ -32,6 +32,7 @@ export type Preset = {
   seniority?: string[];
   experience_max_years?: number;
   closed?: string;
+  location?: unknown[];
 };
 
 export type Presets = { presets: { id: string; preset?: Preset; error?: string }[] };
@@ -62,11 +63,12 @@ export async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
   return body as T;
 }
 
-// The page URL holds the API's filter parameters plus `view` (leads | hidden), which
-// is the page's own. apiQuery strips what the API doesn't know.
+// The page URL holds the API's filter parameters plus the page's own `view` (leads |
+// hidden) and `q` (search). apiQuery strips what the API doesn't know.
 export function apiQuery(page: URLSearchParams, extra: Record<string, string> = {}): string {
   const q = new URLSearchParams(page);
   q.delete("view");
+  q.delete("q");
   for (const [k, v] of Object.entries(extra)) q.set(k, v);
   const s = q.toString();
   return s ? `?${s}` : "";
