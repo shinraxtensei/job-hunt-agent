@@ -1,6 +1,6 @@
 # M2-05: Leads API (Go)
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M2 — Rules and a plain tracker
 - **Linear:** [HAM-34](https://linear.app/hamid-corp/issue/HAM-34/m2-05-leads-api-go)
 - **Estimate:** 1 day
@@ -38,8 +38,10 @@ tracker in M6. No auth: local only now, behind Tailscale after Deploy (ADR-0002)
 2c. **Given** `GET /api/facets` (same filter parameters) and `GET /api/presets`
    **When** called
    **Then** facets returns every facet value with its count under the current filters
-   (to build the filter controls), and presets lists the available presets with their
-   filters.
+   **with that facet's own filter removed** (every other filter still applied), so the
+   page can show how many leads each value would add; the location facets (workplace,
+   remote scope, country, city, track) drop the location rules together. Presets lists
+   the available presets with their filters.
 2d. **Given** a lead whose duplicate group (M2-02, `job_groups`) has more than one member
    **When** I call `GET /api/leads/{id}/members`
    **Then** I get every posting in the lead's group, each with title, team, department,

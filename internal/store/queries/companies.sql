@@ -31,3 +31,8 @@ RETURNING (xmax = 0)::boolean AS inserted;
 -- board_keys inactive. Slugs never contain "/" (the watch list rejects them).
 UPDATE companies SET active = false
 WHERE active AND board_type || '/' || board_slug <> ALL (@board_keys::text[]);
+
+-- name: ListCompanies :many
+SELECT id, name, coalesce(track, '')::text AS track, board_type, board_slug, active, excluded
+FROM companies
+ORDER BY name, id;

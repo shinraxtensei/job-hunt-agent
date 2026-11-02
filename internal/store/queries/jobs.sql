@@ -58,3 +58,27 @@ ORDER BY g.company_id, g.title_key;
 SELECT company_id, title_key, workplace, locations, remote_scopes, countries
 FROM jobs
 WHERE title_key <> '';
+
+-- name: ListLeads :many
+-- Every duplicate group of an active company with its canonical job, for the leads API
+-- (ADR-0012). first_seen_at is the group's: its earliest member's.
+SELECT g.company_id, g.title_key, g.members, g.closed, g.locations::text[] AS locations,
+	g.workplaces::text[] AS workplaces, c.name AS company, coalesce(c.track, '')::text AS track,
+	j.posting_id, j.title, j.team, j.url, j.published_at, j.role_family, j.seniority, j.experience_min_years,
+	(SELECT min(mp.first_seen_at) FROM jobs m JOIN postings mp ON mp.id = m.posting_id
+	 WHERE m.company_id = g.company_id AND m.title_key = g.title_key)::timestamptz AS first_seen_at
+FROM job_groups g
+JOIN companies c ON c.id = g.company_id
+JOIN jobs j ON j.posting_id = g.canonical_posting_id
+WHERE c.active;
+
+-- name: ListGroupMembers :many
+-- Every posting in the group of posting @id: the canonical one first, then by first seen.
+SELECT m.posting_id, m.title, m.team, m.department, m.locations, m.workplace, m.url,
+	p.first_seen_at, (p.closed_at IS NOT NULL)::boolean AS closed
+FROM jobs j
+JOIN jobs m ON m.company_id = j.company_id AND m.title_key = j.title_key
+JOIN postings p ON p.id = m.posting_id
+JOIN job_groups g ON g.company_id = j.company_id AND g.title_key = j.title_key
+WHERE j.posting_id = @id AND j.title_key <> ''
+ORDER BY m.posting_id = g.canonical_posting_id DESC, p.first_seen_at, m.posting_id;

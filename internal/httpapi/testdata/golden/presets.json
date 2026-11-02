@@ -1,0 +1,104 @@
+{
+  "presets": [
+    {
+      "id": "default",
+      "preset": {
+        "name": "default",
+        "description": "My profile (resume, 2026-11)",
+        "role_family": [
+          "backend",
+          "fullstack",
+          "frontend",
+          "mobile",
+          "platform",
+          "data",
+          "ai_ml",
+          "unknown"
+        ],
+        "seniority": [
+          "junior",
+          "mid",
+          "senior",
+          "unknown"
+        ],
+        "experience_max_years": 5,
+        "closed": "hide",
+        "location": [
+          {
+            "workplace": [
+              "remote"
+            ],
+            "remote_scopes": [
+              "worldwide",
+              "emea",
+              "africa",
+              "europe",
+              "country:MA",
+              "unknown"
+            ]
+          },
+          {
+            "workplace": [
+              "onsite",
+              "hybrid"
+            ],
+            "cities": [
+              "Casablanca",
+              "Rabat"
+            ]
+          },
+          {
+            "workplace": [
+              "onsite",
+              "hybrid"
+            ],
+            "countries": [
+              "AT",
+              "BE",
+              "BG",
+              "HR",
+              "CY",
+              "CZ",
+              "DK",
+              "EE",
+              "FI",
+              "FR",
+              "DE",
+              "GR",
+              "HU",
+              "IE",
+              "IT",
+              "LV",
+              "LT",
+              "LU",
+              "MT",
+              "NL",
+              "PL",
+              "PT",
+              "RO",
+              "SK",
+              "SI",
+              "ES",
+              "SE",
+              "IS",
+              "LI",
+              "NO",
+              "GB",
+              "CH",
+              "AE"
+            ],
+            "track": [
+              "relocation"
+            ]
+          },
+          {
+            "workplace": [
+              "unknown"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
+

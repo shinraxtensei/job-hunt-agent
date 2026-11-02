@@ -74,6 +74,50 @@ func (q *Queries) GetCompany(ctx context.Context, id int64) (Company, error) {
 	return i, err
 }
 
+const listCompanies = `-- name: ListCompanies :many
+SELECT id, name, coalesce(track, '')::text AS track, board_type, board_slug, active, excluded
+FROM companies
+ORDER BY name, id
+`
+
+type ListCompaniesRow struct {
+	ID        int64
+	Name      string
+	Track     string
+	BoardType string
+	BoardSlug string
+	Active    bool
+	Excluded  bool
+}
+
+func (q *Queries) ListCompanies(ctx context.Context) ([]ListCompaniesRow, error) {
+	rows, err := q.db.Query(ctx, listCompanies)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCompaniesRow
+	for rows.Next() {
+		var i ListCompaniesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Track,
+			&i.BoardType,
+			&i.BoardSlug,
+			&i.Active,
+			&i.Excluded,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertCompanyID = `-- name: UpsertCompanyID :one
 INSERT INTO companies (name, board_type, board_slug)
 VALUES ($1, $2, $3)

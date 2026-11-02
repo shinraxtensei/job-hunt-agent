@@ -1,0 +1,66 @@
+{
+  "total": 2,
+  "leads": [
+    {
+      "id": 9006,
+      "company": {
+        "name": "Brick",
+        "track": "relocation"
+      },
+      "title": "Mobile Engineer (Flutter)",
+      "role_family": "mobile",
+      "seniority": "unknown",
+      "workplaces": [
+        "onsite"
+      ],
+      "remote_scopes": [],
+      "countries": [
+        "NL"
+      ],
+      "locations": [
+        "Amsterdam"
+      ],
+      "experience_min_years": null,
+      "closed": false,
+      "team": "Engineering",
+      "url": "https://jobs.lever.co/x/9006",
+      "published_at": "2025-10-31T08:40:00Z",
+      "first_seen_at": "2026-11-01T12:30:00Z",
+      "members": 1,
+      "members_url": "/api/leads/9006/members"
+    },
+    {
+      "id": 9001,
+      "company": {
+        "name": "Acme",
+        "track": "remote"
+      },
+      "title": "Senior Backend Engineer",
+      "role_family": "backend",
+      "seniority": "senior",
+      "workplaces": [
+        "remote"
+      ],
+      "remote_scopes": [
+        "country:MA",
+        "emea"
+      ],
+      "countries": [
+        "MA"
+      ],
+      "locations": [
+        "Remote - EMEA",
+        "Remote – Morocco"
+      ],
+      "experience_min_years": 5,
+      "closed": false,
+      "team": "Engineering",
+      "url": "https://jobs.lever.co/x/9001",
+      "published_at": "2025-10-31T08:40:00Z",
+      "first_seen_at": "2026-10-30T10:00:00Z",
+      "members": 2,
+      "members_url": "/api/leads/9001/members"
+    }
+  ]
+}
+

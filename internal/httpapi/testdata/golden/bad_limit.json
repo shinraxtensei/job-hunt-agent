@@ -1,0 +1,7 @@
+{
+  "error": {
+    "parameter": "limit",
+    "message": "want a whole number from 1 to 200"
+  }
+}
+

@@ -1,0 +1,32 @@
+{
+  "lead_id": 9001,
+  "members": [
+    {
+      "id": 9001,
+      "title": "Senior Backend Engineer",
+      "team": "Engineering",
+      "department": "",
+      "locations": [
+        "Remote – Morocco"
+      ],
+      "workplace": "remote",
+      "url": "https://jobs.lever.co/x/9001",
+      "first_seen_at": "2026-10-30T10:00:00Z",
+      "closed": false
+    },
+    {
+      "id": 9002,
+      "title": "Senior Backend Engineer",
+      "team": "Engineering",
+      "department": "",
+      "locations": [
+        "Remote - EMEA"
+      ],
+      "workplace": "remote",
+      "url": "https://jobs.lever.co/x/9002",
+      "first_seen_at": "2026-10-31T10:00:00Z",
+      "closed": false
+    }
+  ]
+}
+

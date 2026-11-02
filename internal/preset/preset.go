@@ -17,16 +17,22 @@ import (
 
 // Preset is one set of filters. A nil list or pointer, or an empty Closed, is no filter.
 type Preset struct {
-	Name, Description     string
-	RoleFamily, Seniority []string
-	ExperienceMaxYears    *int   // hide groups whose explicit minimum is above this
-	Closed                string // hide | show | only
-	Location              []Rule // shown if any rule matches any member
+	Name               string   `json:"name"`
+	Description        string   `json:"description,omitempty"`
+	RoleFamily         []string `json:"role_family,omitempty"`
+	Seniority          []string `json:"seniority,omitempty"`
+	ExperienceMaxYears *int     `json:"experience_max_years,omitempty"` // hide groups whose explicit minimum is above this
+	Closed             string   `json:"closed,omitempty"`               // hide | show | only
+	Location           []Rule   `json:"location,omitempty"`             // shown if any rule matches any member
 }
 
 // Rule is one location rule: every list it sets must match.
 type Rule struct {
-	Workplace, RemoteScopes, Cities, Countries, Track []string
+	Workplace    []string `json:"workplace,omitempty"`
+	RemoteScopes []string `json:"remote_scopes,omitempty"`
+	Cities       []string `json:"cities,omitempty"`
+	Countries    []string `json:"countries,omitempty"`
+	Track        []string `json:"track,omitempty"`
 }
 
 // Group is what a preset is evaluated on: the canonical job's facets, the company's
@@ -204,39 +210,68 @@ func rules(v *yaml.Node, bad reporter) []Rule {
 		var r Rule
 		for i := 0; i+1 < len(n.Content); i += 2 {
 			k, val := n.Content[i], n.Content[i+1]
-			switch k.Value {
-			case "workplace":
-				r.Workplace = list(val, "workplace", workplaces, bad)
-			case "track":
-				r.Track = list(val, "track", tracks, bad)
-			case "cities":
-				r.Cities = list(val, "city", nil, bad)
-			case "remote_scopes":
-				for _, s := range list(val, "remote_scope", nil, bad) {
-					if code, ok := strings.CutPrefix(s, "country:"); !slices.Contains(remoteScopes, s) && (!ok || !isCode(code)) {
-						bad(val, "unknown remote_scope %q", s)
-						continue
-					}
-					r.RemoteScopes = append(r.RemoteScopes, s)
-				}
-			case "countries":
-				for _, c := range list(val, "country", nil, bad) {
-					switch {
-					case c == "EU_EEA":
-						r.Countries = append(r.Countries, euEEA...)
-					case isCode(c):
-						r.Countries = append(r.Countries, c)
-					default:
-						bad(val, "country %q is not an ISO alpha-2 code or EU_EEA", c)
-					}
-				}
-			default:
+			if !slices.Contains(ruleKeys, k.Value) {
 				bad(k, "unknown location key %q (want one of %s)", k.Value, strings.Join(ruleKeys, ", "))
+				continue
 			}
+			vals, problems := RuleValues(k.Value, list(val, k.Value, nil, bad))
+			for _, msg := range problems {
+				bad(val, "%s", msg)
+			}
+			r.set(k.Value, vals)
 		}
 		out = append(out, r)
 	}
 	return out
+}
+
+// RuleValues checks the values of one location rule key ("workplace", "remote_scopes",
+// "cities", "countries", "track") and returns them with EU_EEA expanded, plus a message
+// for each invalid value. The API uses it for query parameters, so a preset file and a URL
+// accept exactly the same values.
+func RuleValues(key string, values []string) (out, problems []string) {
+	for _, v := range values {
+		ok := true
+		switch key {
+		case "workplace":
+			ok = slices.Contains(workplaces, v)
+		case "track":
+			ok = slices.Contains(tracks, v)
+		case "remote_scopes":
+			code, isCountry := strings.CutPrefix(v, "country:")
+			ok = slices.Contains(remoteScopes, v) || isCountry && isCode(code)
+		case "countries":
+			if v == "EU_EEA" {
+				out = append(out, euEEA...)
+				continue
+			}
+			if !isCode(v) {
+				problems = append(problems, fmt.Sprintf("country %q is not an ISO alpha-2 code or EU_EEA", v))
+				continue
+			}
+		}
+		if !ok {
+			problems = append(problems, fmt.Sprintf("unknown %s %q", strings.TrimSuffix(key, "s"), v))
+			continue
+		}
+		out = append(out, v)
+	}
+	return out, problems
+}
+
+func (r *Rule) set(key string, vals []string) {
+	switch key {
+	case "workplace":
+		r.Workplace = vals
+	case "track":
+		r.Track = vals
+	case "cities":
+		r.Cities = vals
+	case "remote_scopes":
+		r.RemoteScopes = vals
+	case "countries":
+		r.Countries = vals
+	}
 }
 
 // isCode reports whether s is an upper-case ISO 3166-1 alpha-2 code.

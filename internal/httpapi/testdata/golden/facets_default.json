@@ -1,0 +1,38 @@
+{
+  "facets": {
+    "closed": {
+      "false": 2,
+      "true": 1
+    },
+    "company": {
+      "Acme": 1,
+      "Brick": 1
+    },
+    "country": {
+      "MA": 1,
+      "NL": 1
+    },
+    "remote_scope": {
+      "country:MA": 1,
+      "emea": 1
+    },
+    "role_family": {
+      "backend": 1,
+      "mobile": 1
+    },
+    "seniority": {
+      "senior": 1,
+      "unknown": 1
+    },
+    "track": {
+      "relocation": 1,
+      "remote": 1
+    },
+    "workplace": {
+      "onsite": 1,
+      "remote": 1
+    }
+  },
+  "total": 2
+}
+

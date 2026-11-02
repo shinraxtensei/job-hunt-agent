@@ -131,6 +131,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0009 | Group duplicate jobs by company and a title key stored on `jobs` | Accepted |
 | 0010 | Close postings missing from a successful full-board fetch | Accepted |
 | 0011 | Job facets on `jobs`, a classifier version, and YAML filter presets | Accepted |
+| 0012 | The leads API loads groups and evaluates presets in Go, with a keyset cursor | Accepted |
 
 ## Project skills
 

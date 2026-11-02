@@ -1,0 +1,7 @@
+{
+  "error": {
+    "parameter": "remote_scope",
+    "message": "unknown remote_scope \"mars\""
+  }
+}
+

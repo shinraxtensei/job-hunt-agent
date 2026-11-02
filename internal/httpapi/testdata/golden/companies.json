@@ -1,0 +1,35 @@
+{
+  "companies": [
+    {
+      "name": "Acme",
+      "track": "remote",
+      "board_type": "lever",
+      "board_slug": "acme",
+      "active": true,
+      "excluded": false,
+      "open_leads": 3,
+      "kept_leads": 1
+    },
+    {
+      "name": "Brick",
+      "track": "relocation",
+      "board_type": "lever",
+      "board_slug": "brick",
+      "active": true,
+      "excluded": false,
+      "open_leads": 1,
+      "kept_leads": 1
+    },
+    {
+      "name": "Gone",
+      "track": "morocco",
+      "board_type": "lever",
+      "board_slug": "gone",
+      "active": false,
+      "excluded": false,
+      "open_leads": 0,
+      "kept_leads": 0
+    }
+  ]
+}
+

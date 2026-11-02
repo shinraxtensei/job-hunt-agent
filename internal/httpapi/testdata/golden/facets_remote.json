@@ -1,0 +1,38 @@
+{
+  "facets": {
+    "closed": {
+      "false": 2
+    },
+    "company": {
+      "Acme": 2
+    },
+    "country": {
+      "FR": 1,
+      "MA": 2,
+      "US": 1
+    },
+    "remote_scope": {
+      "country:MA": 1,
+      "emea": 1,
+      "us_only": 1
+    },
+    "role_family": {
+      "backend": 1,
+      "data": 1
+    },
+    "seniority": {
+      "senior": 1,
+      "staff_plus": 1
+    },
+    "track": {
+      "remote": 4
+    },
+    "workplace": {
+      "hybrid": 1,
+      "onsite": 1,
+      "remote": 2
+    }
+  },
+  "total": 2
+}
+

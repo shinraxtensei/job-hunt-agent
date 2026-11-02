@@ -11,6 +11,60 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const listGroupMembers = `-- name: ListGroupMembers :many
+SELECT m.posting_id, m.title, m.team, m.department, m.locations, m.workplace, m.url,
+	p.first_seen_at, (p.closed_at IS NOT NULL)::boolean AS closed
+FROM jobs j
+JOIN jobs m ON m.company_id = j.company_id AND m.title_key = j.title_key
+JOIN postings p ON p.id = m.posting_id
+JOIN job_groups g ON g.company_id = j.company_id AND g.title_key = j.title_key
+WHERE j.posting_id = $1 AND j.title_key <> ''
+ORDER BY m.posting_id = g.canonical_posting_id DESC, p.first_seen_at, m.posting_id
+`
+
+type ListGroupMembersRow struct {
+	PostingID   int64
+	Title       string
+	Team        string
+	Department  string
+	Locations   []string
+	Workplace   string
+	Url         string
+	FirstSeenAt pgtype.Timestamptz
+	Closed      bool
+}
+
+// Every posting in the group of posting @id: the canonical one first, then by first seen.
+func (q *Queries) ListGroupMembers(ctx context.Context, id int64) ([]ListGroupMembersRow, error) {
+	rows, err := q.db.Query(ctx, listGroupMembers, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGroupMembersRow
+	for rows.Next() {
+		var i ListGroupMembersRow
+		if err := rows.Scan(
+			&i.PostingID,
+			&i.Title,
+			&i.Team,
+			&i.Department,
+			&i.Locations,
+			&i.Workplace,
+			&i.Url,
+			&i.FirstSeenAt,
+			&i.Closed,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGroupsForPresets = `-- name: ListGroupsForPresets :many
 SELECT g.company_id, g.title_key, g.closed, coalesce(c.track, '')::text AS track, c.name AS company,
 	j.title, j.role_family, j.seniority, j.experience_min_years
@@ -140,6 +194,78 @@ func (q *Queries) ListJobsToClassify(ctx context.Context, arg ListJobsToClassify
 	for rows.Next() {
 		var i ListJobsToClassifyRow
 		if err := rows.Scan(&i.PostingID, &i.Source, &i.RawPayload); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLeads = `-- name: ListLeads :many
+SELECT g.company_id, g.title_key, g.members, g.closed, g.locations::text[] AS locations,
+	g.workplaces::text[] AS workplaces, c.name AS company, coalesce(c.track, '')::text AS track,
+	j.posting_id, j.title, j.team, j.url, j.published_at, j.role_family, j.seniority, j.experience_min_years,
+	(SELECT min(mp.first_seen_at) FROM jobs m JOIN postings mp ON mp.id = m.posting_id
+	 WHERE m.company_id = g.company_id AND m.title_key = g.title_key)::timestamptz AS first_seen_at
+FROM job_groups g
+JOIN companies c ON c.id = g.company_id
+JOIN jobs j ON j.posting_id = g.canonical_posting_id
+WHERE c.active
+`
+
+type ListLeadsRow struct {
+	CompanyID          int64
+	TitleKey           string
+	Members            int32
+	Closed             bool
+	Locations          []string
+	Workplaces         []string
+	Company            string
+	Track              string
+	PostingID          int64
+	Title              string
+	Team               string
+	Url                string
+	PublishedAt        pgtype.Timestamptz
+	RoleFamily         string
+	Seniority          string
+	ExperienceMinYears pgtype.Int4
+	FirstSeenAt        pgtype.Timestamptz
+}
+
+// Every duplicate group of an active company with its canonical job, for the leads API
+// (ADR-0012). first_seen_at is the group's: its earliest member's.
+func (q *Queries) ListLeads(ctx context.Context) ([]ListLeadsRow, error) {
+	rows, err := q.db.Query(ctx, listLeads)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLeadsRow
+	for rows.Next() {
+		var i ListLeadsRow
+		if err := rows.Scan(
+			&i.CompanyID,
+			&i.TitleKey,
+			&i.Members,
+			&i.Closed,
+			&i.Locations,
+			&i.Workplaces,
+			&i.Company,
+			&i.Track,
+			&i.PostingID,
+			&i.Title,
+			&i.Team,
+			&i.Url,
+			&i.PublishedAt,
+			&i.RoleFamily,
+			&i.Seniority,
+			&i.ExperienceMinYears,
+			&i.FirstSeenAt,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

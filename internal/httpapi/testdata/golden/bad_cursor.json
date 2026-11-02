@@ -1,0 +1,7 @@
+{
+  "error": {
+    "parameter": "cursor",
+    "message": "not a cursor this API returned"
+  }
+}
+

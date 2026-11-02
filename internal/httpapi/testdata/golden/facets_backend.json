@@ -1,0 +1,35 @@
+{
+  "facets": {
+    "closed": {
+      "false": 1
+    },
+    "company": {
+      "Acme": 1
+    },
+    "country": {
+      "MA": 1
+    },
+    "remote_scope": {
+      "country:MA": 1,
+      "emea": 1
+    },
+    "role_family": {
+      "backend": 1,
+      "data": 1,
+      "frontend": 1,
+      "mobile": 1,
+      "sales": 1
+    },
+    "seniority": {
+      "senior": 1
+    },
+    "track": {
+      "remote": 1
+    },
+    "workplace": {
+      "remote": 1
+    }
+  },
+  "total": 1
+}
+

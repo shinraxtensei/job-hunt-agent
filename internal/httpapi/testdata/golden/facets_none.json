@@ -1,0 +1,46 @@
+{
+  "facets": {
+    "closed": {
+      "false": 4,
+      "true": 1
+    },
+    "company": {
+      "Acme": 4,
+      "Brick": 1
+    },
+    "country": {
+      "FR": 1,
+      "MA": 2,
+      "NL": 1,
+      "US": 1
+    },
+    "remote_scope": {
+      "country:MA": 1,
+      "emea": 1,
+      "us_only": 1
+    },
+    "role_family": {
+      "backend": 1,
+      "data": 1,
+      "frontend": 1,
+      "mobile": 1,
+      "sales": 1
+    },
+    "seniority": {
+      "senior": 1,
+      "staff_plus": 1,
+      "unknown": 3
+    },
+    "track": {
+      "relocation": 1,
+      "remote": 4
+    },
+    "workplace": {
+      "hybrid": 1,
+      "onsite": 2,
+      "remote": 2
+    }
+  },
+  "total": 5
+}
+

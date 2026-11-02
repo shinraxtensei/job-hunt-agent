@@ -1,0 +1,92 @@
+{
+  "total": 3,
+  "leads": [
+    {
+      "id": 9005,
+      "company": {
+        "name": "Acme",
+        "track": "remote"
+      },
+      "title": "Frontend Engineer",
+      "role_family": "frontend",
+      "seniority": "unknown",
+      "workplaces": [
+        "hybrid"
+      ],
+      "remote_scopes": [],
+      "countries": [
+        "MA"
+      ],
+      "locations": [
+        "Casablanca"
+      ],
+      "experience_min_years": null,
+      "closed": true,
+      "team": "Engineering",
+      "url": "https://jobs.lever.co/x/9005",
+      "published_at": "2025-10-31T08:40:00Z",
+      "first_seen_at": "2026-11-02T09:00:00Z",
+      "members": 1,
+      "members_url": "/api/leads/9005/members"
+    },
+    {
+      "id": 9004,
+      "company": {
+        "name": "Acme",
+        "track": "remote"
+      },
+      "title": "Staff Data Engineer",
+      "role_family": "data",
+      "seniority": "staff_plus",
+      "workplaces": [
+        "remote"
+      ],
+      "remote_scopes": [
+        "us_only"
+      ],
+      "countries": [
+        "US"
+      ],
+      "locations": [
+        "Remote - US"
+      ],
+      "experience_min_years": 8,
+      "closed": false,
+      "team": "Engineering",
+      "url": "https://jobs.lever.co/x/9004",
+      "published_at": "2025-10-31T08:40:00Z",
+      "first_seen_at": "2026-11-02T08:00:00Z",
+      "members": 1,
+      "members_url": "/api/leads/9004/members"
+    },
+    {
+      "id": 9003,
+      "company": {
+        "name": "Acme",
+        "track": "remote"
+      },
+      "title": "Account Executive",
+      "role_family": "sales",
+      "seniority": "unknown",
+      "workplaces": [
+        "onsite"
+      ],
+      "remote_scopes": [],
+      "countries": [
+        "FR"
+      ],
+      "locations": [
+        "Paris, France"
+      ],
+      "experience_min_years": null,
+      "closed": false,
+      "team": "Engineering",
+      "url": "https://jobs.lever.co/x/9003",
+      "published_at": "2025-10-31T08:40:00Z",
+      "first_seen_at": "2026-11-01T09:00:00Z",
+      "members": 1,
+      "members_url": "/api/leads/9003/members"
+    }
+  ]
+}
+

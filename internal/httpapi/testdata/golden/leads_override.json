@@ -1,0 +1,34 @@
+{
+  "total": 1,
+  "leads": [
+    {
+      "id": 9003,
+      "company": {
+        "name": "Acme",
+        "track": "remote"
+      },
+      "title": "Account Executive",
+      "role_family": "sales",
+      "seniority": "unknown",
+      "workplaces": [
+        "onsite"
+      ],
+      "remote_scopes": [],
+      "countries": [
+        "FR"
+      ],
+      "locations": [
+        "Paris, France"
+      ],
+      "experience_min_years": null,
+      "closed": false,
+      "team": "Engineering",
+      "url": "https://jobs.lever.co/x/9003",
+      "published_at": "2025-10-31T08:40:00Z",
+      "first_seen_at": "2026-11-01T09:00:00Z",
+      "members": 1,
+      "members_url": "/api/leads/9003/members"
+    }
+  ]
+}
+
