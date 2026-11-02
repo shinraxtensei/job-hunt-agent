@@ -28,3 +28,8 @@ updates:
     groups:
       web:
         patterns: ["*"]
+    ignore:
+      # TypeScript 7 (the native compiler) can't run typescript-eslint yet: its peer range
+      # is <6.1 and it refuses TS 7 (typescript-eslint#10940). Remove when that ships.
+      - dependency-name: typescript
+        versions: [">=7"]

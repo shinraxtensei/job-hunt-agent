@@ -57,7 +57,7 @@ on Workable (see the change log).
 M1-08 (daily schedule and monitoring) and M1-09 (backups) moved to **D: Deploy**: both
 only make sense on an always-on server.
 
-## M2: Rules and a plain tracker (usable from here)
+## M2: Rules and a plain tracker (usable from here) ✅ done 2026-11-02
 
 **Goal:** the owner opens one page each morning and sees today's new leads that fit his
 profile, and can widen any filter with one click.
@@ -76,7 +76,8 @@ profile, and can widen any filter with one click.
 
 **Stories:** M2-01 Normalise to the job record · M2-02 Deduplication · M2-03 Classify
 jobs and filter with presets · M2-04 Closed-posting detection · M2-05 Leads API (Go) ·
-M2-06 Plain tracker table (TypeScript) · M2-07 Manual add by link
+M2-06 Plain tracker table (TypeScript) · M2-07 Manual add by link · M2-08 Tracker polish
+(added) · M2-09 Classifier country coverage (added)
 
 Order: M2-01 → M2-02 → M2-03 (uses M2-04's `closed` facet, can start before it) →
 M2-05 → M2-06. M2-04 and M2-07 can go any time after M2-01.
@@ -237,3 +238,4 @@ M8-03 Public README and architecture write-up · M8-04 Threat model review
 | 2026-11-01 | M1-06 Workable adapter moved from M1 to the M7 backlog; M1 now covers Lever, Greenhouse and Ashby. | No active watch-list company uses Workable: the only Workable entry is Yassir, which is excluded and never collected. The public endpoint also listed 0 jobs for every account tried (M1-01), so the adapter's first task is unsolved. All 50 active companies are collected without it. |
 | 2026-11-01 | M2 stories written. Liveness: closure is detected from full-board fetches; only manually added postings get the 2-day recheck. | The collector already fetches whole boards, so a per-posting recheck would only duplicate requests. |
 | 2026-11-01 | M2-03: hard rules that drop postings replaced by classification plus filter presets; the owner's profile is the `default` preset. New milestone **S: Sharing with friends**, unscheduled, after D. | The owner wants to widen filters at will (seniority included) and to share the tracker with friends in other fields, who need the same data with different filters. Dropping would lose exactly the jobs they want. Sharing changes the trust boundary (ADR-0002), so it gets its own milestone. |
+| 2026-11-02 | **M2 complete.** M2-01…M2-07 done, plus two stories added during the milestone: M2-08 Tracker polish (matched location, labels) and M2-09 Classifier country coverage (all ISO 3166-1 countries, `latam`). Decisions: ADR-0008…ADR-0015. On the local data: 5,902 jobs in 4,486 duplicate groups; the default preset shows 508 and hides 3,978, each with its reasons; closed postings detected from full-board fetches; jobs can be added by link (`collector add`), with board links fetched only through the boards' own APIs. The tracker page (Vite + React, embedded in the API binary, same-origin CSP) passes axe and AA contrast at 375 and 1280 px in both themes. Held back: TypeScript 7 (Dependabot #26) until typescript-eslint supports it (typescript-eslint#10940). Next: **D: Deploy**. | Every M2 exit criterion is met and seen working locally. TypeScript 7 passes `tsc`, Vite and Vitest, but typescript-eslint 8.72.1 (latest) requires TypeScript < 6.1 and refuses to run, so `npm ci` and the lint step fail. |
