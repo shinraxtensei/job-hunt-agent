@@ -62,6 +62,21 @@ func (c *Client) Fetch(ctx context.Context, board string, limit *rate.Limiter) (
 	return raws, skipped, nil
 }
 
+// FetchOne returns one job by board and id from Greenhouse's API (M2-07). The URL is built
+// here from the parsed board and id; a pasted link is never requested. A 404 is
+// fetch.ErrNotFound.
+func (c *Client) FetchOne(ctx context.Context, board, id string, limit *rate.Limiter) (job.Raw, error) {
+	body, err := c.Get(ctx, c.base+"/v1/boards/"+url.PathEscape(board)+"/jobs/"+url.PathEscape(id), limit)
+	if err != nil {
+		return job.Raw{}, fmt.Errorf("greenhouse: fetch %s/%s: %w", board, id, err)
+	}
+	raws, _, err := parse(append(append([]byte(`{"jobs":[`), body...), ']', '}'))
+	if err != nil || len(raws) != 1 || raws[0].SourceID != id {
+		return job.Raw{}, fmt.Errorf("greenhouse: fetch %s/%s: not the job asked for", board, id)
+	}
+	return raws[0], nil
+}
+
 // parse splits a jobs document into raw records. Each record keeps its job's bytes
 // exactly; only id, title and absolute_url are read, to fill the columns every posting
 // needs. Jobs without a positive integer id or a URL, or containing NUL (which Postgres

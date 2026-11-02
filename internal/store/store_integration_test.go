@@ -144,7 +144,7 @@ func TestStoreCreatesAndReadsCompany(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading company: %v", err)
 	}
-	if got.Name != "Acme" || got.BoardType != "lever" || got.BoardSlug != acme || got.Excluded {
+	if got.Name != "Acme" || got.BoardType.String != "lever" || got.BoardSlug.String != acme || got.Excluded {
 		t.Errorf("read back %+v, want Acme/lever/acme, not excluded", got)
 	}
 	if !got.CreatedAt.Valid {

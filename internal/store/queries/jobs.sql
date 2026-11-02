@@ -50,7 +50,10 @@ SELECT g.company_id, g.title_key, g.closed, coalesce(c.track, '')::text AS track
 FROM job_groups g
 JOIN companies c ON c.id = g.company_id
 JOIN jobs j ON j.posting_id = g.canonical_posting_id
-WHERE c.active
+WHERE c.active OR EXISTS (
+	SELECT 1 FROM jobs m JOIN postings mp ON mp.id = m.posting_id
+	WHERE m.company_id = g.company_id AND m.title_key = g.title_key AND mp.origin = 'manual'
+)
 ORDER BY g.company_id, g.title_key;
 
 -- name: ListJobPlaces :many
@@ -60,17 +63,23 @@ FROM jobs
 WHERE title_key <> '';
 
 -- name: ListLeads :many
--- Every duplicate group of an active company with its canonical job, for the leads API
--- (ADR-0012). first_seen_at is the group's: its earliest member's.
+-- Every duplicate group of an active company, or with a manually added member
+-- (ADR-0015), with its canonical job, for the leads API (ADR-0012). first_seen_at is the
+-- group's: its earliest member's.
 SELECT g.company_id, g.title_key, g.members, g.closed, g.locations::text[] AS locations,
 	g.workplaces::text[] AS workplaces, c.name AS company, coalesce(c.track, '')::text AS track,
 	j.posting_id, j.title, j.team, j.url, j.published_at, j.role_family, j.seniority, j.experience_min_years,
 	(SELECT min(mp.first_seen_at) FROM jobs m JOIN postings mp ON mp.id = m.posting_id
-	 WHERE m.company_id = g.company_id AND m.title_key = g.title_key)::timestamptz AS first_seen_at
+	 WHERE m.company_id = g.company_id AND m.title_key = g.title_key)::timestamptz AS first_seen_at,
+	cp.origin
 FROM job_groups g
 JOIN companies c ON c.id = g.company_id
 JOIN jobs j ON j.posting_id = g.canonical_posting_id
-WHERE c.active;
+JOIN postings cp ON cp.id = g.canonical_posting_id
+WHERE c.active OR EXISTS (
+	SELECT 1 FROM jobs m JOIN postings mp ON mp.id = m.posting_id
+	WHERE m.company_id = g.company_id AND m.title_key = g.title_key AND mp.origin = 'manual'
+);
 
 -- name: ListGroupMembers :many
 -- Every posting in the group of posting @id: the canonical one first, then by first seen.

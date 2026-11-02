@@ -2,6 +2,7 @@ package greenhouse_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/shinraxtensei/job-hunter/internal/job"
+	"github.com/shinraxtensei/job-hunter/internal/source/fetch"
 	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
 )
 
@@ -193,5 +195,30 @@ func TestFetchErrorNamesCompany(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "secret upstream detail") {
 		t.Errorf("error leaks the response body: %v", err)
+	}
+}
+
+// M2-07: FetchOne asks Greenhouse's API for one job, by board and id.
+func TestFetchOne(t *testing.T) {
+	jobs := jobsOf(t, "cockroachlabs_jobs.json")
+	var path string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path = r.URL.Path
+		if r.URL.Path == "/v1/boards/cockroachlabs/jobs/8079608" {
+			_, _ = w.Write(jobs[0])
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	t.Cleanup(srv.Close)
+	raw, err := client(srv.URL).FetchOne(t.Context(), "cockroachlabs", "8079608", noLimit())
+	if err != nil || raw.Source != "greenhouse" || raw.SourceID != "8079608" || string(raw.Payload) != string(jobs[0]) {
+		t.Fatalf("FetchOne = %+v, %v", raw, err)
+	}
+	if path != "/v1/boards/cockroachlabs/jobs/8079608" {
+		t.Errorf("requested %s", path)
+	}
+	if _, err := client(srv.URL).FetchOne(t.Context(), "cockroachlabs", "1", noLimit()); !errors.Is(err, fetch.ErrNotFound) {
+		t.Errorf("missing job: err = %v, want ErrNotFound", err)
 	}
 }

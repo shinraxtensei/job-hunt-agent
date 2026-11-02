@@ -31,6 +31,20 @@ func (q *Queries) ClosePostingsNotIn(ctx context.Context, arg ClosePostingsNotIn
 	return result.RowsAffected(), nil
 }
 
+const closeRechecked = `-- name: CloseRechecked :execrows
+UPDATE postings SET closed_at = coalesce(closed_at, now()), last_rechecked_at = now()
+WHERE id = $1 AND closed_at IS NULL
+`
+
+// A manual board posting its board no longer has (404): closed, and rechecked now.
+func (q *Queries) CloseRechecked(ctx context.Context, id int64) (int64, error) {
+	result, err := q.db.Exec(ctx, closeRechecked, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const countOpenPostings = `-- name: CountOpenPostings :one
 SELECT count(*) FROM postings
 WHERE company_id = $1 AND source = $2 AND closed_at IS NULL
@@ -66,6 +80,87 @@ func (q *Queries) CountPostingsNotIn(ctx context.Context, arg CountPostingsNotIn
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const getPostingID = `-- name: GetPostingID :one
+SELECT id FROM postings WHERE source = $1 AND source_posting_id = $2
+`
+
+type GetPostingIDParams struct {
+	Source          string
+	SourcePostingID string
+}
+
+// The posting stored under this source and id, if any (the duplicate check, ADR-0015).
+func (q *Queries) GetPostingID(ctx context.Context, arg GetPostingIDParams) (int64, error) {
+	row := q.db.QueryRow(ctx, getPostingID, arg.Source, arg.SourcePostingID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const listManualToRecheck = `-- name: ListManualToRecheck :many
+SELECT p.id, p.source, p.source_posting_id, p.company_id, c.board_slug::text AS board_slug
+FROM postings p
+JOIN companies c ON c.id = p.company_id
+WHERE p.origin = 'manual' AND p.source IN ('lever', 'greenhouse', 'ashby')
+	AND NOT (c.active AND NOT c.excluded)
+	AND c.board_slug IS NOT NULL
+	AND (p.last_rechecked_at IS NULL OR p.last_rechecked_at < now() - interval '2 days')
+ORDER BY p.id
+`
+
+type ListManualToRecheckRow struct {
+	ID              int64
+	Source          string
+	SourcePostingID string
+	CompanyID       int64
+	BoardSlug       string
+}
+
+// Manual board postings of companies that aren't collected, not rechecked for 2 days.
+func (q *Queries) ListManualToRecheck(ctx context.Context) ([]ListManualToRecheckRow, error) {
+	rows, err := q.db.Query(ctx, listManualToRecheck)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListManualToRecheckRow
+	for rows.Next() {
+		var i ListManualToRecheckRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Source,
+			&i.SourcePostingID,
+			&i.CompanyID,
+			&i.BoardSlug,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markManual = `-- name: MarkManual :exec
+UPDATE postings SET origin = 'manual' WHERE id = $1
+`
+
+func (q *Queries) MarkManual(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markManual, id)
+	return err
+}
+
+const setRechecked = `-- name: SetRechecked :exec
+UPDATE postings SET last_rechecked_at = now() WHERE id = $1
+`
+
+func (q *Queries) SetRechecked(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, setRechecked, id)
+	return err
 }
 
 const upsertPosting = `-- name: UpsertPosting :one

@@ -8,6 +8,9 @@
 //	collector classify --report-unknown
 //	                           list the location strings the classifier can't place (M2-09)
 //	collector preview <name>   show what data/presets/<name>.yaml shows and hides, and why
+//	collector add <url> [--title T --company C --location L]
+//	                           add a job by its link (M2-07, ADR-0015): board postings are
+//	                           fetched through the board's API; other links never are
 //
 // Environment: DATABASE_URL (app role, required); COLLECTOR_CONCURRENCY (default 8);
 // COLLECTOR_HOST_INTERVAL (minimum gap per host, default and minimum 1s);
@@ -17,7 +20,9 @@ package main
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
+	"io"
 	"log/slog"
 	"math/rand/v2"
 	"os"
@@ -41,7 +46,7 @@ import (
 )
 
 const (
-	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify [--report-unknown] | collector preview <preset>"
+	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify [--report-unknown] | collector preview <preset> | collector add <url> [--title T --company C --location L]"
 
 	// normaliseBatch is how many postings `collector normalise` writes per transaction.
 	normaliseBatch = 500
@@ -94,6 +99,9 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 
 	if len(args) == 2 && args[0] == "preview" {
 		return preview(ctx, dsn, args[1])
+	}
+	if len(args) >= 1 && args[0] == "add" {
+		return add(ctx, log, dsn, leverURL, args[1:], getenv)
 	}
 
 	switch strings.Join(args, " ") {
@@ -260,5 +268,61 @@ func preview(ctx context.Context, dsn, name string) (int, error) {
 		return 1, err
 	}
 	collector.Preview(os.Stdout, p, groups, 10, rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))) //nolint:gosec // sampling, not security
+	return 0, nil
+}
+
+// parseAddArgs reads `add <url> [--title T] [--company C] [--location L]`.
+func parseAddArgs(args []string) (string, collector.Manual, error) {
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
+		return "", collector.Manual{}, errors.New("usage: collector add <url> [--title T --company C --location L]")
+	}
+	var m collector.Manual
+	fs := flag.NewFlagSet("add", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	fs.StringVar(&m.Title, "title", "", "job title (links that aren't board postings)")
+	fs.StringVar(&m.Company, "company", "", "company name (links that aren't board postings)")
+	fs.StringVar(&m.Location, "location", "", "location, optional")
+	if err := fs.Parse(args[1:]); err != nil {
+		return "", collector.Manual{}, fmt.Errorf("add: %w", err)
+	}
+	if fs.NArg() > 0 {
+		return "", collector.Manual{}, fmt.Errorf("add: one link at a time (unexpected %q)", fs.Arg(0))
+	}
+	return args[0], m, nil
+}
+
+// add stores a job from its link and says what happened.
+func add(ctx context.Context, log *slog.Logger, dsn, leverURL string, args []string, getenv func(string) string) (int, error) {
+	link, m, err := parseAddArgs(args)
+	if err != nil {
+		return 2, err
+	}
+	cfg, err := runConfig(getenv)
+	if err != nil {
+		return 1, err
+	}
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return 1, fmt.Errorf("connecting to database: %w", err)
+	}
+	defer pool.Close()
+	reg := collector.Registry{
+		"lever":      lever.New(leverURL),
+		"greenhouse": greenhouse.New(greenhouse.BaseURL),
+		"ashby":      ashby.New(ashby.BaseURL),
+	}
+	res, err := collector.Add(ctx, pool, reg, cfg.HostInterval, link, m, log)
+	if err != nil {
+		return 1, err
+	}
+	kind := "manual posting (never fetched)"
+	if res.Board {
+		kind = "board posting"
+	}
+	if res.Existed {
+		fmt.Printf("already exists (id %d)\n", res.PostingID)
+		return 0, nil
+	}
+	fmt.Printf("added %s, id %d\n", kind, res.PostingID)
 	return 0, nil
 }

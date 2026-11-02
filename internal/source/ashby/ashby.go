@@ -62,6 +62,22 @@ func (c *Client) Fetch(ctx context.Context, board string, limit *rate.Limiter) (
 	return raws, skipped, nil
 }
 
+// FetchOne returns one job by board and id (M2-07). Ashby's posting API has no
+// single-job endpoint, so the board is read and the id picked; a job the board doesn't
+// list is fetch.ErrNotFound. A pasted link is never requested.
+func (c *Client) FetchOne(ctx context.Context, board, id string, limit *rate.Limiter) (job.Raw, error) {
+	raws, _, err := c.Fetch(ctx, board, limit)
+	if err != nil {
+		return job.Raw{}, err
+	}
+	for _, r := range raws {
+		if r.SourceID == id {
+			return r, nil
+		}
+	}
+	return job.Raw{}, fmt.Errorf("ashby: fetch %s/%s: %w", board, id, fetch.ErrNotFound)
+}
+
 // parse splits a job board document into raw records. Each record keeps its job's
 // bytes exactly; only id, title, jobUrl and isListed are read. id is in every real
 // response though the docs don't list it; jobs without it or a jobUrl, or containing

@@ -41,3 +41,29 @@ WHERE company_id = @company_id AND source = @source AND closed_at IS NULL
 UPDATE postings SET closed_at = now()
 WHERE company_id = @company_id AND source = @source AND closed_at IS NULL
 	AND source_posting_id <> ALL (@seen_ids::text[]);
+
+-- name: GetPostingID :one
+-- The posting stored under this source and id, if any (the duplicate check, ADR-0015).
+SELECT id FROM postings WHERE source = @source AND source_posting_id = @source_posting_id;
+
+-- name: MarkManual :exec
+UPDATE postings SET origin = 'manual' WHERE id = @id;
+
+-- name: SetRechecked :exec
+UPDATE postings SET last_rechecked_at = now() WHERE id = @id;
+
+-- name: CloseRechecked :execrows
+-- A manual board posting its board no longer has (404): closed, and rechecked now.
+UPDATE postings SET closed_at = coalesce(closed_at, now()), last_rechecked_at = now()
+WHERE id = @id AND closed_at IS NULL;
+
+-- name: ListManualToRecheck :many
+-- Manual board postings of companies that aren't collected, not rechecked for 2 days.
+SELECT p.id, p.source, p.source_posting_id, p.company_id, c.board_slug::text AS board_slug
+FROM postings p
+JOIN companies c ON c.id = p.company_id
+WHERE p.origin = 'manual' AND p.source IN ('lever', 'greenhouse', 'ashby')
+	AND NOT (c.active AND NOT c.excluded)
+	AND c.board_slug IS NOT NULL
+	AND (p.last_rechecked_at IS NULL OR p.last_rechecked_at < now() - interval '2 days')
+ORDER BY p.id;

@@ -286,3 +286,21 @@ func FuzzNormalise(f *testing.F) {
 		}
 	})
 }
+
+// M2-07: a posting typed by hand normalises from its payload (what the owner typed), so it
+// is classified and grouped like any other.
+func TestNormaliseManual(t *testing.T) {
+	for name, c := range map[string]struct {
+		payload string
+		want    job.Record
+	}{
+		"remote": {`{"title":"Senior Backend Engineer","company":"Acme","location":"Remote - EMEA","url":"https://www.linkedin.com/jobs/view/1"}`,
+			job.Record{Title: "Senior Backend Engineer", URL: "https://www.linkedin.com/jobs/view/1", Locations: []string{"Remote - EMEA"}, Workplace: job.Remote}},
+		"onsite city": {`{"title":"Développeur Go","company":"Acme","location":"Casablanca","url":"https://rekrute.com/x"}`,
+			job.Record{Title: "Développeur Go", URL: "https://rekrute.com/x", Locations: []string{"Casablanca"}, Workplace: job.Unknown}},
+		"no location": {`{"title":"Data Engineer","company":"Acme","url":"https://x.ma/1"}`,
+			job.Record{Title: "Data Engineer", URL: "https://x.ma/1", Workplace: job.Unknown}},
+	} {
+		t.Run(name, func(t *testing.T) { check(t, "manual", []byte(c.payload), c.want) })
+	}
+}

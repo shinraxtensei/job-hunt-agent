@@ -75,6 +75,7 @@ testdata/            golden files (recorded board responses, sample postings)
 | Vulnerability scan | `make vuln` → govulncheck |
 | Fuzz the source parsers (30s each) | `make fuzz` |
 | Local stack | `make up` / `make down` |
+| Add a job by link (board postings fetched through the board's API; other links never fetched) | `go run ./cmd/collector add <url> [--title T --company C --location L]` |
 | Location strings the classifier can't place (to grow its tables) | `go run ./cmd/collector classify --report-unknown` |
 | Web checks: audit, types, lint, unit, build, Playwright + axe (Node 26, `web/.nvmrc`) | `make web-check` |
 | Build the tracker page into the API binary | `make web-build` |
@@ -138,6 +139,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0012 | The leads API loads groups and evaluates presets in Go, with a keyset cursor | Accepted |
 | 0013 | Build the tracker page with Vite, React and TypeScript, embedded in the API binary | Accepted |
 | 0014 | Vendor reviewed third-party agent skills, pinned by commit | Accepted |
+| 0015 | Manual postings: origin on postings, board-less companies, recheck by posting | Accepted |
 
 ## Project skills
 

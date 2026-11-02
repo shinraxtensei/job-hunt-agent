@@ -13,7 +13,7 @@ import (
 
 const createCompany = `-- name: CreateCompany :one
 INSERT INTO companies (name, board_type, board_slug)
-VALUES ($1, $2, $3)
+VALUES ($1, $2::text, $3::text)
 RETURNING id, name, board_type, board_slug, excluded, created_at, track, active
 `
 
@@ -54,6 +54,43 @@ func (q *Queries) DeactivateCompaniesNotIn(ctx context.Context, boardKeys []stri
 	return result.RowsAffected(), nil
 }
 
+const ensureBoardlessCompany = `-- name: EnsureBoardlessCompany :one
+INSERT INTO companies (name, active)
+VALUES ($1, false)
+ON CONFLICT (lower(name)) WHERE board_type IS NULL DO UPDATE SET name = companies.name
+RETURNING id
+`
+
+// A company typed with --company (no board), one row per name whatever the case.
+func (q *Queries) EnsureBoardlessCompany(ctx context.Context, name string) (int64, error) {
+	row := q.db.QueryRow(ctx, ensureBoardlessCompany, name)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const ensureManualBoardCompany = `-- name: EnsureManualBoardCompany :one
+INSERT INTO companies (name, board_type, board_slug, active)
+VALUES ($1, $2::text, $3::text, false)
+ON CONFLICT (board_type, board_slug) DO UPDATE SET board_slug = EXCLUDED.board_slug
+RETURNING id
+`
+
+type EnsureManualBoardCompanyParams struct {
+	Name      string
+	BoardType string
+	BoardSlug string
+}
+
+// The company of a board posting added by link (ADR-0015): found by its board, or created
+// inactive so it isn't collected daily unless it joins the watch list.
+func (q *Queries) EnsureManualBoardCompany(ctx context.Context, arg EnsureManualBoardCompanyParams) (int64, error) {
+	row := q.db.QueryRow(ctx, ensureManualBoardCompany, arg.Name, arg.BoardType, arg.BoardSlug)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getCompany = `-- name: GetCompany :one
 SELECT id, name, board_type, board_slug, excluded, created_at, track, active FROM companies WHERE id = $1
 `
@@ -75,7 +112,8 @@ func (q *Queries) GetCompany(ctx context.Context, id int64) (Company, error) {
 }
 
 const listCompanies = `-- name: ListCompanies :many
-SELECT id, name, coalesce(track, '')::text AS track, board_type, board_slug, active, excluded
+SELECT id, name, coalesce(track, '')::text AS track, coalesce(board_type, '')::text AS board_type,
+	coalesce(board_slug, '')::text AS board_slug, active, excluded
 FROM companies
 ORDER BY name, id
 `
@@ -120,7 +158,7 @@ func (q *Queries) ListCompanies(ctx context.Context) ([]ListCompaniesRow, error)
 
 const upsertCompanyID = `-- name: UpsertCompanyID :one
 INSERT INTO companies (name, board_type, board_slug)
-VALUES ($1, $2, $3)
+VALUES ($1, $2::text, $3::text)
 ON CONFLICT (board_type, board_slug) DO UPDATE SET board_slug = EXCLUDED.board_slug
 RETURNING id
 `
@@ -143,7 +181,7 @@ func (q *Queries) UpsertCompanyID(ctx context.Context, arg UpsertCompanyIDParams
 
 const upsertWatchedCompany = `-- name: UpsertWatchedCompany :one
 INSERT INTO companies (name, board_type, board_slug, track, excluded, active)
-VALUES ($1, $2, $3, $4, $5, true)
+VALUES ($1, $2::text, $3::text, $4, $5, true)
 ON CONFLICT (board_type, board_slug) DO UPDATE
 	SET name = EXCLUDED.name, track = EXCLUDED.track, excluded = EXCLUDED.excluded, active = true
 	WHERE (companies.name, companies.track, companies.excluded, companies.active)

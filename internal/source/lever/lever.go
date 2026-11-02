@@ -59,6 +59,22 @@ func (c *Client) Fetch(ctx context.Context, site string, limit *rate.Limiter) ([
 	return raws, skipped, nil
 }
 
+// FetchOne returns one posting by site and id from Lever's API (M2-07). The URL is built
+// here from the parsed site and id; a pasted link is never requested. A 404 is
+// fetch.ErrNotFound.
+func (c *Client) FetchOne(ctx context.Context, site, id string, limit *rate.Limiter) (job.Raw, error) {
+	u := c.base + "/v0/postings/" + url.PathEscape(site) + "/" + url.PathEscape(id) + "?mode=json"
+	body, err := c.Get(ctx, u, limit)
+	if err != nil {
+		return job.Raw{}, fmt.Errorf("lever: fetch %s/%s: %w", site, id, err)
+	}
+	raws, _, err := parse(append(append([]byte("["), body...), ']'))
+	if err != nil || len(raws) != 1 || raws[0].SourceID != id {
+		return job.Raw{}, fmt.Errorf("lever: fetch %s/%s: not the posting asked for", site, id)
+	}
+	return raws[0], nil
+}
+
 // parse splits a postings list into raw records. Each record keeps its element's bytes
 // exactly; only id, text and hostedUrl are read, to fill the columns every posting needs.
 // Entries without an id or URL, or containing NUL (which Postgres refuses in text and

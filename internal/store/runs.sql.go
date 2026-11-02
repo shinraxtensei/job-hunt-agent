@@ -32,8 +32,9 @@ SET ended_at = now(), outcome = $1,
 	companies_attempted = $2, companies_failed = $3,
 	companies_skipped = $4,
 	postings_new = $5, postings_seen = $6, postings_changed = $7,
-	jobs_failed = $8, postings_closed = $9, postings_reopened = $10
-WHERE id = $11
+	jobs_failed = $8, postings_closed = $9, postings_reopened = $10,
+	manual_rechecked = $11
+WHERE id = $12
 `
 
 type FinishRunParams struct {
@@ -47,6 +48,7 @@ type FinishRunParams struct {
 	JobsFailed         int32
 	PostingsClosed     int32
 	PostingsReopened   int32
+	ManualRechecked    int32
 	ID                 int64
 }
 
@@ -62,14 +64,15 @@ func (q *Queries) FinishRun(ctx context.Context, arg FinishRunParams) error {
 		arg.JobsFailed,
 		arg.PostingsClosed,
 		arg.PostingsReopened,
+		arg.ManualRechecked,
 		arg.ID,
 	)
 	return err
 }
 
 const listCollectableCompanies = `-- name: ListCollectableCompanies :many
-SELECT id, name, board_type, board_slug FROM companies
-WHERE active AND NOT excluded
+SELECT id, name, board_type::text AS board_type, board_slug::text AS board_slug FROM companies
+WHERE active AND NOT excluded AND board_type IS NOT NULL
 ORDER BY id
 `
 

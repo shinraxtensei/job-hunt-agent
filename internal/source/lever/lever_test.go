@@ -2,6 +2,7 @@ package lever_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/shinraxtensei/job-hunter/internal/job"
+	"github.com/shinraxtensei/job-hunter/internal/source/fetch"
 	"github.com/shinraxtensei/job-hunter/internal/source/lever"
 )
 
@@ -166,5 +168,44 @@ func TestFetchSkipsPostingWithNUL(t *testing.T) {
 	}
 	if len(skipped.IDs) != 1 || skipped.IDs[0] != "00000000-nul0-4000-8000-000000000000" {
 		t.Errorf("skipped IDs = %v, want the NUL posting's ID (ADR-0010: it is still on the board)", skipped.IDs)
+	}
+}
+
+// M2-07: FetchOne asks Lever's API for one posting, by site and id, never the pasted link.
+func TestFetchOne(t *testing.T) {
+	elems := rawElements(t, "spotify_postings.json")
+	var one struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(elems[0], &one); err != nil {
+		t.Fatal(err)
+	}
+	var path, mode string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path, mode = r.URL.Path, r.URL.Query().Get("mode")
+		switch r.URL.Path {
+		case "/v0/postings/spotify/" + one.ID:
+			_, _ = w.Write(elems[0])
+		case "/v0/postings/spotify/00000000-0000-4000-8000-000000000000":
+			_, _ = w.Write(elems[1]) // a different posting than asked for
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(srv.Close)
+	c := client(srv.URL)
+
+	raw, err := c.FetchOne(t.Context(), "spotify", one.ID, noLimit())
+	if err != nil || raw.Source != "lever" || raw.SourceID != one.ID || string(raw.Payload) != string(elems[0]) {
+		t.Fatalf("FetchOne = %+v, %v", raw, err)
+	}
+	if path != "/v0/postings/spotify/"+one.ID || mode != "json" {
+		t.Errorf("requested %s?mode=%s", path, mode)
+	}
+	if _, err := c.FetchOne(t.Context(), "spotify", "11111111-1111-4111-8111-111111111111", noLimit()); !errors.Is(err, fetch.ErrNotFound) {
+		t.Errorf("missing posting: err = %v, want ErrNotFound", err)
+	}
+	if _, err := c.FetchOne(t.Context(), "spotify", "00000000-0000-4000-8000-000000000000", noLimit()); err == nil {
+		t.Error("a response for another posting was accepted")
 	}
 }

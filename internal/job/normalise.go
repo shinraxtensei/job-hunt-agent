@@ -57,6 +57,8 @@ func Normalise(source string, payload []byte) (Record, error) {
 		r = greenhouse(m)
 	case "ashby":
 		r = ashby(m)
+	case "manual":
+		r = manual(m)
 	default:
 		return Record{}, fmt.Errorf("no normaliser for source %q", source)
 	}
@@ -141,4 +143,13 @@ func workplace(v string) Workplace {
 	default:
 		return Unknown
 	}
+}
+
+// manual normalises a posting typed by hand (M2-07, ADR-0015): the payload is what the
+// owner typed. The workplace is read from the location words, like Greenhouse's.
+func manual(m fields) Record {
+	loc := m.str("location")
+	r := Record{Title: m.str("title"), URL: m.str("url"), Workplace: greenhouseWorkplace(loc)}
+	r.Locations = addLocation(r.Locations, loc)
+	return r
 }

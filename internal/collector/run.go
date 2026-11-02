@@ -34,6 +34,7 @@ type RunResult struct {
 	Attempted, Failed, Skipped, New, Changed, Seen int    // Changed: payload differed; Seen: identical
 	JobsFailed                                     int    // stored but not normalised (ADR-0008)
 	Closed, Reopened                               int    // postings closed / reopened (ADR-0010)
+	ManualRechecked                                int    // manual board postings rechecked (ADR-0015)
 }
 
 // DB is what Run needs from the database: queries and transactions, concurrently
@@ -77,7 +78,7 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 		return res, errors.Join(fmt.Errorf("listing companies: %w", err), finish(ctx, db, &res, nil))
 	}
 
-	todo, skipped := plan(companies, reg, cfg.HostInterval)
+	todo, skipped, limiters := plan(companies, reg, cfg.HostInterval)
 	skippedN := 0
 	for boardType, names := range skipped {
 		log.Warn("no adapter for board type; skipping companies", "board_type", boardType, "companies", names)
@@ -118,6 +119,17 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 	}
 	_ = g.Wait() // every goroutine returns nil; failures are collected above
 
+	// Manual board postings of companies that aren't collected (ADR-0015), through the
+	// same per-host limiters. A database error here is logged; the run's outcome is about
+	// the companies.
+	if ctx.Err() == nil {
+		rc, err := recheckManual(ctx, db, reg, limiters, cfg.HostInterval, log)
+		if err != nil {
+			log.Error("recheck of manual postings failed", "err", err)
+		}
+		res.ManualRechecked, res.Closed, res.Reopened = rc.Rechecked, res.Closed+rc.Closed, res.Reopened+rc.Reopened
+	}
+
 	res.Failed = len(failures)
 	switch {
 	case ctx.Err() != nil:
@@ -134,7 +146,7 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 	}
 	log.Info("run finished", "run_id", res.RunID, "outcome", res.Outcome, "attempted", res.Attempted,
 		"failed", res.Failed, "skipped", res.Skipped, "new", res.New, "changed", res.Changed, "seen", res.Seen, "jobs_failed", res.JobsFailed,
-		"closed", res.Closed, "reopened", res.Reopened)
+		"closed", res.Closed, "reopened", res.Reopened, "manual_rechecked", res.ManualRechecked)
 	return res, nil
 }
 
@@ -144,7 +156,7 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 //
 // ponytail: a slot is held while waiting on its host's limiter; interleaving keeps that
 // cheap at 50 companies. A per-host queue would be the upgrade if hosts get lopsided.
-func plan(companies []store.ListCollectableCompaniesRow, reg Registry, interval time.Duration) ([]work, map[string][]string) {
+func plan(companies []store.ListCollectableCompaniesRow, reg Registry, interval time.Duration) ([]work, map[string][]string, map[string]*rate.Limiter) {
 	limit := rate.Inf
 	if interval > 0 {
 		limit = rate.Every(interval)
@@ -176,7 +188,7 @@ func plan(companies []store.ListCollectableCompaniesRow, reg Registry, interval 
 			}
 		}
 		if !added {
-			return todo, skipped
+			return todo, skipped, limiters
 		}
 	}
 }
@@ -198,15 +210,16 @@ func finish(ctx context.Context, db DB, res *RunResult, failures []failure) erro
 		return q.FinishRun(fctx, store.FinishRunParams{
 			ID:                 res.RunID,
 			Outcome:            pgtype.Text{String: res.Outcome, Valid: true},
-			CompaniesAttempted: int32(res.Attempted),  //nolint:gosec // bounded by the company count
-			CompaniesFailed:    int32(res.Failed),     //nolint:gosec // as above
-			CompaniesSkipped:   int32(res.Skipped),    //nolint:gosec // as above
-			PostingsNew:        int32(res.New),        //nolint:gosec // postings per run, far below 2^31
-			PostingsSeen:       int32(res.Seen),       //nolint:gosec // as above
-			PostingsChanged:    int32(res.Changed),    //nolint:gosec // as above
-			JobsFailed:         int32(res.JobsFailed), //nolint:gosec // as above
-			PostingsClosed:     int32(res.Closed),     //nolint:gosec // as above
-			PostingsReopened:   int32(res.Reopened),   //nolint:gosec // as above
+			CompaniesAttempted: int32(res.Attempted),       //nolint:gosec // bounded by the company count
+			CompaniesFailed:    int32(res.Failed),          //nolint:gosec // as above
+			CompaniesSkipped:   int32(res.Skipped),         //nolint:gosec // as above
+			PostingsNew:        int32(res.New),             //nolint:gosec // postings per run, far below 2^31
+			PostingsSeen:       int32(res.Seen),            //nolint:gosec // as above
+			PostingsChanged:    int32(res.Changed),         //nolint:gosec // as above
+			JobsFailed:         int32(res.JobsFailed),      //nolint:gosec // as above
+			PostingsClosed:     int32(res.Closed),          //nolint:gosec // as above
+			PostingsReopened:   int32(res.Reopened),        //nolint:gosec // as above
+			ManualRechecked:    int32(res.ManualRechecked), //nolint:gosec // as above
 		})
 	})
 	if err != nil {

@@ -269,3 +269,44 @@ func TestFacetCountsDropTheirOwnFilter(t *testing.T) {
 		t.Errorf("seniority %v: other facets must still apply role_family=backend", body.Facets["seniority"])
 	}
 }
+
+// M2-07 (ADR-0015): a job added by link shows up like any lead, even though its company
+// isn't collected (inactive), and says it was added manually.
+func TestManualLeadIsShown(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	ctx := t.Context()
+	var companyID, postingID int64
+	if err := db.QueryRow(ctx, `INSERT INTO companies (name, active) VALUES ('Typed Co', false) RETURNING id`).Scan(&companyID); err != nil {
+		t.Fatal(err)
+	}
+	payload := `{"title":"Backend Engineer","company":"Typed Co","location":"Casablanca","url":"https://example.ma/jobs/1"}`
+	if err := db.QueryRow(ctx, `INSERT INTO postings (company_id, source, source_posting_id, url, title, raw_payload, content_hash, origin)
+		VALUES ($1, 'manual', 'https://example.ma/jobs/1', 'https://example.ma/jobs/1', 'Backend Engineer', $2,
+			sha256(convert_to($2::jsonb::text, 'UTF8')), 'manual') RETURNING id`, companyID, payload).Scan(&postingID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		c := context.Background()
+		for _, q := range []string{`DELETE FROM jobs WHERE company_id = $1`, `DELETE FROM postings WHERE company_id = $1`, `DELETE FROM companies WHERE id = $1`} {
+			if _, err := db.Exec(c, q, companyID); err != nil {
+				t.Errorf("cleaning up: %v", err)
+			}
+		}
+	})
+	if _, err := collector.NormaliseStored(ctx, db, 100, quiet()); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/leads?preset=none&company=Typed%20Co", nil))
+	var body struct {
+		Leads []struct {
+			ID     int64  `json:"id"`
+			Origin string `json:"origin"`
+		} `json:"leads"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil || len(body.Leads) != 1 ||
+		body.Leads[0].ID != postingID || body.Leads[0].Origin != "manual" {
+		t.Errorf("leads = %s (err %v), want the manual posting with origin manual", rec.Body, err)
+	}
+}

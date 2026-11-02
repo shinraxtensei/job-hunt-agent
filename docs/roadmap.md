@@ -174,6 +174,13 @@ M5-04 Document versions linked to applications
 **Stories:** M6-01 Application status and history · M6-02 Board view · M6-03 Notes and
 contacts · M6-04 Follow-up reminders · M6-05 Skip reasons
 
+**Notes**
+- Company merge (from M2-07, ADR-0015): a board-less company typed with `collector add
+  --company` and the same company later added to the watch list are two `companies` rows,
+  so their leads don't group together. Merging them (and moving the manual postings) is M6
+  work.
+- Closing manual non-board postings is the owner's action here; they are never rechecked.
+
 ## M7: Digest and more sources
 
 **Goal:** the morning brief comes to the owner, and coverage grows beyond the ATS boards.

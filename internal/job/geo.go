@@ -50,9 +50,11 @@ var countryPhrases = func() []phrase {
 	return table(byCode)
 }()
 
-// readCSV returns the code,value rows of a checked-in table, skipping comments and the
-// header. The files are tested (TestEveryISOCodeResolves), so a bad row is skipped
-// rather than failing start-up.
+// readCSV returns the code,value rows of a checked-in table, skipping comments, the header
+// and rows whose code or value is invalid. It stops at the first row the CSV reader
+// rejects (wrong field count, broken quoting), so everything after a malformed row would
+// be lost: TestCountryTablesAreStrict fails on any malformed row, unknown code or empty
+// alias, so that can't ship.
 func readCSV(b []byte) [][2]string {
 	r := csv.NewReader(bytes.NewReader(b))
 	r.Comment = '#'
@@ -60,7 +62,7 @@ func readCSV(b []byte) [][2]string {
 	for {
 		rec, err := r.Read()
 		if err != nil {
-			break // io.EOF, or a malformed row ends the table
+			break // io.EOF, or a malformed row: ends the table (see above)
 		}
 		if len(rec) == 2 && isCountryCode(rec[0]) && rec[1] != "" {
 			out = append(out, [2]string{rec[0], rec[1]})

@@ -27,6 +27,7 @@
       "url": "https://jobs.lever.co/x/9005",
       "published_at": "2025-10-31T08:40:00Z",
       "first_seen_at": "2026-11-02T09:00:00Z",
+      "origin": "collected",
       "members": 1,
       "members_url": "/api/leads/9005/members"
     },
@@ -58,6 +59,7 @@
       "url": "https://jobs.lever.co/x/9004",
       "published_at": "2025-10-31T08:40:00Z",
       "first_seen_at": "2026-11-02T08:00:00Z",
+      "origin": "collected",
       "members": 1,
       "members_url": "/api/leads/9004/members"
     },
@@ -87,6 +89,7 @@
       "url": "https://jobs.lever.co/x/9006",
       "published_at": "2025-10-31T08:40:00Z",
       "first_seen_at": "2026-11-01T12:30:00Z",
+      "origin": "collected",
       "members": 1,
       "members_url": "/api/leads/9006/members"
     }

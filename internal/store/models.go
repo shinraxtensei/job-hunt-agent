@@ -22,6 +22,7 @@ type CollectorRun struct {
 	JobsFailed         int32
 	PostingsClosed     int32
 	PostingsReopened   int32
+	ManualRechecked    int32
 }
 
 type CollectorRunError struct {
@@ -33,8 +34,8 @@ type CollectorRunError struct {
 type Company struct {
 	ID        int64
 	Name      string
-	BoardType string
-	BoardSlug string
+	BoardType pgtype.Text
+	BoardSlug pgtype.Text
 	Excluded  bool
 	CreatedAt pgtype.Timestamptz
 	Track     pgtype.Text
@@ -88,4 +89,6 @@ type Posting struct {
 	ContentHash     []byte
 	LastChangedAt   pgtype.Timestamptz
 	ClosedAt        pgtype.Timestamptz
+	Origin          string
+	LastRecheckedAt pgtype.Timestamptz
 }

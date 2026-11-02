@@ -97,9 +97,15 @@ func (c *Client) Get(ctx context.Context, u string, limit *rate.Limiter) ([]byte
 	}
 }
 
+// ErrNotFound is a 404: the board says the thing asked for doesn't exist (M2-07: a
+// rechecked posting that is gone).
+var ErrNotFound = errors.New("not found")
+
 // permanent marks an error that retrying won't fix (4xx other than 429, an oversized
 // body).
 type permanent struct{ error }
+
+func (p permanent) Unwrap() error { return p.error }
 
 // get makes one request. It returns the body on 200; otherwise an error, and for 429
 // or 5xx the server's Retry-After, if any. The attempt ends at the ceiling, or when the
@@ -127,6 +133,8 @@ func (c *Client) get(ctx context.Context, u string) ([]byte, time.Duration, erro
 	case resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500:
 		// The body is untrusted and may be large; only the status goes in the error.
 		return nil, retryAfter(resp.Header.Get("Retry-After")), fmt.Errorf("unexpected status %s", resp.Status)
+	case resp.StatusCode == http.StatusNotFound:
+		return nil, 0, permanent{fmt.Errorf("unexpected status %s: %w", resp.Status, ErrNotFound)}
 	default:
 		return nil, 0, permanent{fmt.Errorf("unexpected status %s", resp.Status)}
 	}

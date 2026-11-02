@@ -49,3 +49,19 @@ func TestExitCode(t *testing.T) {
 		}
 	}
 }
+
+// M2-07: `add <url>` takes the link first, then optional flags, and refuses anything else.
+func TestParseAddArgs(t *testing.T) {
+	link, m, err := parseAddArgs([]string{"https://www.linkedin.com/jobs/view/1", "--title", "Backend Engineer", "--company", "Acme", "--location", "Casablanca"})
+	if err != nil || link != "https://www.linkedin.com/jobs/view/1" || m.Title != "Backend Engineer" || m.Company != "Acme" || m.Location != "Casablanca" {
+		t.Errorf("parseAddArgs = %q %+v %v", link, m, err)
+	}
+	if link, _, err := parseAddArgs([]string{"https://jobs.lever.co/x/1"}); err != nil || link != "https://jobs.lever.co/x/1" {
+		t.Errorf("link only: %q %v", link, err)
+	}
+	for _, args := range [][]string{{}, {"--title", "x"}, {"https://a", "https://b"}, {"https://a", "--colour", "blue"}} {
+		if _, _, err := parseAddArgs(args); err == nil {
+			t.Errorf("parseAddArgs(%q) accepted", args)
+		}
+	}
+}

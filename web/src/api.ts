@@ -18,6 +18,7 @@ export type Lead = {
   url: string;
   published_at: string | null;
   first_seen_at: string;
+  origin: "collected" | "manual"; // manual: added by link (shown in M6)
   members: number;
   members_url: string;
   hidden_by?: string[];

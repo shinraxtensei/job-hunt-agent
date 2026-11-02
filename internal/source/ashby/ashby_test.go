@@ -2,6 +2,7 @@ package ashby_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/shinraxtensei/job-hunter/internal/job"
 	"github.com/shinraxtensei/job-hunter/internal/source/ashby"
+	fetchpkg "github.com/shinraxtensei/job-hunter/internal/source/fetch"
 )
 
 // These tests cover Ashby's URL, parsing and golden files. Retries, Retry-After, the
@@ -188,5 +190,21 @@ func TestFetchErrorNamesCompany(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), "secret upstream detail") {
 		t.Errorf("error leaks the response body: %v", err)
+	}
+}
+
+// M2-07: Ashby has no single-posting endpoint: FetchOne reads the board and picks the id.
+func TestFetchOne(t *testing.T) {
+	srv, reqs := serve(t, http.StatusOK, fixture(t, "linear_jobs.json"))
+	c := ashby.New(srv.URL)
+	raw, err := c.FetchOne(t.Context(), "linear", "b7669c4b-eeca-421d-ba9a-d90203f6fcb2", noLimit())
+	if err != nil || raw.Title != "Product Manager" || raw.Source != "ashby" {
+		t.Fatalf("FetchOne = %+v, %v", raw, err)
+	}
+	if p := reqs()[0].URL.Path; p != "/posting-api/job-board/linear" {
+		t.Errorf("requested %s", p)
+	}
+	if _, err := c.FetchOne(t.Context(), "linear", "11111111-1111-4111-8111-111111111111", noLimit()); !errors.Is(err, fetchpkg.ErrNotFound) {
+		t.Errorf("missing job: err = %v, want ErrNotFound", err)
 	}
 }

@@ -40,6 +40,7 @@ type Lead struct {
 	URL                string     `json:"url"`
 	PublishedAt        *time.Time `json:"published_at"`
 	FirstSeenAt        time.Time  `json:"first_seen_at"` // the group's earliest member
+	Origin             string     `json:"origin"`        // collected | manual (added by link, ADR-0015)
 	Members            int32      `json:"members"`
 	MembersURL         string     `json:"members_url"`
 	HiddenBy           []string   `json:"hidden_by,omitempty"` // /api/leads/hidden only
@@ -82,7 +83,7 @@ func (a *api) load(ctx context.Context) ([]Lead, error) {
 			RoleFamily: r.RoleFamily, Seniority: r.Seniority, Workplaces: r.Workplaces,
 			RemoteScopes: []string{}, Countries: []string{}, Locations: r.Locations,
 			Closed: r.Closed, Team: r.Team, URL: r.Url, FirstSeenAt: r.FirstSeenAt.Time.UTC(),
-			Members: r.Members, MembersURL: fmt.Sprintf("/api/leads/%d/members", r.PostingID),
+			Origin: r.Origin, Members: r.Members, MembersURL: fmt.Sprintf("/api/leads/%d/members", r.PostingID),
 			companyID: r.CompanyID, titleKey: r.TitleKey,
 		}
 		if r.ExperienceMinYears.Valid {

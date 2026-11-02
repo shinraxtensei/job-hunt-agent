@@ -1,6 +1,6 @@
 # M2-07: Manual add by link
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M2 — Rules and a plain tracker
 - **Linear:** [HAM-36](https://linear.app/hamid-corp/issue/HAM-36/m2-07-manual-add-by-link)
 - **Estimate:** 1 day

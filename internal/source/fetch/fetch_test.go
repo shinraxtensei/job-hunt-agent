@@ -2,6 +2,7 @@ package fetch_test
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -387,6 +388,17 @@ func TestHasNUL(t *testing.T) {
 	} {
 		if got := fetch.HasNUL([]byte(in)); got != want {
 			t.Errorf("HasNUL(%s) = %v, want %v", in, got, want)
+		}
+	}
+}
+
+// M2-07: a 404 is ErrNotFound, so a recheck can tell "gone" from "failed".
+func TestGet404IsNotFound(t *testing.T) {
+	for code, want := range map[int]bool{404: true, 410: false, 403: false} {
+		srv, _, _ := scripted(t, []int{code}, nil)
+		_, err := client().Get(t.Context(), srv.URL, noLimit())
+		if got := errors.Is(err, fetch.ErrNotFound); got != want {
+			t.Errorf("%d: errors.Is(err, ErrNotFound) = %v, want %v (err %v)", code, got, want, err)
 		}
 	}
 }

@@ -25,6 +25,7 @@ const lead = (over: Partial<Lead>): Lead => ({
   url: "https://example.com/job",
   published_at: null,
   first_seen_at: "2026-11-02T08:00:00Z",
+  origin: "collected",
   members: 1,
   members_url: "/api/leads/1/members",
   ...over,
