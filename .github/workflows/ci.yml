@@ -40,5 +40,33 @@ jobs:
         # every PR.
         run: go run github.com/zricethezav/gitleaks/v8@v8.30.1 git --redact --verbose --log-opts=HEAD .
 
+      # Node is pinned exactly here and bumped by hand like the Go tools (ADR-0013);
+      # web/.nvmrc and engines name the major line.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 26.13.0
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Playwright version
+        id: playwright
+        run: echo "version=$(jq -r '.packages["node_modules/@playwright/test"].version' web/package-lock.json)" >> "$GITHUB_OUTPUT"
+
+      # Chromium is downloaded only when Playwright is bumped.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ steps.playwright.outputs.version }}
+
+      - name: Playwright browser
+        run: |
+          make web-install
+          if [ "${{ steps.browsers.outputs.cache-hit }}" = "true" ]; then
+            cd web && npx playwright install-deps chromium
+          else
+            cd web && npx playwright install --with-deps chromium
+          fi
+
       - name: make check
         run: make check

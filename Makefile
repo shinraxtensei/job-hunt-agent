@@ -18,14 +18,15 @@ COMPOSE := docker compose -f deploy/compose.yaml --env-file .env
 SQLC_IMAGE := sqlc/sqlc:1.31.1@sha256:70f53171d27b2424e9358869975455a6e955a5aa8e58a998a270a6e34e525537
 
 .PHONY: help check fmt fmt-check vet lint test-go test-integration test-py evals \
-	sqlc sqlc-check migration vuln up down fuzz
+	sqlc sqlc-check migration vuln up down fuzz web-install web-check web-build web-dev
 
 help: ## List every target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
 
 # test-integration runs every test (unit + integration), so it replaces test-go here.
-check: fmt-check sqlc-check vet lint test-integration vuln ## Everything CI runs (needs Docker)
+# web-check runs first so the embedded page is built before the Go build uses it.
+check: web-check fmt-check sqlc-check vet lint test-integration vuln ## Everything CI runs (needs Docker and Node 26)
 
 fmt: ## Format all Go code
 	@gofmt -w $(GO_DIRS)
@@ -88,3 +89,23 @@ up: ## Start the local stack (Postgres) and wait until it is healthy
 
 down: ## Stop the local stack; data stays in the named volume
 	$(COMPOSE) down
+
+# --- web/ (M2-06, ADR-0013). Node 26 (web/.nvmrc); npm ci refuses another version.
+WEB := npm --prefix web
+
+web-install: ## Install web dependencies exactly as locked (npm ci)
+	$(WEB) ci
+
+web-check: web-install ## Web checks: audit, types, lint, unit tests, build, Playwright + axe
+	cd web && npm audit --audit-level=high
+	$(WEB) run typecheck
+	$(WEB) run lint
+	$(WEB) test
+	$(WEB) run build
+	$(WEB) run e2e
+
+web-build: web-install ## Build the tracker page into internal/webui/dist/app (embedded by cmd/api)
+	$(WEB) run build
+
+web-dev: web-install ## Vite dev server on :5173, proxying /api to the API on 127.0.0.1:8080
+	$(WEB) run dev

@@ -18,3 +18,13 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+
+  # The tracker page (ADR-0013). Grouped and weekly; every bump runs make check (audit,
+  # tests, Playwright) before it can merge.
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    groups:
+      web:
+        patterns: ["*"]

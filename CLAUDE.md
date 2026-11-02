@@ -49,7 +49,7 @@ internal/
   queue/             SKIP LOCKED job table
   httpapi/           net/http handlers (Go 1.22+ routing)
 agents/              Python (uv): extract/, score/, tailor/, evals/
-web/                 TypeScript UI
+web/                 TypeScript UI (Vite + React, ADR-0013); built into web/dist/app, embedded in cmd/api
 db/migrations/       plain SQL migrations (goose), forward-only
 data/companies.yaml  the reviewed watch list (ADR-0005)
 data/presets/        filter presets; default.yaml is the owner's profile (ADR-0011)
@@ -132,6 +132,8 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0010 | Close postings missing from a successful full-board fetch | Accepted |
 | 0011 | Job facets on `jobs`, a classifier version, and YAML filter presets | Accepted |
 | 0012 | The leads API loads groups and evaluates presets in Go, with a keyset cursor | Accepted |
+| 0013 | Build the tracker page with Vite, React and TypeScript, embedded in the API binary | Accepted |
+| 0014 | Vendor reviewed third-party agent skills, pinned by commit | Accepted |
 
 ## Project skills
 
@@ -139,3 +141,10 @@ Never run `python` or `pytest` directly — always through `uv run`.
 - `source-adapter` — how to add a new job board
 - `evidence-bank-guardrails` — honesty rules for CVs and cover letters
 - `adr` — how to record a decision
+
+Vendored third-party skills (ADR-0014: reviewed, pinned by commit, see each `SOURCE.md`):
+
+- `frontend-design` — visual direction and copy for new or reshaped UI (anthropics/skills)
+- `web-design-guidelines` — `file:line` review against the Web Interface Guidelines (vercel-labs; rules vendored in `rules.md`)
+- `fixing-accessibility` — accessibility rules and minimal fixes (ibelick/ui-skills)
+- impeccable — **rejected** in review (2026-11-02): its setup runs a launcher that downloads and executes a native binary, and it installs edit hooks that inject instructions into the agent's context; see ADR-0014

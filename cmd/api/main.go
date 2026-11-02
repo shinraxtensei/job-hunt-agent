@@ -1,4 +1,5 @@
-// Command api serves the read-only leads API (M2-05, ADR-0012).
+// Command api serves the read-only leads API (M2-05, ADR-0012) and the tracker page
+// embedded from web/ (M2-06, ADR-0013).
 //
 // Environment:
 //
@@ -24,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/shinraxtensei/job-hunter/internal/httpapi"
+	"github.com/shinraxtensei/job-hunter/internal/webui"
 )
 
 // shutdownTimeout is how long in-flight requests get after a signal.
@@ -58,7 +60,8 @@ func run(ctx context.Context, log *slog.Logger, getenv func(string) string) erro
 	if err != nil {
 		return fmt.Errorf("listening on %s: %w", addr, err)
 	}
-	srv := newServer(httpapi.New(pool, cmp.Or(getenv("PRESETS_DIR"), "data/presets"), commit(), time.Now, log))
+	api := httpapi.New(pool, cmp.Or(getenv("PRESETS_DIR"), "data/presets"), commit(), time.Now, log)
+	srv := newServer(routes(api, webui.Handler(webui.Dist())))
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
 	log.Info("listening", "addr", ln.Addr().String(), "commit", commit())
@@ -75,6 +78,15 @@ func run(ctx context.Context, log *slog.Logger, getenv func(string) string) erro
 	}
 	log.Info("stopped")
 	return nil
+}
+
+// routes sends the API's paths to the API and everything else to the tracker page.
+func routes(api, page http.Handler) http.Handler {
+	mux := http.NewServeMux()
+	mux.Handle("/api/", api)
+	mux.Handle("/healthz", api)
+	mux.Handle("/", page)
+	return mux
 }
 
 func newServer(h http.Handler) *http.Server {

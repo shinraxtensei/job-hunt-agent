@@ -1,0 +1,48 @@
+/* Plumbing only (PR a): enough layout to avoid horizontal page scroll on a phone. The
+   design lands in PR (b). */
+body {
+  margin: 0 1rem;
+  font-family: system-ui, sans-serif;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.25rem 0.5rem;
+  overflow-wrap: anywhere;
+}
+fieldset {
+  display: inline-block;
+  vertical-align: top;
+  max-width: 100%;
+}
+/* Rows become stacked blocks under 640px. */
+@media (max-width: 640px) {
+  table,
+  thead,
+  tbody,
+  tr,
+  th,
+  td {
+    display: block;
+  }
+  thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  tr {
+    border-bottom: 1px solid;
+    padding: 0.5rem 0;
+  }
+  td::before {
+    content: attr(data-label) ": ";
+    font-weight: bold;
+  }
+}

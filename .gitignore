@@ -31,7 +31,10 @@ __pycache__/
 
 # --- Node ---
 node_modules/
-dist/
+# vite build output, embedded by internal/webui (dist/.gitkeep is committed)
+/internal/webui/dist/app/
+/web/test-results/
+/web/playwright-report/
 
 # --- Env and secrets ---
 .env
