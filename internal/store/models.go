@@ -20,6 +20,8 @@ type CollectorRun struct {
 	PostingsSeen       int32
 	PostingsChanged    int32
 	JobsFailed         int32
+	PostingsClosed     int32
+	PostingsReopened   int32
 }
 
 type CollectorRunError struct {
@@ -64,6 +66,7 @@ type JobGroup struct {
 	CanonicalPostingID interface{}
 	Locations          interface{}
 	Workplaces         interface{}
+	Closed             bool
 }
 
 type Posting struct {
@@ -78,4 +81,5 @@ type Posting struct {
 	LastCheckedAt   pgtype.Timestamptz
 	ContentHash     []byte
 	LastChangedAt   pgtype.Timestamptz
+	ClosedAt        pgtype.Timestamptz
 }

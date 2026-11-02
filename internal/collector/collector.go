@@ -21,10 +21,11 @@ type Source interface {
 	Name() string
 	// Host is the API host it calls; Run rate-limits per host.
 	Host() string
-	// Fetch returns every published posting on slug's board and how many entries it
-	// skipped as malformed or unstorable. It must wait on limit before every HTTP
-	// request it makes, retries included: limit is shared by every company on Host.
-	Fetch(ctx context.Context, slug string, limit *rate.Limiter) ([]job.Raw, int, error)
+	// Fetch returns every published posting on slug's board and the entries it skipped
+	// as malformed or unstorable (by ID where the ID was readable). It must wait on limit
+	// before every HTTP request it makes, retries included: limit is shared by every
+	// company on Host.
+	Fetch(ctx context.Context, slug string, limit *rate.Limiter) ([]job.Raw, job.Skipped, error)
 }
 
 // beginner opens transactions: *pgx.Conn and *pgxpool.Pool both are.
@@ -34,7 +35,17 @@ type beginner interface {
 
 // Result counts what one company's collection saw. JobsFailed counts new or changed
 // postings that were stored but could not be normalised (ADR-0008).
-type Result struct{ Fetched, New, Changed, Seen, Skipped, JobsFailed int }
+type Result struct{ Fetched, New, Changed, Seen, Skipped, JobsFailed, Closed, Reopened int }
+
+// EmptyBoardGuard: a successful fetch that returns no postings for a company with more
+// open postings than this closes nothing and fails the company (ADR-0010): an outage or an
+// API change must not close a whole board.
+const EmptyBoardGuard = 10
+
+// CloseRatioGuardMin: a fetch that would close more than half of a company's open postings,
+// and at least this many, closes nothing and fails the company (ADR-0010): a partial outage
+// must not close most of a board.
+const CloseRatioGuardMin = 10
 
 // Once fetches one board by slug and stores every posting in one transaction, creating
 // the company row if needed (with no track: it is not on the watch list). A failure at
@@ -58,8 +69,8 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 	if err != nil {
 		return Result{}, err // adapters name the company
 	}
-	res := Result{Fetched: len(raws), Skipped: skipped}
-	var newIDs []string
+	res := Result{Fetched: len(raws), Skipped: skipped.Total()}
+	var newIDs, reopenedIDs []string
 
 	err = pgx.BeginFunc(ctx, db, func(tx pgx.Tx) error {
 		q := store.New(tx)
@@ -67,7 +78,19 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 		if err != nil {
 			return err
 		}
+		if len(raws) == 0 {
+			open, err := q.CountOpenPostings(ctx, store.CountOpenPostingsParams{CompanyID: co, Source: src.Name()})
+			if err != nil {
+				return fmt.Errorf("counting open postings: %w", err)
+			}
+			if open > EmptyBoardGuard {
+				return fmt.Errorf("empty board, refusing to close %d postings", open)
+			}
+		}
+		// Skipped entries with a readable ID are still on the board: never close them.
+		seen := append(make([]string, 0, len(raws)+len(skipped.IDs)), skipped.IDs...)
 		for _, r := range raws {
+			seen = append(seen, r.SourceID)
 			r2, err := q.UpsertPosting(ctx, store.UpsertPostingParams{
 				CompanyID:       co,
 				Source:          r.Source,
@@ -78,6 +101,9 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 			})
 			if err != nil {
 				return fmt.Errorf("storing posting %s: %w", r.SourceID, err)
+			}
+			if r2.Reopened {
+				reopenedIDs = append(reopenedIDs, r.SourceID)
 			}
 			switch {
 			case r2.Inserted:
@@ -96,6 +122,26 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 				res.JobsFailed++
 			}
 		}
+		// The fetch succeeded (we are here), so whatever the board no longer lists is gone,
+		// unless that is most of the board, which looks like a partial outage.
+		toClose, err := q.CountPostingsNotIn(ctx, store.CountPostingsNotInParams{CompanyID: co, Source: src.Name(), SeenIds: seen})
+		if err != nil {
+			return fmt.Errorf("counting postings to close: %w", err)
+		}
+		if toClose >= CloseRatioGuardMin {
+			open, err := q.CountOpenPostings(ctx, store.CountOpenPostingsParams{CompanyID: co, Source: src.Name()})
+			if err != nil {
+				return fmt.Errorf("counting open postings: %w", err)
+			}
+			if toClose*2 > open {
+				return fmt.Errorf("refusing to close %d of %d postings", toClose, open)
+			}
+		}
+		closed, err := q.ClosePostingsNotIn(ctx, store.ClosePostingsNotInParams{CompanyID: co, Source: src.Name(), SeenIds: seen})
+		if err != nil {
+			return fmt.Errorf("closing missing postings: %w", err)
+		}
+		res.Closed = int(closed)
 		return nil
 	})
 	if err != nil {
@@ -106,11 +152,15 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 	for _, id := range newIDs {
 		log.Info("new posting", "source", src.Name(), "company", slug, "posting_id", id)
 	}
+	for _, id := range reopenedIDs {
+		log.Info("posting reopened", "source", src.Name(), "company", slug, "posting_id", id)
+	}
+	res.Reopened = len(reopenedIDs)
 	res.New = len(newIDs)
 	res.Seen = res.Fetched - res.New - res.Changed
 	log.Info("collect finished", "source", src.Name(), "company", slug,
 		"fetched", res.Fetched, "new", res.New, "changed", res.Changed, "seen", res.Seen, "skipped", res.Skipped,
-		"jobs_failed", res.JobsFailed)
+		"jobs_failed", res.JobsFailed, "closed", res.Closed, "reopened", res.Reopened)
 	return res, nil
 }
 

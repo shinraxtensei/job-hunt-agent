@@ -34,8 +34,8 @@ func FuzzParse(f *testing.F) {
 		if json.Unmarshal(body, &elems) != nil {
 			t.Fatalf("parse accepted input that is not a JSON array")
 		}
-		if len(raws)+skipped != len(elems) {
-			t.Fatalf("%d records + %d skipped != %d elements", len(raws), skipped, len(elems))
+		if len(raws)+skipped.Total() != len(elems) {
+			t.Fatalf("%d records + %d skipped != %d elements", len(raws), skipped.Total(), len(elems))
 		}
 		for _, r := range raws {
 			if r.SourceID == "" || r.URL == "" || !json.Valid(r.Payload) || fetch.HasNUL(r.Payload) {

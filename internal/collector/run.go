@@ -33,6 +33,7 @@ type RunResult struct {
 	Outcome                                        string // ok, partial, failed or cancelled
 	Attempted, Failed, Skipped, New, Changed, Seen int    // Changed: payload differed; Seen: identical
 	JobsFailed                                     int    // stored but not normalised (ADR-0008)
+	Closed, Reopened                               int    // postings closed / reopened (ADR-0010)
 }
 
 // DB is what Run needs from the database: queries and transactions, concurrently
@@ -103,6 +104,8 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 				res.New += r.New
 				res.Changed += r.Changed
 				res.JobsFailed += r.JobsFailed
+				res.Closed += r.Closed
+				res.Reopened += r.Reopened
 				res.Seen += r.Seen
 			case ctx.Err() != nil:
 				// Stopped by cancellation, not a board failure; the run is "cancelled".
@@ -130,7 +133,8 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 		return res, err
 	}
 	log.Info("run finished", "run_id", res.RunID, "outcome", res.Outcome, "attempted", res.Attempted,
-		"failed", res.Failed, "skipped", res.Skipped, "new", res.New, "changed", res.Changed, "seen", res.Seen, "jobs_failed", res.JobsFailed)
+		"failed", res.Failed, "skipped", res.Skipped, "new", res.New, "changed", res.Changed, "seen", res.Seen, "jobs_failed", res.JobsFailed,
+		"closed", res.Closed, "reopened", res.Reopened)
 	return res, nil
 }
 
@@ -201,6 +205,8 @@ func finish(ctx context.Context, db DB, res *RunResult, failures []failure) erro
 			PostingsSeen:       int32(res.Seen),       //nolint:gosec // as above
 			PostingsChanged:    int32(res.Changed),    //nolint:gosec // as above
 			JobsFailed:         int32(res.JobsFailed), //nolint:gosec // as above
+			PostingsClosed:     int32(res.Closed),     //nolint:gosec // as above
+			PostingsReopened:   int32(res.Reopened),   //nolint:gosec // as above
 		})
 	})
 	if err != nil {

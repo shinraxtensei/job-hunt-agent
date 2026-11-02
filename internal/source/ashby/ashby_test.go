@@ -49,7 +49,7 @@ func serve(t *testing.T, status int, body []byte) (*httptest.Server, func() []*h
 	return srv, func() []*http.Request { mu.Lock(); defer mu.Unlock(); return append([]*http.Request(nil), reqs...) }
 }
 
-func fetch(t *testing.T, name string) ([]job.Raw, int, error) {
+func fetch(t *testing.T, name string) ([]job.Raw, job.Skipped, error) {
 	t.Helper()
 	srv, _ := serve(t, http.StatusOK, fixture(t, name))
 	return ashby.New(srv.URL).Fetch(t.Context(), "linear", noLimit())
@@ -73,8 +73,8 @@ func TestFetchGoldenFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if skipped != 0 {
-		t.Errorf("skipped %d, want 0", skipped)
+	if skipped.Total() != 0 {
+		t.Errorf("skipped %d, want 0", skipped.Total())
 	}
 	jobs := jobsOf(t, "linear_jobs.json")
 	want := []job.Raw{
@@ -134,8 +134,8 @@ func TestFetchSkipsMalformedPosting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if skipped != 2 || len(got) != 2 || got[0].Title != "Senior / Staff Fullstack Engineer" || got[1].Title != "Product Manager" {
-		t.Errorf("got %d records (%d skipped), want the two well-formed ones and 2 skipped", len(got), skipped)
+	if skipped.Total() != 2 || len(got) != 2 || got[0].Title != "Senior / Staff Fullstack Engineer" || got[1].Title != "Product Manager" {
+		t.Errorf("got %d records (%d skipped), want the two well-formed ones and 2 skipped", len(got), skipped.Total())
 	}
 }
 
@@ -146,8 +146,8 @@ func TestFetchLeavesOutUnlistedJobs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if len(got) != 2 || skipped != 0 {
-		t.Errorf("got %d records, %d skipped; want 2 listed jobs and 0 skipped", len(got), skipped)
+	if len(got) != 2 || skipped.Total() != 0 {
+		t.Errorf("got %d records, %d skipped; want 2 listed jobs and 0 skipped", len(got), skipped.Total())
 	}
 	for _, r := range got {
 		if strings.HasSuffix(r.SourceID, "unlst") {
@@ -162,8 +162,11 @@ func TestFetchSkipsPostingWithNUL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if skipped != 1 || len(got) != 2 {
-		t.Errorf("got %d records, %d skipped; want 2 and 1", len(got), skipped)
+	if skipped.Total() != 1 || len(got) != 2 {
+		t.Errorf("got %d records, %d skipped; want 2 and 1", len(got), skipped.Total())
+	}
+	if len(skipped.IDs) != 1 || skipped.IDs[0] != "00000000-0000-4000-8000-00000000nul0" {
+		t.Errorf("skipped IDs = %v, want the NUL posting's ID (ADR-0010: it is still on the board)", skipped.IDs)
 	}
 }
 

@@ -9,9 +9,68 @@ import (
 	"context"
 )
 
+const closePostingsNotIn = `-- name: ClosePostingsNotIn :execrows
+UPDATE postings SET closed_at = now()
+WHERE company_id = $1 AND source = $2 AND closed_at IS NULL
+	AND source_posting_id <> ALL ($3::text[])
+`
+
+type ClosePostingsNotInParams struct {
+	CompanyID int64
+	Source    string
+	SeenIds   []string
+}
+
+// Closes the company's open postings from this source that the fetched board no longer
+// lists (ADR-0010). Run only after a successful fetch, in the company's transaction.
+func (q *Queries) ClosePostingsNotIn(ctx context.Context, arg ClosePostingsNotInParams) (int64, error) {
+	result, err := q.db.Exec(ctx, closePostingsNotIn, arg.CompanyID, arg.Source, arg.SeenIds)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const countOpenPostings = `-- name: CountOpenPostings :one
+SELECT count(*) FROM postings
+WHERE company_id = $1 AND source = $2 AND closed_at IS NULL
+`
+
+type CountOpenPostingsParams struct {
+	CompanyID int64
+	Source    string
+}
+
+func (q *Queries) CountOpenPostings(ctx context.Context, arg CountOpenPostingsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countOpenPostings, arg.CompanyID, arg.Source)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countPostingsNotIn = `-- name: CountPostingsNotIn :one
+SELECT count(*) FROM postings
+WHERE company_id = $1 AND source = $2 AND closed_at IS NULL
+	AND source_posting_id <> ALL ($3::text[])
+`
+
+type CountPostingsNotInParams struct {
+	CompanyID int64
+	Source    string
+	SeenIds   []string
+}
+
+// How many of the company's open postings from this source ClosePostingsNotIn would close.
+func (q *Queries) CountPostingsNotIn(ctx context.Context, arg CountPostingsNotInParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countPostingsNotIn, arg.CompanyID, arg.Source, arg.SeenIds)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const upsertPosting = `-- name: UpsertPosting :one
 WITH old AS (
-	SELECT content_hash FROM postings
+	SELECT content_hash, closed_at FROM postings
 	WHERE source = $2 AND source_posting_id = $3
 )
 INSERT INTO postings (company_id, source, source_posting_id, url, title, raw_payload, content_hash)
@@ -19,6 +78,7 @@ VALUES ($1, $2, $3, $4, $5, $6,
 	sha256(convert_to(CAST($6 AS jsonb)::text, 'UTF8')))
 ON CONFLICT (source, source_posting_id) DO UPDATE SET
 	last_checked_at = now(),
+	closed_at       = NULL, -- seen again: open (ADR-0010)
 	raw_payload     = EXCLUDED.raw_payload,
 	content_hash    = EXCLUDED.content_hash,
 	url             = EXCLUDED.url,
@@ -26,7 +86,8 @@ ON CONFLICT (source, source_posting_id) DO UPDATE SET
 	last_changed_at = CASE WHEN postings.content_hash = EXCLUDED.content_hash
 		THEN postings.last_changed_at ELSE now() END
 RETURNING id, content_hash, (xmax = 0)::boolean AS inserted,
-	(xmax <> 0 AND (SELECT content_hash FROM old) IS DISTINCT FROM content_hash)::boolean AS changed
+	(xmax <> 0 AND (SELECT content_hash FROM old) IS DISTINCT FROM content_hash)::boolean AS changed,
+	(xmax <> 0 AND (SELECT closed_at FROM old) IS NOT NULL)::boolean AS reopened
 `
 
 type UpsertPostingParams struct {
@@ -43,6 +104,7 @@ type UpsertPostingRow struct {
 	ContentHash []byte
 	Inserted    bool
 	Changed     bool
+	Reopened    bool
 }
 
 // Stores one posting (ADR-0007). New: inserted with its hash. Already stored: the
@@ -66,6 +128,7 @@ func (q *Queries) UpsertPosting(ctx context.Context, arg UpsertPostingParams) (U
 		&i.ContentHash,
 		&i.Inserted,
 		&i.Changed,
+		&i.Reopened,
 	)
 	return i, err
 }

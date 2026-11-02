@@ -49,15 +49,15 @@ func (c *Client) Host() string {
 // how many jobs were skipped as malformed or unstorable. A bad job never fails the whole
 // fetch. Requests go through fetch.Client.Get: every attempt waits on limit, with
 // retries and Retry-After.
-func (c *Client) Fetch(ctx context.Context, board string, limit *rate.Limiter) ([]job.Raw, int, error) {
+func (c *Client) Fetch(ctx context.Context, board string, limit *rate.Limiter) ([]job.Raw, job.Skipped, error) {
 	u := c.base + "/posting-api/job-board/" + url.PathEscape(board) + "?includeCompensation=true"
 	body, err := c.Get(ctx, u, limit)
 	if err != nil {
-		return nil, 0, fmt.Errorf("ashby: fetch %s: %w", board, err)
+		return nil, job.Skipped{}, fmt.Errorf("ashby: fetch %s: %w", board, err)
 	}
 	raws, skipped, err := parse(body)
 	if err != nil {
-		return nil, 0, fmt.Errorf("ashby: fetch %s: %w", board, err)
+		return nil, job.Skipped{}, fmt.Errorf("ashby: fetch %s: %w", board, err)
 	}
 	return raws, skipped, nil
 }
@@ -69,18 +69,18 @@ func (c *Client) Fetch(ctx context.Context, board string, limit *rate.Limiter) (
 // meant only for people with the direct link, so they are left out and not counted.
 // A document with no jobs array is an error: the API changed, and an empty result would
 // hide it.
-func parse(body []byte) ([]job.Raw, int, error) {
+func parse(body []byte) ([]job.Raw, job.Skipped, error) {
 	var doc struct {
 		Jobs *[]json.RawMessage `json:"jobs"`
 	}
 	if err := json.Unmarshal(body, &doc); err != nil {
-		return nil, 0, fmt.Errorf("decoding job board: %w", err)
+		return nil, job.Skipped{}, fmt.Errorf("decoding job board: %w", err)
 	}
 	if doc.Jobs == nil {
-		return nil, 0, errors.New(`decoding job board: no "jobs" array in the response`)
+		return nil, job.Skipped{}, errors.New(`decoding job board: no "jobs" array in the response`)
 	}
 	raws := make([]job.Raw, 0, len(*doc.Jobs))
-	skipped := 0
+	var skipped job.Skipped
 	for _, e := range *doc.Jobs {
 		var j struct {
 			ID       string `json:"id"`
@@ -88,8 +88,12 @@ func parse(body []byte) ([]job.Raw, int, error) {
 			JobURL   string `json:"jobUrl"`
 			IsListed *bool  `json:"isListed"`
 		}
-		if err := json.Unmarshal(e, &j); err != nil || j.ID == "" || j.JobURL == "" || fetch.HasNUL(e) {
-			skipped++
+		err := json.Unmarshal(e, &j)
+		if err != nil || j.ID == "" || j.JobURL == "" || fetch.HasNUL(e) {
+			if err != nil {
+				j.ID = "" // a partly decoded entry has no trustworthy ID
+			}
+			skipped.Add(j.ID)
 			continue
 		}
 		if j.IsListed != nil && !*j.IsListed {

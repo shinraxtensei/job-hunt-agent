@@ -1,6 +1,6 @@
 # M2-04: Closed-posting detection
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M2 — Rules and a plain tracker
 - **Linear:** [HAM-33](https://linear.app/hamid-corp/issue/HAM-33/m2-04-closed-posting-detection)
 - **Estimate:** ½ day

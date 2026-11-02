@@ -50,9 +50,9 @@ func (f *fakeSource) Name() string { return f.name }
 func (f *fakeSource) Host() string { return f.host }
 
 // Fetch waits on the host limiter first, as every Source must before each request.
-func (f *fakeSource) Fetch(ctx context.Context, slug string, limit *rate.Limiter) ([]job.Raw, int, error) {
+func (f *fakeSource) Fetch(ctx context.Context, slug string, limit *rate.Limiter) ([]job.Raw, job.Skipped, error) {
 	if err := limit.Wait(ctx); err != nil {
-		return nil, 0, err
+		return nil, job.Skipped{}, err
 	}
 	f.mu.Lock()
 	f.calls = append(f.calls, call{slug, time.Now()})
@@ -69,21 +69,21 @@ func (f *fakeSource) Fetch(ctx context.Context, slug string, limit *rate.Limiter
 
 	if f.block[slug] {
 		<-ctx.Done()
-		return nil, 0, fmt.Errorf("%s: fetch %s: %w", f.name, slug, ctx.Err())
+		return nil, job.Skipped{}, fmt.Errorf("%s: fetch %s: %w", f.name, slug, ctx.Err())
 	}
 	select {
 	case <-time.After(f.delay):
 	case <-ctx.Done():
-		return nil, 0, ctx.Err()
+		return nil, job.Skipped{}, ctx.Err()
 	}
 	if f.fail[slug] {
-		return nil, 0, fmt.Errorf("%s: fetch %s: unexpected status 500 Internal Server Error", f.name, slug)
+		return nil, job.Skipped{}, fmt.Errorf("%s: fetch %s: unexpected status 500 Internal Server Error", f.name, slug)
 	}
 	id := fmt.Sprintf("%s-%d", slug, time.Now().UnixNano())
 	return []job.Raw{{
 		Source: f.name, SourceID: id, URL: "https://example.test/" + id, Title: "Engineer",
 		Payload: []byte(fmt.Sprintf(`{"id":%q}`, id)),
-	}}, 0, nil
+	}}, job.Skipped{}, nil
 }
 
 func (f *fakeSource) fetched() []call {

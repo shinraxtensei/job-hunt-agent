@@ -6,7 +6,7 @@
 -- whitespace in the source never count as a change. changed compares against the hash
 -- read before this statement (the CTE sees the old row).
 WITH old AS (
-	SELECT content_hash FROM postings
+	SELECT content_hash, closed_at FROM postings
 	WHERE source = @source AND source_posting_id = @source_posting_id
 )
 INSERT INTO postings (company_id, source, source_posting_id, url, title, raw_payload, content_hash)
@@ -14,6 +14,7 @@ VALUES (@company_id, @source, @source_posting_id, @url, @title, @raw_payload,
 	sha256(convert_to(CAST(sqlc.arg(raw_payload) AS jsonb)::text, 'UTF8')))
 ON CONFLICT (source, source_posting_id) DO UPDATE SET
 	last_checked_at = now(),
+	closed_at       = NULL, -- seen again: open (ADR-0010)
 	raw_payload     = EXCLUDED.raw_payload,
 	content_hash    = EXCLUDED.content_hash,
 	url             = EXCLUDED.url,
@@ -21,4 +22,22 @@ ON CONFLICT (source, source_posting_id) DO UPDATE SET
 	last_changed_at = CASE WHEN postings.content_hash = EXCLUDED.content_hash
 		THEN postings.last_changed_at ELSE now() END
 RETURNING id, content_hash, (xmax = 0)::boolean AS inserted,
-	(xmax <> 0 AND (SELECT content_hash FROM old) IS DISTINCT FROM content_hash)::boolean AS changed;
+	(xmax <> 0 AND (SELECT content_hash FROM old) IS DISTINCT FROM content_hash)::boolean AS changed,
+	(xmax <> 0 AND (SELECT closed_at FROM old) IS NOT NULL)::boolean AS reopened;
+
+-- name: CountOpenPostings :one
+SELECT count(*) FROM postings
+WHERE company_id = @company_id AND source = @source AND closed_at IS NULL;
+
+-- name: CountPostingsNotIn :one
+-- How many of the company's open postings from this source ClosePostingsNotIn would close.
+SELECT count(*) FROM postings
+WHERE company_id = @company_id AND source = @source AND closed_at IS NULL
+	AND source_posting_id <> ALL (@seen_ids::text[]);
+
+-- name: ClosePostingsNotIn :execrows
+-- Closes the company's open postings from this source that the fetched board no longer
+-- lists (ADR-0010). Run only after a successful fetch, in the company's transaction.
+UPDATE postings SET closed_at = now()
+WHERE company_id = @company_id AND source = @source AND closed_at IS NULL
+	AND source_posting_id <> ALL (@seen_ids::text[]);

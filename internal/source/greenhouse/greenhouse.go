@@ -50,14 +50,14 @@ func (c *Client) Host() string {
 // how many jobs were skipped as malformed or unstorable. A bad job never fails the whole
 // fetch. Requests go through fetch.Client.Get: every attempt waits on limit, with
 // retries and Retry-After.
-func (c *Client) Fetch(ctx context.Context, board string, limit *rate.Limiter) ([]job.Raw, int, error) {
+func (c *Client) Fetch(ctx context.Context, board string, limit *rate.Limiter) ([]job.Raw, job.Skipped, error) {
 	body, err := c.Get(ctx, c.base+"/v1/boards/"+url.PathEscape(board)+"/jobs?content=true", limit)
 	if err != nil {
-		return nil, 0, fmt.Errorf("greenhouse: fetch %s: %w", board, err)
+		return nil, job.Skipped{}, fmt.Errorf("greenhouse: fetch %s: %w", board, err)
 	}
 	raws, skipped, err := parse(body)
 	if err != nil {
-		return nil, 0, fmt.Errorf("greenhouse: fetch %s: %w", board, err)
+		return nil, job.Skipped{}, fmt.Errorf("greenhouse: fetch %s: %w", board, err)
 	}
 	return raws, skipped, nil
 }
@@ -67,31 +67,32 @@ func (c *Client) Fetch(ctx context.Context, board string, limit *rate.Limiter) (
 // needs. Jobs without a positive integer id or a URL, or containing NUL (which Postgres
 // refuses), are skipped and counted. A document with no jobs array is an error: the API
 // changed, and an empty result would hide it.
-func parse(body []byte) ([]job.Raw, int, error) {
+func parse(body []byte) ([]job.Raw, job.Skipped, error) {
 	var doc struct {
 		Jobs *[]json.RawMessage `json:"jobs"`
 	}
 	if err := json.Unmarshal(body, &doc); err != nil {
-		return nil, 0, fmt.Errorf("decoding jobs: %w", err)
+		return nil, job.Skipped{}, fmt.Errorf("decoding jobs: %w", err)
 	}
 	if doc.Jobs == nil {
-		return nil, 0, errors.New(`decoding jobs: no "jobs" array in the response`)
+		return nil, job.Skipped{}, errors.New(`decoding jobs: no "jobs" array in the response`)
 	}
 	raws := make([]job.Raw, 0, len(*doc.Jobs))
-	skipped := 0
+	var skipped job.Skipped
 	for _, e := range *doc.Jobs {
 		var j struct {
 			ID          json.Number `json:"id"`
 			Title       string      `json:"title"`
 			AbsoluteURL string      `json:"absolute_url"`
 		}
-		if err := json.Unmarshal(e, &j); err != nil || j.AbsoluteURL == "" || fetch.HasNUL(e) {
-			skipped++
-			continue
+		err := json.Unmarshal(e, &j)
+		id, idErr := strconv.ParseInt(j.ID.String(), 10, 64)
+		readable := ""
+		if err == nil && idErr == nil && id > 0 {
+			readable = strconv.FormatInt(id, 10)
 		}
-		id, err := strconv.ParseInt(j.ID.String(), 10, 64)
-		if err != nil || id <= 0 {
-			skipped++
+		if readable == "" || j.AbsoluteURL == "" || fetch.HasNUL(e) {
+			skipped.Add(readable)
 			continue
 		}
 		raws = append(raws, job.Raw{

@@ -36,8 +36,8 @@ func FuzzParse(f *testing.F) {
 		if json.Unmarshal(body, &doc) != nil {
 			t.Fatalf("parse accepted input that is not a jobs document")
 		}
-		if len(raws)+skipped != len(doc.Jobs) {
-			t.Fatalf("%d records + %d skipped != %d jobs", len(raws), skipped, len(doc.Jobs))
+		if len(raws)+skipped.Total() != len(doc.Jobs) {
+			t.Fatalf("%d records + %d skipped != %d jobs", len(raws), skipped.Total(), len(doc.Jobs))
 		}
 		for _, r := range raws {
 			if r.SourceID == "" || r.URL == "" || !json.Valid(r.Payload) || fetch.HasNUL(r.Payload) {

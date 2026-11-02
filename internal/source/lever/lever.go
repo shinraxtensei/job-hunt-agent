@@ -47,14 +47,14 @@ func New(baseURL string) *Client {
 // skipped as malformed or unstorable. A bad entry never fails the whole fetch.
 // Requests go through fetch.Client.Get: every attempt waits on limit (robots.txt asks
 // for Crawl-delay: 1), with retries and Retry-After.
-func (c *Client) Fetch(ctx context.Context, site string, limit *rate.Limiter) ([]job.Raw, int, error) {
+func (c *Client) Fetch(ctx context.Context, site string, limit *rate.Limiter) ([]job.Raw, job.Skipped, error) {
 	body, err := c.Get(ctx, c.base+"/v0/postings/"+url.PathEscape(site)+"?mode=json", limit)
 	if err != nil {
-		return nil, 0, fmt.Errorf("lever: fetch %s: %w", site, err)
+		return nil, job.Skipped{}, fmt.Errorf("lever: fetch %s: %w", site, err)
 	}
 	raws, skipped, err := parse(body)
 	if err != nil {
-		return nil, 0, fmt.Errorf("lever: fetch %s: %w", site, err)
+		return nil, job.Skipped{}, fmt.Errorf("lever: fetch %s: %w", site, err)
 	}
 	return raws, skipped, nil
 }
@@ -63,21 +63,25 @@ func (c *Client) Fetch(ctx context.Context, site string, limit *rate.Limiter) ([
 // exactly; only id, text and hostedUrl are read, to fill the columns every posting needs.
 // Entries without an id or URL, or containing NUL (which Postgres refuses in text and
 // jsonb), are skipped and counted.
-func parse(body []byte) ([]job.Raw, int, error) {
+func parse(body []byte) ([]job.Raw, job.Skipped, error) {
 	var elems []json.RawMessage
 	if err := json.Unmarshal(body, &elems); err != nil {
-		return nil, 0, fmt.Errorf("decoding postings list: %w", err)
+		return nil, job.Skipped{}, fmt.Errorf("decoding postings list: %w", err)
 	}
 	raws := make([]job.Raw, 0, len(elems))
-	skipped := 0
+	var skipped job.Skipped
 	for _, e := range elems {
 		var p struct {
 			ID        string `json:"id"`
 			Text      string `json:"text"`
 			HostedURL string `json:"hostedUrl"`
 		}
-		if err := json.Unmarshal(e, &p); err != nil || p.ID == "" || p.HostedURL == "" || fetch.HasNUL(e) {
-			skipped++
+		err := json.Unmarshal(e, &p)
+		if err != nil || p.ID == "" || p.HostedURL == "" || fetch.HasNUL(e) {
+			if err != nil {
+				p.ID = "" // a partly decoded entry has no trustworthy ID
+			}
+			skipped.Add(p.ID)
 			continue
 		}
 		raws = append(raws, job.Raw{

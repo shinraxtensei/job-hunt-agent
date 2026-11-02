@@ -89,8 +89,8 @@ func TestFetchGoldenFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if skipped != 0 {
-		t.Errorf("skipped %d, want 0", skipped)
+	if skipped.Total() != 0 {
+		t.Errorf("skipped %d, want 0", skipped.Total())
 	}
 	jobs := jobsOf(t, "cockroachlabs_jobs.json")
 	want := []job.Raw{
@@ -155,8 +155,8 @@ func TestFetchSkipsMalformedPosting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if skipped != 2 || len(got) != 2 || got[0].SourceID != "8079608" || got[1].SourceID != "7422578" {
-		t.Errorf("got %d records (%d skipped), want the two well-formed ones and 2 skipped", len(got), skipped)
+	if skipped.Total() != 2 || len(got) != 2 || got[0].SourceID != "8079608" || got[1].SourceID != "7422578" {
+		t.Errorf("got %d records (%d skipped), want the two well-formed ones and 2 skipped", len(got), skipped.Total())
 	}
 }
 
@@ -167,8 +167,11 @@ func TestFetchSkipsPostingWithNUL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if skipped != 1 || len(got) != 2 {
-		t.Errorf("got %d records, %d skipped; want 2 and 1", len(got), skipped)
+	if skipped.Total() != 1 || len(got) != 2 {
+		t.Errorf("got %d records, %d skipped; want 2 and 1", len(got), skipped.Total())
+	}
+	if len(skipped.IDs) != 1 || skipped.IDs[0] != "1" {
+		t.Errorf("skipped IDs = %v, want the NUL posting's ID (ADR-0010: it is still on the board)", skipped.IDs)
 	}
 }
 

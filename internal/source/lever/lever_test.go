@@ -84,8 +84,8 @@ func TestFetchGoldenFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if skipped != 0 {
-		t.Errorf("skipped %d postings, want 0", skipped)
+	if skipped.Total() != 0 {
+		t.Errorf("skipped %d postings, want 0", skipped.Total())
 	}
 	elems := rawElements(t, "spotify_postings.json")
 	equalRaw(t, got, []job.Raw{
@@ -123,8 +123,8 @@ func TestFetchSkipsMalformedPosting(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if skipped != 1 {
-		t.Errorf("skipped = %d, want 1", skipped)
+	if skipped.Total() != 1 {
+		t.Errorf("skipped = %d, want 1", skipped.Total())
 	}
 	if len(got) != 2 || got[0].SourceID != "2a55d6c9-c564-443a-be3e-a3851db5a93b" ||
 		got[1].SourceID != "785989a6-b219-43b1-92d9-750a67054f24" {
@@ -156,12 +156,15 @@ func TestFetchSkipsPostingWithNUL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Fetch: %v", err)
 	}
-	if skipped != 1 || len(got) != 2 {
-		t.Errorf("got %d records, %d skipped; want 2 records, 1 skipped", len(got), skipped)
+	if skipped.Total() != 1 || len(got) != 2 {
+		t.Errorf("got %d records, %d skipped; want 2 records, 1 skipped", len(got), skipped.Total())
 	}
 	for _, r := range got {
 		if r.SourceID == "00000000-nul0-4000-8000-000000000000" {
 			t.Error("the posting containing NUL was returned")
 		}
+	}
+	if len(skipped.IDs) != 1 || skipped.IDs[0] != "00000000-nul0-4000-8000-000000000000" {
+		t.Errorf("skipped IDs = %v, want the NUL posting's ID (ADR-0010: it is still on the board)", skipped.IDs)
 	}
 }

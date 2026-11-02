@@ -13,3 +13,23 @@ type Raw struct {
 	Title    string          // posting title as published
 	Payload  json.RawMessage // the posting's original JSON, byte for byte
 }
+
+// Skipped describes the entries a source dropped as malformed or unstorable. IDs lists
+// those whose ID could still be read: they are on the board, so they must count as seen
+// (never closed, ADR-0010). Unreadable counts the rest.
+type Skipped struct {
+	IDs        []string
+	Unreadable int
+}
+
+// Add records a skipped entry; an empty id counts as unreadable.
+func (s *Skipped) Add(id string) {
+	if id == "" {
+		s.Unreadable++
+		return
+	}
+	s.IDs = append(s.IDs, id)
+}
+
+// Total is how many entries were skipped.
+func (s Skipped) Total() int { return len(s.IDs) + s.Unreadable }

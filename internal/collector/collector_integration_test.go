@@ -254,11 +254,11 @@ type rawsSource []job.Raw
 
 func (rawsSource) Name() string { return "lever" }
 func (rawsSource) Host() string { return "raws.test" }
-func (s rawsSource) Fetch(ctx context.Context, _ string, limit *rate.Limiter) ([]job.Raw, int, error) {
+func (s rawsSource) Fetch(ctx context.Context, _ string, limit *rate.Limiter) ([]job.Raw, job.Skipped, error) {
 	if err := limit.Wait(ctx); err != nil {
-		return nil, 0, err
+		return nil, job.Skipped{}, err
 	}
-	return s, 0, nil
+	return s, job.Skipped{}, nil
 }
 
 // M0-04 AC4: a failure partway through storing rolls back everything, including the
