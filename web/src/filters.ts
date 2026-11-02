@@ -1,4 +1,5 @@
 import type { Preset } from "./api";
+import { label } from "./labels";
 
 // The facets the filter sheet offers, in the API's order.
 export const FACETS: [key: string, label: string][] = [
@@ -13,9 +14,6 @@ export const FACETS: [key: string, label: string][] = [
 
 export const LOCATION_PARAMS = ["workplace", "remote_scope", "country", "city", "track"];
 
-// A readable form of a facet value ("ai_ml" → "ai ml", "country:MA" → "MA").
-export const pretty = (v: string) => v.replace(/^country:/, "").replaceAll("_", " ");
-
 export type Applied = { key: string; label: string; value: string; fromURL: boolean };
 
 const list = (v: string | null) => (v === null ? null : v.split(",").filter(Boolean));
@@ -26,10 +24,10 @@ export function applied(params: URLSearchParams, preset: Preset | undefined): Ap
   const out: Applied[] = [];
   const presetName = params.get("preset");
   if (presetName) out.push({ key: "preset", label: "Preset", value: presetName === "none" ? "No filters" : presetName, fromURL: true });
-  const facet = (key: string, label: string, fallback: string[] | undefined) => {
+  const facet = (key: string, name: string, fallback: string[] | undefined) => {
     const v = list(params.get(key));
     const values = v ?? fallback;
-    if (values?.length) out.push({ key, label, value: values.map(pretty).join(", "), fromURL: v !== null });
+    if (values?.length) out.push({ key, label: name, value: values.map((x) => label(key, x)).join(", "), fromURL: v !== null });
   };
   facet("role_family", "Role", preset?.role_family);
   facet("seniority", "Seniority", preset?.seniority);

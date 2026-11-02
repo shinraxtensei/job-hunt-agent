@@ -1,6 +1,7 @@
 import { useState, type Ref } from "react";
 import { get, type Lead, type Members } from "./api";
 import { Icon } from "./icons";
+import { label, reason } from "./labels";
 import { ExternalLink } from "./safe";
 
 const DAY = 24 * 3600e3;
@@ -18,10 +19,21 @@ export function age(iso: string, now: number): string {
   return `${Math.floor(h / 24)}d`;
 }
 
+// Words a location uses for a workplace ("Hybrid", "On-site", "Remote - EMEA").
+const workplaceWords: Record<string, string[]> = { remote: ["remote"], hybrid: ["hybrid"], onsite: ["onsite", "on site"] };
+const words = (s: string) => ` ${s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+
+// place is the row's location: the one that matched the filters (else the first), how
+// many more there are, and the workplace unless the location already says it.
 export function place(l: Lead): string {
-  const [first, ...rest] = l.locations;
-  const loc = first ? first + (rest.length ? ` +${rest.length}` : "") : "No location";
-  const wp = l.workplaces.filter((w) => w !== "unknown").join(", ");
+  const shown = l.matched_location || l.locations[0];
+  const more = l.locations.length - (shown ? 1 : 0);
+  const loc = shown ? shown + (more > 0 ? ` +${more}` : "") : "No location";
+  const said = shown ? words(shown) : "";
+  const wp = l.workplaces
+    .filter((w) => w !== "unknown" && !(workplaceWords[w] ?? []).some((word) => said.includes(` ${word} `)))
+    .map((w) => label("workplace", w))
+    .join(", ");
   return wp ? `${loc} · ${wp}` : loc;
 }
 
@@ -167,7 +179,7 @@ function LeadRow(props: {
         <td className="title">
           <ExternalLink href={l.url}>{l.title}</ExternalLink>
           {l.closed && <span className="reasons">closed</span>}
-          {hidden && l.hidden_by && <span className="reasons">hidden by {l.hidden_by.join(", ")}</span>}
+          {hidden && l.hidden_by && <span className="reasons">hidden by {l.hidden_by.map(reason).join(", ")}</span>}
         </td>
         <td className="place">{place(l)}</td>
         <td className="num">{l.members > 1 ? num.format(l.members) : ""}</td>
@@ -208,7 +220,7 @@ function LeadRow(props: {
               <div className="pair">
                 <dt>Role</dt>
                 <dd>
-                  {l.role_family.replaceAll("_", " ")}, {l.seniority.replaceAll("_", " ")}
+                  {label("role_family", l.role_family)}, {label("seniority", l.seniority)}
                 </dd>
               </div>
               {l.published_at && (

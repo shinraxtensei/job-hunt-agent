@@ -22,6 +22,19 @@ type Data = { leads: Lead[]; total: number; cursor?: string; facets: Facets; oth
 const current = () => new URLSearchParams(window.location.search);
 const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
+// useNarrow follows the phone layout breakpoint (styles/app.css, 640px).
+function useNarrow(): boolean {
+  const query = "(max-width: 640px)";
+  const [narrow, setNarrow] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setNarrow(mq.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  return narrow;
+}
+
 function withParam(params: URLSearchParams, k: string, v: string | null): URLSearchParams {
   const next = new URLSearchParams(params);
   if (v === null || v === "") next.delete(k);
@@ -53,6 +66,7 @@ export function App() {
   });
   const [theme, setTheme] = useState<Theme>(() => (readPref("theme") as Theme | null) ?? "system");
   const search = useRef<HTMLInputElement>(null);
+  const narrow = useNarrow();
   const rows = useRef<(HTMLTableRowElement | null)[]>([]);
   const helpRef = useRef<HTMLDialogElement>(null);
 
@@ -316,7 +330,7 @@ export function App() {
               name="search"
               autoComplete="off"
               spellCheck={false}
-              placeholder="Search titles, companies, places…"
+              placeholder={narrow ? "Search" : "Search titles, companies, places…"}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />

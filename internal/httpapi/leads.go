@@ -33,6 +33,7 @@ type Lead struct {
 	RemoteScopes       []string   `json:"remote_scopes"`
 	Countries          []string   `json:"countries"`
 	Locations          []string   `json:"locations"`
+	MatchedLocation    string     `json:"matched_location"` // the location that passed the location rules; "" if none applied (M2-08)
 	ExperienceMinYears *int32     `json:"experience_min_years"`
 	Closed             bool       `json:"closed"`
 	Team               string     `json:"team"`
@@ -289,6 +290,7 @@ func (a *api) split(all []Lead, f filters) (shown, hidden []Lead) {
 			continue
 		}
 		if l.HiddenBy = f.preset.Evaluate(l.group); l.HiddenBy == nil {
+			l.MatchedLocation = f.preset.MatchedLocation(l.group)
 			shown = append(shown, l)
 		} else {
 			hidden = append(hidden, l)

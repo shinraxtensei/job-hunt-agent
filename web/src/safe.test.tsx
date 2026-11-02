@@ -18,6 +18,7 @@ const lead = (over: Partial<Lead>): Lead => ({
   remote_scopes: [],
   countries: [],
   locations: ["Remote"],
+  matched_location: "",
   experience_min_years: null,
   closed: false,
   team: "",

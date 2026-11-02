@@ -73,6 +73,32 @@ func (p Preset) Evaluate(g Group) []string {
 	return hidden
 }
 
+// MatchedLocation returns the location string that made g pass p's location rules (M2-08):
+// of the first member a rule matches, the first of its locations that the rule matches on
+// its own (classified alone), else that member's first location. "" when p has no location
+// rules or none matched. Locations are untrusted text: returned as is, only compared.
+func (p Preset) MatchedLocation(g Group) string {
+	for _, m := range g.Members {
+		for _, r := range p.Location {
+			if !r.matches(g.Track, m) {
+				continue
+			}
+			for _, loc := range m.Locations {
+				f := job.Classify(job.Record{Locations: []string{loc}, Workplace: job.Workplace(m.Workplace)}, "")
+				alone := Place{Workplace: m.Workplace, Locations: []string{loc}, RemoteScopes: f.RemoteScopes, Countries: f.Countries}
+				if r.matches(g.Track, alone) {
+					return loc
+				}
+			}
+			if len(m.Locations) > 0 {
+				return m.Locations[0] // matched through the board's country code, not the text
+			}
+			return ""
+		}
+	}
+	return ""
+}
+
 func (p Preset) locationMatches(g Group) bool {
 	for _, m := range g.Members {
 		for _, r := range p.Location {

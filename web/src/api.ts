@@ -11,6 +11,7 @@ export type Lead = {
   remote_scopes: string[];
   countries: string[];
   locations: string[];
+  matched_location: string; // the location that passed the location rules, "" if none applied
   experience_min_years: number | null;
   closed: boolean;
   team: string;

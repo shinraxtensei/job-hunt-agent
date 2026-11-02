@@ -20,6 +20,7 @@
       "locations": [
         "Casablanca"
       ],
+      "matched_location": "",
       "experience_min_years": null,
       "closed": true,
       "team": "Engineering",
@@ -50,6 +51,7 @@
       "locations": [
         "Remote - US"
       ],
+      "matched_location": "",
       "experience_min_years": 8,
       "closed": false,
       "team": "Engineering",

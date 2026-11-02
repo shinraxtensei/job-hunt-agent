@@ -46,5 +46,9 @@ Cursor pagination must return every group once even when new jobs arrive between
 - **Bad:** every request reads all groups (a few ms now); the ceiling is roughly 50k
   groups. Facet counts evaluate the groups once per facet (five passes), each with that
   facet's own filter removed, so a count says what choosing the value would add.
+- **Added by M2-08 (2026-11-02):** each shown lead carries `matched_location`, the
+  location that passed the location rules (`preset.MatchedLocation`), so the page can show
+  why a lead fits without knowing the rules. Additive; empty when no location rule
+  applied.
 - **Revisit when:** a request takes over ~200 ms locally, or groups exceed ~50k: move the
   facet filters into SQL and keep `Evaluate` for the location rules and reasons.

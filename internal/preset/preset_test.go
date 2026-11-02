@@ -163,3 +163,43 @@ func TestClosedOnly(t *testing.T) {
 		t.Error("closed: only does not show exactly the closed groups")
 	}
 }
+
+// M2-08 AC2: the location shown first is the one that made the group pass the location
+// rules: of the first member a rule matches, the first location the rule matches alone.
+func TestMatchedLocation(t *testing.T) {
+	p := load(t)
+	place := func(workplace string, scopes, countries []string, locs ...string) preset.Place {
+		return preset.Place{Workplace: workplace, Locations: locs, RemoteScopes: scopes, Countries: countries}
+	}
+	for _, c := range []struct {
+		name  string
+		track string
+		ms    []preset.Place
+		want  string
+	}{
+		{"multi-country remote: the accepted country, not the first", "remote",
+			[]preset.Place{place("remote", []string{"country:RO", "country:BR", "country:MA"}, []string{"RO", "BR", "MA"},
+				"Romania", "Brazil", "Morocco")}, "Morocco"},
+		{"the member that matched, not the first member", "remote",
+			[]preset.Place{place("onsite", nil, []string{"DE"}, "Berlin, Germany"), place("remote", []string{"emea"}, nil, "Remote - EMEA")},
+			"Remote - EMEA"},
+		{"onsite city", "remote",
+			[]preset.Place{place("onsite", nil, []string{"FR", "MA"}, "Paris, France", "Casablanca, Morocco")}, "Casablanca, Morocco"},
+		{"relocation country from a bare city", "relocation",
+			[]preset.Place{place("hybrid", nil, []string{"JP", "NL"}, "Tokyo", "Amsterdam")}, "Amsterdam"},
+		{"workplace unknown matches its first location", "remote",
+			[]preset.Place{place("unknown", nil, nil, "Tokyo", "Osaka")}, "Tokyo"},
+		{"no rule matched", "remote",
+			[]preset.Place{place("remote", []string{"us_only"}, []string{"US"}, "Remote, US")}, ""},
+		{"matched by the board's country code only: the member's first location", "remote",
+			[]preset.Place{place("remote", []string{"country:MA"}, []string{"MA"}, "Remote")}, "Remote"},
+	} {
+		g := preset.Group{RoleFamily: "backend", Seniority: "senior", Track: c.track, Members: c.ms}
+		if got := p.MatchedLocation(g); got != c.want {
+			t.Errorf("%s: %q, want %q", c.name, got, c.want)
+		}
+	}
+	if got := (preset.Preset{Name: "none"}).MatchedLocation(preset.Group{Members: []preset.Place{place("remote", nil, nil, "Anywhere")}}); got != "" {
+		t.Errorf("no location rules: %q, want empty", got)
+	}
+}

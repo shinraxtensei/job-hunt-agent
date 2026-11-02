@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { Facets, Preset, Presets } from "./api";
-import { applied, FACETS, pretty, selected } from "./filters";
+import { applied, FACETS, selected } from "./filters";
+import { label as display } from "./labels";
 import { Icon } from "./icons";
 
 type Props = {
@@ -107,7 +108,7 @@ export function FilterSheet(props: Props) {
         {FACETS.map(([k, label]) => {
           const sel = selected(params, preset, k);
           const counts = facets?.facets[k] ?? {};
-          const values = [...new Set([...Object.keys(counts), ...sel])].sort();
+          const values = [...new Set([...Object.keys(counts), ...sel])].sort((a, b) => display(k, a).localeCompare(display(k, b)));
           return (
             <fieldset key={k}>
               <legend>{label}</legend>
@@ -122,7 +123,7 @@ export function FilterSheet(props: Props) {
                         set(k, next.join(","));
                       }}
                     />
-                    <span className="name">{pretty(v)}</span>
+                    <span className="name">{display(k, v)}</span>
                     <span className="count" aria-label={`${counts[v] ?? 0} leads`}>
                       {counts[v] ?? 0}
                     </span>

@@ -20,6 +20,7 @@
       "locations": [
         "Amsterdam"
       ],
+      "matched_location": "Amsterdam",
       "experience_min_years": null,
       "closed": false,
       "team": "Engineering",
@@ -52,6 +53,7 @@
         "Remote - EMEA",
         "Remote – Morocco"
       ],
+      "matched_location": "Remote – Morocco",
       "experience_min_years": 5,
       "closed": false,
       "team": "Engineering",

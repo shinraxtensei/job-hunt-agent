@@ -56,7 +56,7 @@ for (const width of [375, 1280]) {
         await page.getByRole("button", { name: /Filters/ }).click();
         const sheet = page.getByRole("dialog", { name: "Filters" });
         await expect(sheet.getByText("New: last 24 h")).toBeVisible();
-        await expect(sheet.getByRole("checkbox", { name: /^backend/ })).toBeChecked(); // from the preset
+        await expect(sheet.getByRole("checkbox", { name: /^Backend/ })).toBeChecked(); // from the preset, labelled
         await noAxeViolations(page);
         await sheet.getByRole("button", { name: "Reset to my defaults" }).click();
         await expect(page).toHaveURL(/\/$/);
@@ -70,7 +70,7 @@ for (const width of [375, 1280]) {
         await page.goto("/");
         await page.getByRole("link", { name: "3 hidden by these filters" }).click();
         await expect(page).toHaveURL(/view=hidden/);
-        await expect(page.getByText("hidden by role_family=sales, location")).toBeVisible();
+        await expect(page.getByText("hidden by Role: Sales, Location")).toBeVisible();
         await noHorizontalScroll(page);
         await noAxeViolations(page);
       });
@@ -89,6 +89,32 @@ for (const width of [375, 1280]) {
   }
 }
 
+// M2-08 AC4: at 375 px the search placeholder fits its field.
+test("the search placeholder fits at 375px", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await mockAPI(page);
+  await page.goto("/");
+  const search = page.getByRole("searchbox");
+  await expect(search).toHaveAttribute("placeholder", "Search");
+  const fits = await search.evaluate((el: HTMLInputElement) => {
+    const ctx = document.createElement("canvas").getContext("2d")!;
+    const cs = getComputedStyle(el);
+    ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    return ctx.measureText(el.placeholder).width <= el.clientWidth;
+  });
+  expect(fits, "placeholder wider than the field").toBe(true);
+  await noAxeViolations(page);
+});
+
+// M2-08 AC1-AC3 in the real page: matched location first, no repeated workplace, labels.
+test("rows show the matched location and labelled values", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await mockAPI(page);
+  await page.goto("/");
+  await expect(page.locator("tr.row", { hasText: "Senior Backend Engineer" }).locator("td.place")).toHaveText("Remote – Morocco +1");
+  await expect(page.locator("tr.row", { hasText: "Mobile Engineer" }).locator("td.place")).toHaveText("Amsterdam · On-site");
+});
+
 test.describe("desktop behaviour", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
@@ -96,8 +122,8 @@ test.describe("desktop behaviour", () => {
     await mockAPI(page);
     await page.goto("/?role_family=sales");
     const chips = page.getByLabel("Applied filters");
-    await expect(chips.getByText("Role sales")).toBeVisible();
-    await expect(chips.getByText("Seniority junior, mid, senior, unknown")).toBeVisible(); // from the preset
+    await expect(chips.getByText("Role Sales")).toBeVisible();
+    await expect(chips.getByText("Seniority Junior, Mid, Senior, Unknown")).toBeVisible(); // from the preset, labelled
     await chips.getByRole("button", { name: "Remove Role filter" }).click();
     await expect(page).toHaveURL(/\/$/);
   });
