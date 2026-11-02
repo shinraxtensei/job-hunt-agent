@@ -5,6 +5,8 @@
 //	collector companies sync   data/companies.yaml into the companies table
 //	collector normalise        (re)build missing or stale job records (ADR-0008)
 //	collector classify         rebuild facets made by an older classifier (ADR-0011)
+//	collector classify --report-unknown
+//	                           list the location strings the classifier can't place (M2-09)
 //	collector preview <name>   show what data/presets/<name>.yaml shows and hides, and why
 //
 // Environment: DATABASE_URL (app role, required); COLLECTOR_CONCURRENCY (default 8);
@@ -39,10 +41,12 @@ import (
 )
 
 const (
-	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify | collector preview <preset>"
+	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify [--report-unknown] | collector preview <preset>"
 
 	// normaliseBatch is how many postings `collector normalise` writes per transaction.
 	normaliseBatch = 500
+	// reportUnknownTop is how many location strings `classify --report-unknown` lists.
+	reportUnknownTop = 40
 
 	// watchListPath is relative to the working directory: run from the repo root.
 	watchListPath = "data/companies.yaml"
@@ -134,6 +138,22 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 		defer pool.Close()
 		if _, err := collector.ClassifyStored(ctx, pool, normaliseBatch, log); err != nil {
 			return 1, err
+		}
+		return 0, nil
+
+	case "classify --report-unknown":
+		pool, err := pgxpool.New(ctx, dsn)
+		if err != nil {
+			return 1, fmt.Errorf("connecting to database: %w", err)
+		}
+		defer pool.Close()
+		locs, err := collector.UnresolvedLocations(ctx, pool, reportUnknownTop)
+		if err != nil {
+			return 1, err
+		}
+		fmt.Printf("%d most common location strings the classifier can't place (jobs, location):\n", len(locs))
+		for _, l := range locs {
+			fmt.Printf("%6d  %q\n", l.Jobs, l.Location) // quoted: posting text is untrusted
 		}
 		return 0, nil
 

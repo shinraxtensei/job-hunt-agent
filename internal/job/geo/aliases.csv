@@ -1,0 +1,165 @@
+# Other names for countries (and the US states), matched like the names in iso3166-1.csv.
+# One alias per line: code,alias. Folded and lower-cased when loaded; "&" and "St." forms
+# of every name get "and" and "Saint" variants automatically.
+# "Georgia" is deliberately absent: it is both a country (GE) and a US state.
+code,alias
+US,United States of America
+US,USA
+US,US
+US,États-Unis
+GB,UK
+GB,Great Britain
+GB,England
+GB,Scotland
+GB,Wales
+GB,Northern Ireland
+GB,Royaume-Uni
+IE,Republic of Ireland
+IE,Irlande
+AE,UAE
+AE,Émirats arabes unis
+SA,KSA
+SA,Arabie saoudite
+TR,Turkey
+TR,Turkiye
+TR,Turquie
+CZ,Czech Republic
+KR,Korea
+KR,Republic of Korea
+KR,Corée du Sud
+CI,Ivory Coast
+CI,Cote d'Ivoire
+HK,Hong Kong
+HK,Hong Kong SAR
+MO,Macau
+MO,Macao
+CD,DRC
+CD,DR Congo
+CD,Democratic Republic of the Congo
+CG,Republic of the Congo
+NL,The Netherlands
+NL,Holland
+NL,Pays-Bas
+MM,Burma
+MM,Myanmar
+PS,Palestine
+VA,Vatican
+VA,Holy See
+CV,Cabo Verde
+SZ,Swaziland
+TL,East Timor
+MK,Macedonia
+RU,Russian Federation
+VN,Viet Nam
+LA,Lao PDR
+SY,Syrian Arab Republic
+IR,Islamic Republic of Iran
+TZ,United Republic of Tanzania
+BO,Plurinational State of Bolivia
+VE,Bolivarian Republic of Venezuela
+MD,Republic of Moldova
+BN,Brunei Darussalam
+FM,Federated States of Micronesia
+MA,Maroc
+DE,Deutschland
+DE,Allemagne
+ES,España
+ES,Espagne
+IT,Italia
+IT,Italie
+BE,Belgique
+BE,België
+CH,Suisse
+CH,Schweiz
+AT,Österreich
+AT,Autriche
+DK,Danemark
+SE,Sverige
+SE,Suède
+NO,Norvège
+FI,Finlande
+IS,Islande
+PL,Polska
+PL,Pologne
+HU,Hongrie
+RO,Roumanie
+BG,Bulgarie
+HR,Croatie
+GR,Grèce
+CY,Chypre
+MT,Malte
+EE,Estonie
+LV,Lettonie
+LT,Lituanie
+RS,Serbie
+TN,Tunisie
+DZ,Algérie
+EG,Égypte
+ZA,Afrique du Sud
+SN,Sénégal
+CM,Cameroun
+IN,Inde
+SG,Singapour
+JP,Japon
+CN,Chine
+AU,Australie
+NZ,Nouvelle-Zélande
+TH,Thaïlande
+ID,Indonésie
+MY,Malaisie
+BR,Brasil
+BR,Brésil
+MX,Mexique
+AR,Argentine
+CO,Colombie
+CL,Chili
+PE,Pérou
+US,Alabama
+US,Alaska
+US,Arizona
+US,Arkansas
+US,California
+US,Colorado
+US,Connecticut
+US,Delaware
+US,Florida
+US,Hawaii
+US,Idaho
+US,Illinois
+US,Indiana
+US,Iowa
+US,Kansas
+US,Kentucky
+US,Louisiana
+US,Maine
+US,Maryland
+US,Massachusetts
+US,Michigan
+US,Minnesota
+US,Mississippi
+US,Missouri
+US,Montana
+US,Nebraska
+US,Nevada
+US,New Hampshire
+US,New Jersey
+US,New Mexico
+US,New York
+US,North Carolina
+US,North Dakota
+US,Ohio
+US,Oklahoma
+US,Oregon
+US,Pennsylvania
+US,Rhode Island
+US,South Carolina
+US,South Dakota
+US,Tennessee
+US,Texas
+US,Utah
+US,Vermont
+US,Virginia
+US,Washington
+US,West Virginia
+US,Wisconsin
+US,Wyoming

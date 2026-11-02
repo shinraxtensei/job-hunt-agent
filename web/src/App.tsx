@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { apiQuery, get, type Facets, type Lead, type Page, type Presets } from "./api";
 import { FilterSheet } from "./FilterSheet";
 import { applied } from "./filters";
@@ -196,8 +196,17 @@ export function App() {
 
   // Keyboard: j/k move, o or Enter opens, e expands, / searches, Esc clears, ? helps,
   // [ toggles the sidebar. Dialogs handle their own keys (Esc closes them).
+  // One listener for the page's life that always runs the latest handler: re-registering
+  // it after each render left a gap where a key pressed right after new rows painted
+  // reached the previous handler (with the previous, empty list).
+  const onKeyRef = useRef<(e: KeyboardEvent) => void>(() => {});
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const listener = (e: KeyboardEvent) => onKeyRef.current(e);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, []);
+  useLayoutEffect(() => {
+    onKeyRef.current = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || document.querySelector("dialog[open]")) return;
       const t = e.target as HTMLElement | null;
       const typing = !!t?.closest("input, select, textarea");
@@ -247,9 +256,7 @@ export function App() {
           break;
       }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [focus, ordered, expanded, query, setQuery, moveFocus, openLead, toggle, toggleRail]);
+  });
 
   useEffect(() => {
     const d = helpRef.current;

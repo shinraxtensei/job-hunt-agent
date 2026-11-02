@@ -75,6 +75,7 @@ testdata/            golden files (recorded board responses, sample postings)
 | Vulnerability scan | `make vuln` → govulncheck |
 | Fuzz the source parsers (30s each) | `make fuzz` |
 | Local stack | `make up` / `make down` |
+| Location strings the classifier can't place (to grow its tables) | `go run ./cmd/collector classify --report-unknown` |
 | Web checks: audit, types, lint, unit, build, Playwright + axe (Node 26, `web/.nvmrc`) | `make web-check` |
 | Build the tracker page into the API binary | `make web-build` |
 | Tracker page dev server (proxies `/api` to 127.0.0.1:8080) | `make web-dev` |

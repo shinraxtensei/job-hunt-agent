@@ -30,8 +30,8 @@ posting, ADR-0008) and rebuilt by `collector classify`:
 | `role_family` | text NOT NULL, CHECK | `backend` `frontend` `fullstack` `mobile` `platform` `data` `ai_ml` `security` `qa` `eng_management` `product` `design` `sales` `marketing` `customer` `operations` `finance` `people` `legal` `other` `unknown` |
 | `seniority` | text NOT NULL, CHECK | `intern` `junior` `mid` `senior` `staff_plus` `lead_manager` `unknown` |
 | `experience_min_years` | integer NULL | an explicit minimum from the description; NULL when none |
-| `remote_scopes` | text[] NOT NULL DEFAULT '{}' | **every** remote scope the job's locations name: `worldwide` `emea` `europe` `africa` `americas` `apac` `us_only` `country:<CODE>` (ISO alpha-2, upper case) `unknown`; empty when no location is remote. A remote rule passes if **any** scope is accepted |
-| `countries` | text[] NOT NULL DEFAULT '{}' | ISO alpha-2 codes: the board's codes (Lever) plus country and city names found in `locations` via fixed tables |
+| `remote_scopes` | text[] NOT NULL DEFAULT '{}' | **every** remote scope the job's locations name: `worldwide` `emea` `europe` `africa` `latam` `americas` `apac` `us_only` `country:<CODE>` (ISO alpha-2, upper case) `unknown`; empty when no location is remote. A remote rule passes if **any** scope is accepted |
+| `countries` | text[] NOT NULL DEFAULT '{}' | ISO alpha-2 codes: the board's codes (Lever) plus country and city names found in `locations` via fixed tables (all 249 ISO 3166-1 countries and aliases from checked-in CSVs since classifier version 3, M2-09) |
 | `classifier_version` | integer NOT NULL DEFAULT 0 | `job.ClassifierVersion` that produced the facets |
 
 Cities stay in `locations`; a preset's cities are matched against them as whole words
@@ -65,7 +65,7 @@ location:                      # shown if ANY rule matches
 ```
 
 A facet list *includes* values; an omitted key means "no filter". `EU_EEA` is a fixed
-alias for the EU/EEA country codes. **Evaluation** is a pure function `preset.Evaluate`:
+alias for the EU/EEA country codes; `LATAM` and `AMERICAS` (M2-09) for those regions. **Evaluation** is a pure function `preset.Evaluate`:
 it returns `shown`, or `hidden` with every filter that hid the job (`role_family=sales`,
 `seniority=staff_plus`, `experience_min_years=7`, `location`, `closed`). It runs at query
 time (the API builds its query from it in M2-05), so editing a preset needs no recompute.

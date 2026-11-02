@@ -29,6 +29,8 @@ async function noHorizontalScroll(page: Page) {
 }
 
 async function noAxeViolations(page: Page) {
+  // Let open/reveal animations finish: mid-fade text measures as low contrast.
+  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running"));
   const { violations } = await new AxeBuilder({ page }).analyze();
   expect(violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target).join(" ")})`)).toEqual([]);
 }

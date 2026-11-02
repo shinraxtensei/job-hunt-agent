@@ -82,3 +82,10 @@ JOIN postings p ON p.id = m.posting_id
 JOIN job_groups g ON g.company_id = j.company_id AND g.title_key = j.title_key
 WHERE j.posting_id = @id AND j.title_key <> ''
 ORDER BY m.posting_id = g.canonical_posting_id DESC, p.first_seen_at, m.posting_id;
+
+-- name: CountJobLocations :many
+-- How many jobs name each location string, most common first (M2-09 --report-unknown).
+SELECT l::text AS location, count(*)::integer AS jobs
+FROM jobs, unnest(locations) AS l
+GROUP BY l
+ORDER BY jobs DESC, l;

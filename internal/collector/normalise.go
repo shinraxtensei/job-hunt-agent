@@ -168,3 +168,28 @@ func ClassifyStored(ctx context.Context, db DB, batchSize int, log *slog.Logger)
 		"written", res.Written, "failed", res.Failed)
 	return res, nil
 }
+
+// LocationCount is one location string and how many jobs name it.
+type LocationCount struct {
+	Location string
+	Jobs     int
+}
+
+// UnresolvedLocations returns up to limit location strings the classifier can't place
+// (job.Unresolved), most common first, so gaps in its tables are visible (M2-09).
+func UnresolvedLocations(ctx context.Context, db DB, limit int) ([]LocationCount, error) {
+	rows, err := store.New(db).CountJobLocations(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("counting job locations: %w", err)
+	}
+	var out []LocationCount
+	for _, r := range rows {
+		if len(out) == limit {
+			break
+		}
+		if job.Unresolved(r.Location) {
+			out = append(out, LocationCount{r.Location, int(r.Jobs)})
+		}
+	}
+	return out, nil
+}

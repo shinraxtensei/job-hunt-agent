@@ -33,7 +33,7 @@ location:
 		`line 8: unknown remote_scope "mars"`,
 		`line 8: unknown remote_scope "country:mars"`,
 		`line 9: unknown workplace "floating"`,
-		`line 9: country "Germany" is not an ISO alpha-2 code or EU_EEA`,
+		`line 9: country "Germany" is not an ISO alpha-2 code, EU_EEA, LATAM or AMERICAS`,
 		`line 9: unknown track "nomad"`,
 		`line 10: empty location rule`,
 	} {
@@ -201,5 +201,21 @@ func TestMatchedLocation(t *testing.T) {
 	}
 	if got := (preset.Preset{Name: "none"}).MatchedLocation(preset.Group{Members: []preset.Place{place("remote", nil, nil, "Anywhere")}}); got != "" {
 		t.Errorf("no location rules: %q, want empty", got)
+	}
+}
+
+// M2-09: latam is a remote scope, and LATAM/AMERICAS expand to their member countries in
+// a countries rule (like EU_EEA).
+func TestRegionAliases(t *testing.T) {
+	p, err := preset.Parse([]byte("name: latam\nlocation:\n  - {workplace: [remote], remote_scopes: [latam, americas]}\n  - {workplace: [onsite], countries: [LATAM]}\n  - {workplace: [hybrid], countries: [AMERICAS]}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(p.Location[1].Countries, "BR") || slices.Contains(p.Location[1].Countries, "US") ||
+		!slices.Contains(p.Location[2].Countries, "US") || !slices.Contains(p.Location[2].Countries, "PA") {
+		t.Errorf("aliases expanded to %v and %v", p.Location[1].Countries, p.Location[2].Countries)
+	}
+	if got := p.Evaluate(preset.Group{Members: []preset.Place{remote("latam")}}); got != nil {
+		t.Errorf("remote latam hidden by %v", got)
 	}
 }

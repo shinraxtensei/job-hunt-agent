@@ -133,7 +133,7 @@ var (
 	ruleKeys     = []string{"workplace", "remote_scopes", "cities", "countries", "track"}
 	workplaces   = []string{"remote", "hybrid", "onsite", "unknown"}
 	tracks       = []string{"morocco", "remote", "relocation", "consulting"} // ADR-0005
-	remoteScopes = []string{"worldwide", "emea", "europe", "africa", "americas", "apac", "us_only", "unknown"}
+	remoteScopes = []string{"worldwide", "emea", "europe", "africa", "latam", "americas", "apac", "us_only", "unknown"}
 )
 
 // Load reads and validates the preset at path.
@@ -267,12 +267,16 @@ func RuleValues(key string, values []string) (out, problems []string) {
 			code, isCountry := strings.CutPrefix(v, "country:")
 			ok = slices.Contains(remoteScopes, v) || isCountry && isCode(code)
 		case "countries":
-			if v == "EU_EEA" {
+			switch v {
+			case "EU_EEA":
 				out = append(out, euEEA...)
+				continue
+			case "LATAM", "AMERICAS":
+				out = append(out, job.RegionCountries(strings.ToLower(v))...)
 				continue
 			}
 			if !isCode(v) {
-				problems = append(problems, fmt.Sprintf("country %q is not an ISO alpha-2 code or EU_EEA", v))
+				problems = append(problems, fmt.Sprintf("country %q is not an ISO alpha-2 code, EU_EEA, LATAM or AMERICAS", v))
 				continue
 			}
 		}

@@ -11,6 +11,39 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countJobLocations = `-- name: CountJobLocations :many
+SELECT l::text AS location, count(*)::integer AS jobs
+FROM jobs, unnest(locations) AS l
+GROUP BY l
+ORDER BY jobs DESC, l
+`
+
+type CountJobLocationsRow struct {
+	Location string
+	Jobs     int32
+}
+
+// How many jobs name each location string, most common first (M2-09 --report-unknown).
+func (q *Queries) CountJobLocations(ctx context.Context) ([]CountJobLocationsRow, error) {
+	rows, err := q.db.Query(ctx, countJobLocations)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountJobLocationsRow
+	for rows.Next() {
+		var i CountJobLocationsRow
+		if err := rows.Scan(&i.Location, &i.Jobs); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listGroupMembers = `-- name: ListGroupMembers :many
 SELECT m.posting_id, m.title, m.team, m.department, m.locations, m.workplace, m.url,
 	p.first_seen_at, (p.closed_at IS NOT NULL)::boolean AS closed

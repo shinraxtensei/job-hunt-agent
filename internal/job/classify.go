@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"html"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -11,7 +12,7 @@ import (
 // ClassifierVersion is stored with every job's facets (ADR-0011). Bump it whenever
 // Classify's output for the same record changes; `collector classify` then rebuilds older
 // rows without re-normalising them.
-const ClassifierVersion = 2 // 2: city→country table
+const ClassifierVersion = 3 // 2: city→country table; 3: all ISO countries, latam (M2-09)
 
 // RoleFamilies and Seniorities are every value the jobs table CHECKs allow.
 var (
@@ -235,51 +236,18 @@ func experience(desc string) int {
 var remoteWords = table(map[string][]string{"": {"remote", "remotely", "anywhere", "distributed", "home based",
 	"homebased", "work from home", "wfh", "teletravail", "worldwide"}})
 
-// geo maps region words to "r:<scope>" and country names to "c:<code>" (a fixed table:
-// English and French names), plus the cities table.
-var geo = append(table(cities), table(map[string][]string{
+// geo maps region words to "r:<scope>" and country names to "c:<code>": every ISO
+// 3166-1 country with its aliases (geo.go, read from checked-in CSVs), the cities table,
+// and the regions below.
+var geo = slices.Concat(table(cities), countryPhrases, table(map[string][]string{
 	"r:worldwide": {"worldwide", "global", "anywhere"},
 	"r:emea":      {"emea", "emear"},
 	"r:europe":    {"europe", "european", "eu"},
 	"r:africa":    {"africa", "afrique"},
-	"r:americas":  {"americas", "amer", "latam", "north america", "south america", "latin america", "na", "namer"},
+	"r:latam":     {"latam", "latin america", "south america", "amerique latine"},
+	"r:americas":  {"americas", "amer", "north america", "na", "namer"},
 	"r:apac":      {"apac", "asia pacific", "apj", "apjc", "anz", "aunz", "asia"},
-	"c:US": {"united states", "united states of america", "usa", "us", "etats unis",
-		// states (not Georgia: also a country), so "Remote - Texas" is US-only
-		"alabama", "alaska", "arizona", "arkansas", "california", "colorado", "connecticut", "delaware",
-		"florida", "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky", "louisiana", "maine",
-		"maryland", "massachusetts", "michigan", "minnesota", "mississippi", "missouri", "montana", "nebraska",
-		"nevada", "new hampshire", "new jersey", "new mexico", "new york", "north carolina", "north dakota",
-		"ohio", "oklahoma", "oregon", "pennsylvania", "rhode island", "south carolina", "south dakota",
-		"tennessee", "texas", "utah", "vermont", "virginia", "washington", "west virginia", "wisconsin", "wyoming"},
-	"c:CA": {"canada"}, "c:MX": {"mexico", "mexique"}, "c:BR": {"brazil", "brasil", "bresil"},
-	"c:AR": {"argentina", "argentine"}, "c:CO": {"colombia", "colombie"}, "c:CL": {"chile", "chili"},
-	"c:PE": {"peru", "perou"}, "c:UY": {"uruguay"}, "c:CR": {"costa rica"},
-	"c:GB": {"united kingdom", "uk", "great britain", "england", "scotland", "wales", "northern ireland", "royaume uni"},
-	"c:IE": {"ireland", "republic of ireland", "irlande"}, "c:FR": {"france"},
-	"c:DE": {"germany", "deutschland", "allemagne"}, "c:ES": {"spain", "espana", "espagne"},
-	"c:PT": {"portugal"}, "c:IT": {"italy", "italia", "italie"},
-	"c:NL": {"netherlands", "the netherlands", "pays bas", "holland"}, "c:BE": {"belgium", "belgique", "belgie"},
-	"c:LU": {"luxembourg"}, "c:CH": {"switzerland", "suisse", "schweiz"}, "c:AT": {"austria", "osterreich", "autriche"},
-	"c:DK": {"denmark", "danemark"}, "c:SE": {"sweden", "suede", "sverige"}, "c:NO": {"norway", "norvege"},
-	"c:FI": {"finland", "finlande"}, "c:IS": {"iceland", "islande"}, "c:LI": {"liechtenstein"},
-	"c:PL": {"poland", "pologne", "polska"}, "c:CZ": {"czech republic", "czechia"}, "c:SK": {"slovakia"},
-	"c:SI": {"slovenia"}, "c:HU": {"hungary", "hongrie"}, "c:RO": {"romania", "roumanie"},
-	"c:BG": {"bulgaria", "bulgarie"}, "c:HR": {"croatia", "croatie"}, "c:GR": {"greece", "grece"},
-	"c:CY": {"cyprus", "chypre"}, "c:MT": {"malta", "malte"}, "c:EE": {"estonia", "estonie"},
-	"c:LV": {"latvia", "lettonie"}, "c:LT": {"lithuania", "lituanie"}, "c:RS": {"serbia", "serbie"},
-	"c:UA": {"ukraine"}, "c:TR": {"turkey", "turkiye", "turquie"},
-	"c:MA": {"morocco", "maroc"}, "c:TN": {"tunisia", "tunisie"}, "c:DZ": {"algeria", "algerie"},
-	"c:EG": {"egypt", "egypte"}, "c:ZA": {"south africa", "afrique du sud"}, "c:NG": {"nigeria"},
-	"c:KE": {"kenya"}, "c:GH": {"ghana"},
-	"c:AE": {"united arab emirates", "uae", "emirats arabes unis"}, "c:SA": {"saudi arabia", "ksa", "arabie saoudite"},
-	"c:QA": {"qatar"}, "c:IL": {"israel"},
-	"c:IN": {"india", "inde"}, "c:SG": {"singapore", "singapour"}, "c:JP": {"japan", "japon"},
-	"c:CN": {"china", "chine"}, "c:HK": {"hong kong"}, "c:TW": {"taiwan"}, "c:KR": {"south korea", "korea", "coree du sud"},
-	"c:AU": {"australia", "australie"}, "c:NZ": {"new zealand", "nouvelle zelande"}, "c:TH": {"thailand", "thailande"},
-	"c:VN": {"vietnam", "viet nam"}, "c:ID": {"indonesia", "indonesie"}, "c:MY": {"malaysia", "malaisie"},
-	"c:PH": {"philippines"}, "c:PK": {"pakistan"},
-})...)
+}))
 
 // cities maps the cities that appear in the local data's locations (2026-11-02) to their
 // country, so a bare "Amsterdam" or "NL - Amsterdam" gets one. A fixed table, not a
