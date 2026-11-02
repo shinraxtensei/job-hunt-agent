@@ -4,6 +4,7 @@
 //	collector once             one Lever board (COLLECTOR_LEVER_COMPANY)
 //	collector companies sync   data/companies.yaml into the companies table
 //	collector normalise        (re)build missing or stale job records (ADR-0008)
+//	collector classify         rebuild facets made by an older classifier (ADR-0011)
 //
 // Environment: DATABASE_URL (app role, required); COLLECTOR_CONCURRENCY (default 8);
 // COLLECTOR_HOST_INTERVAL (minimum gap per host, default and minimum 1s);
@@ -33,7 +34,7 @@ import (
 )
 
 const (
-	usage = "usage: collector run | collector once | collector companies sync | collector normalise"
+	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify"
 
 	// normaliseBatch is how many postings `collector normalise` writes per transaction.
 	normaliseBatch = 500
@@ -110,6 +111,17 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 		defer pool.Close()
 		// Failures are counted in the report; they don't fail the command.
 		if _, err := collector.NormaliseStored(ctx, pool, normaliseBatch, log); err != nil {
+			return 1, err
+		}
+		return 0, nil
+
+	case "classify":
+		pool, err := pgxpool.New(ctx, dsn)
+		if err != nil {
+			return 1, fmt.Errorf("connecting to database: %w", err)
+		}
+		defer pool.Close()
+		if _, err := collector.ClassifyStored(ctx, pool, normaliseBatch, log); err != nil {
 			return 1, err
 		}
 		return 0, nil

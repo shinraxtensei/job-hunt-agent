@@ -189,6 +189,52 @@
       "application_deadline": null,
       "include_ai_disclaimer": null,
       "ai_opt_out_request_url": null
+    },
+    {
+      "id": 7528749003,
+      "title": "iOS Engineer (Berlin) ",
+      "content": "&lt;h4&gt;&lt;strong&gt;THE BEST WORK OF YOUR CAREER&amp;nbsp;&lt;/strong&gt;&lt;/h4&gt;\n&lt;p&gt;Trade Republic is the largest savings platform in Europe - we operate in 18 countries, serving +10 million customers who trusted us with over 150B Euros in assets. But we’re striving for more.&lt;/p&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;\n&lt;p&gt;We have a bold mission to empower everyone to build wealth with easy, safe, and free access to financial systems. You will have the opportunity to grow your career by collaborating with a team of outstanding talents and state of the art technology to build a lasting, positive future for millions.&lt;/p&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;\n&lt;h4&gt;&lt;strong&gt;WHAT YOU&#39;LL BE DOING&lt;/strong&gt;&lt;/h4&gt;\n&lt;ul&gt;\n&lt;li&gt;Contributing to the iOS guild with your expertise to ensure technical excellence&lt;/li&gt;\n&lt;li&gt;Mentor other engineers and have a coach to support your growth&lt;/li&gt;\n&lt;li&gt;Be an owner of product development by collaborating with the different roles, assuring the quality and delivery&lt;/li&gt;\n&lt;li&gt;Work in a dynamic, goal-driven agile setting&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;\n&lt;p&gt;&amp;nbsp;&lt;strong&gt;WHAT WE&#39;RE LOOKING FOR&amp;nbsp;&lt;/strong&gt;&lt;/p&gt;\n&lt;ul&gt;\n&lt;li&gt;5+ years of experience in mobile engineering&amp;nbsp;&lt;/li&gt;\n&lt;li&gt;Experience with Swift, programmatic UI and the basics of reactive programming&lt;/li&gt;\n&lt;li&gt;You have a passion for a great UX and UI and you are keen to work closely with our designers to achieve this&lt;/li&gt;\n&lt;li&gt;You care about quality, and know the best ways to achieve this both in code and for the product itself&lt;br&gt;&lt;br&gt;&lt;/li&gt;\n&lt;/ul&gt;\n&lt;h4&gt;&lt;strong&gt;TECHNOLOGY STACK&lt;/strong&gt;&lt;/h4&gt;\n&lt;ul&gt;\n&lt;li&gt;100% Swift;&lt;/li&gt;\n&lt;li&gt;SwiftUI and UIKit;&lt;/li&gt;\n&lt;li&gt;Reactive data flow with Combine, ReactiveSwift and WebSockets;&lt;/li&gt;\n&lt;li&gt;MVVM-C;&lt;/li&gt;\n&lt;li&gt;Dependency Injection&lt;/li&gt;\n&lt;/ul&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;\n&lt;p&gt;&lt;strong&gt;WHY YOU SHOULD APPLY NOW&lt;/strong&gt;&lt;/p&gt;\n&lt;p&gt;Our culture rewards ownership, excellence, and high energy. We care deeply about outcomes and hold each other accountable - we’re here to win and fix one of the largest challenges Europeans face - closing the pension gap and democratising wealth. If this gets you fired up, reach out!&lt;/p&gt;\n&lt;p&gt;&amp;nbsp;&lt;/p&gt;&lt;div class=&quot;content-conclusion&quot;&gt;&lt;p&gt;We believe it’s our team’s varied identities and backgrounds that make us sharper and stronger. We’re committed to creating an environment where everyone feels respected and has equal opportunity to thrive in their careers. For any questions on DEI during the interview process, reach out to your recruitment partner.&lt;/p&gt;&lt;/div&gt;",
+      "offices": [
+        {
+          "id": 4024843003,
+          "name": "Berlin",
+          "location": "Berlin, Berlin, Germany",
+          "child_ids": [],
+          "parent_id": null
+        }
+      ],
+      "language": "en",
+      "location": {
+        "name": "Berlin"
+      },
+      "updated_at": "2026-09-30T14:11:26-04:00",
+      "departments": [
+        {
+          "id": 4027974003,
+          "name": "iOS",
+          "child_ids": [],
+          "parent_id": 4026464003
+        }
+      ],
+      "absolute_url": "https://traderepublic.com/en-de/about?jobId=7528749003&gh_jid=7528749003",
+      "company_name": "Trade Republic",
+      "ai_disclaimer": null,
+      "requisition_id": "1019",
+      "data_compliance": [
+        {
+          "type": "gdpr",
+          "requires_consent": false,
+          "retention_period": null,
+          "requires_retention_consent": false,
+          "requires_processing_consent": false,
+          "demographic_data_consent_applies": false
+        }
+      ],
+      "first_published": "2025-11-14T08:33:56-05:00",
+      "internal_job_id": 5098525003,
+      "application_deadline": null,
+      "include_ai_disclaimer": null,
+      "ai_opt_out_request_url": null
     }
   ],
   "meta": {

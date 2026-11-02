@@ -1,6 +1,6 @@
 # M2-03: Classify jobs and filter them, with my profile as the default
 
-- **Status:** Ready
+- **Status:** In progress
 - **Milestone:** M2 — Rules and a plain tracker
 - **Linear:** [HAM-32](https://linear.app/hamid-corp/issue/HAM-32)
 - **Estimate:** 1½ days
@@ -38,8 +38,9 @@ pipelines; based in Casablanca, open to remote.
    - `seniority`: `intern`, `junior`, `mid`, `senior`, `staff_plus` (staff, principal,
      distinguished), `lead_manager` (lead, head of, manager, director, VP), `unknown`.
    - `experience_min_years`: an explicit minimum stated in the description, else none.
-   - `remote_scope`: for remote jobs, `worldwide`, `emea`, `europe`, `africa`, `americas`,
-     `us_only`, `country:<code>` or `unknown`.
+   - `remote_scopes`: for remote jobs, every scope the locations name (ADR-0011):
+     `worldwide`, `emea`, `europe`, `africa`, `americas`, `apac`, `us_only`,
+     `country:<code>` or `unknown`.
    - plus what M2-01/M2-04 already provide: workplace, countries, cities, company track,
      closed.
 2. **Given** the classifiers

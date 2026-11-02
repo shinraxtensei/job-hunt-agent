@@ -128,6 +128,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0008 | A `jobs` table, 1:1 with `postings`, holds the normalised job record | Accepted |
 | 0009 | Group duplicate jobs by company and a title key stored on `jobs` | Accepted |
 | 0010 | Close postings missing from a successful full-board fetch | Accepted |
+| 0011 | Job facets on `jobs`, a classifier version, and YAML filter presets | Accepted |
 
 ## Project skills
 

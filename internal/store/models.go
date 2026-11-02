@@ -42,21 +42,27 @@ type Company struct {
 }
 
 type Job struct {
-	PostingID         int64
-	CompanyID         int64
-	Title             string
-	Url               string
-	Locations         []string
-	CountryCodes      []string
-	Workplace         string
-	Team              string
-	Department        string
-	EmploymentType    string
-	PublishedAt       pgtype.Timestamptz
-	NormaliserVersion int32
-	PostingHash       []byte
-	NormalisedAt      pgtype.Timestamptz
-	TitleKey          string
+	PostingID          int64
+	CompanyID          int64
+	Title              string
+	Url                string
+	Locations          []string
+	CountryCodes       []string
+	Workplace          string
+	Team               string
+	Department         string
+	EmploymentType     string
+	PublishedAt        pgtype.Timestamptz
+	NormaliserVersion  int32
+	PostingHash        []byte
+	NormalisedAt       pgtype.Timestamptz
+	TitleKey           string
+	RoleFamily         string
+	Seniority          string
+	ExperienceMinYears pgtype.Int4
+	RemoteScopes       []string
+	Countries          []string
+	ClassifierVersion  int32
 }
 
 type JobGroup struct {

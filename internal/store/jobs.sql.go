@@ -11,6 +11,49 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const listJobsToClassify = `-- name: ListJobsToClassify :many
+SELECT j.posting_id, p.source, p.raw_payload
+FROM jobs j
+JOIN postings p ON p.id = j.posting_id
+WHERE j.posting_id > $1 AND j.classifier_version < $2::integer
+ORDER BY j.posting_id
+LIMIT $3
+`
+
+type ListJobsToClassifyParams struct {
+	AfterID   int64
+	Version   int32
+	BatchSize int32
+}
+
+type ListJobsToClassifyRow struct {
+	PostingID  int64
+	Source     string
+	RawPayload []byte
+}
+
+// The next batch (by posting id, after after_id) of jobs whose facets were made by an
+// older classifier version (ADR-0011).
+func (q *Queries) ListJobsToClassify(ctx context.Context, arg ListJobsToClassifyParams) ([]ListJobsToClassifyRow, error) {
+	rows, err := q.db.Query(ctx, listJobsToClassify, arg.AfterID, arg.Version, arg.BatchSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListJobsToClassifyRow
+	for rows.Next() {
+		var i ListJobsToClassifyRow
+		if err := rows.Scan(&i.PostingID, &i.Source, &i.RawPayload); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPostingsToNormalise = `-- name: ListPostingsToNormalise :many
 SELECT p.id, p.company_id, p.source, p.raw_payload, p.content_hash
 FROM postings p
@@ -63,35 +106,75 @@ func (q *Queries) ListPostingsToNormalise(ctx context.Context, arg ListPostingsT
 	return items, nil
 }
 
+const updateJobFacets = `-- name: UpdateJobFacets :exec
+UPDATE jobs SET role_family = $1, seniority = $2,
+	experience_min_years = $3, remote_scopes = $4,
+	countries = $5, classifier_version = $6
+WHERE posting_id = $7
+`
+
+type UpdateJobFacetsParams struct {
+	RoleFamily         string
+	Seniority          string
+	ExperienceMinYears pgtype.Int4
+	RemoteScopes       []string
+	Countries          []string
+	ClassifierVersion  int32
+	PostingID          int64
+}
+
+func (q *Queries) UpdateJobFacets(ctx context.Context, arg UpdateJobFacetsParams) error {
+	_, err := q.db.Exec(ctx, updateJobFacets,
+		arg.RoleFamily,
+		arg.Seniority,
+		arg.ExperienceMinYears,
+		arg.RemoteScopes,
+		arg.Countries,
+		arg.ClassifierVersion,
+		arg.PostingID,
+	)
+	return err
+}
+
 const upsertJob = `-- name: UpsertJob :exec
 INSERT INTO jobs (posting_id, company_id, title, url, locations, country_codes, workplace,
-	team, department, employment_type, published_at, normaliser_version, posting_hash, title_key)
+	team, department, employment_type, published_at, normaliser_version, posting_hash, title_key,
+	role_family, seniority, experience_min_years, remote_scopes, countries, classifier_version)
 VALUES ($1, $2, $3, $4, $5, $6, $7,
-	$8, $9, $10, $11, $12, $13, $14)
+	$8, $9, $10, $11, $12, $13, $14,
+	$15, $16, $17, $18, $19, $20)
 ON CONFLICT (posting_id) DO UPDATE SET
 	company_id = EXCLUDED.company_id, title = EXCLUDED.title, url = EXCLUDED.url,
 	locations = EXCLUDED.locations, country_codes = EXCLUDED.country_codes,
 	workplace = EXCLUDED.workplace, team = EXCLUDED.team, department = EXCLUDED.department,
 	employment_type = EXCLUDED.employment_type, published_at = EXCLUDED.published_at,
 	normaliser_version = EXCLUDED.normaliser_version, posting_hash = EXCLUDED.posting_hash,
-	title_key = EXCLUDED.title_key, normalised_at = now()
+	title_key = EXCLUDED.title_key, role_family = EXCLUDED.role_family, seniority = EXCLUDED.seniority,
+	experience_min_years = EXCLUDED.experience_min_years, remote_scopes = EXCLUDED.remote_scopes,
+	countries = EXCLUDED.countries, classifier_version = EXCLUDED.classifier_version, normalised_at = now()
 `
 
 type UpsertJobParams struct {
-	PostingID         int64
-	CompanyID         int64
-	Title             string
-	Url               string
-	Locations         []string
-	CountryCodes      []string
-	Workplace         string
-	Team              string
-	Department        string
-	EmploymentType    string
-	PublishedAt       pgtype.Timestamptz
-	NormaliserVersion int32
-	PostingHash       []byte
-	TitleKey          string
+	PostingID          int64
+	CompanyID          int64
+	Title              string
+	Url                string
+	Locations          []string
+	CountryCodes       []string
+	Workplace          string
+	Team               string
+	Department         string
+	EmploymentType     string
+	PublishedAt        pgtype.Timestamptz
+	NormaliserVersion  int32
+	PostingHash        []byte
+	TitleKey           string
+	RoleFamily         string
+	Seniority          string
+	ExperienceMinYears pgtype.Int4
+	RemoteScopes       []string
+	Countries          []string
+	ClassifierVersion  int32
 }
 
 // Writes a posting's normalised record (ADR-0008), replacing any older one.
@@ -111,6 +194,12 @@ func (q *Queries) UpsertJob(ctx context.Context, arg UpsertJobParams) error {
 		arg.NormaliserVersion,
 		arg.PostingHash,
 		arg.TitleKey,
+		arg.RoleFamily,
+		arg.Seniority,
+		arg.ExperienceMinYears,
+		arg.RemoteScopes,
+		arg.Countries,
+		arg.ClassifierVersion,
 	)
 	return err
 }
