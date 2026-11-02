@@ -21,7 +21,7 @@ const (
 
 // NormaliserVersion is stored on every jobs row. Bump it whenever Normalise's output
 // for the same payload changes; `collector normalise` then rebuilds older rows.
-const NormaliserVersion = 1
+const NormaliserVersion = 2 // 2: title_key (M2-02, ADR-0009)
 
 // maxField caps every string copied from a payload (Security notes: untrusted input).
 const maxField = 500
@@ -38,6 +38,7 @@ type Record struct {
 	Department     string
 	EmploymentType string // as published; classified later (M2-03)
 	PublishedAt    time.Time
+	TitleKey       string // groups duplicates within a company (ADR-0009)
 }
 
 // Normalise turns one stored posting payload into a Record. It is pure and never
@@ -62,6 +63,7 @@ func Normalise(source string, payload []byte) (Record, error) {
 	if r.Workplace == "" {
 		r.Workplace = Unknown
 	}
+	r.TitleKey = TitleKey(r.Title, r.Locations)
 	return r, nil
 }
 

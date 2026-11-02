@@ -41,6 +41,7 @@ func writeJob(ctx context.Context, q *store.Queries, postingID, companyID int64,
 		PublishedAt:       published,
 		NormaliserVersion: job.NormaliserVersion,
 		PostingHash:       postingHash,
+		TitleKey:          rec.TitleKey,
 	}); err != nil {
 		return false, fmt.Errorf("writing job record for posting %d: %w", postingID, err)
 	}

@@ -224,3 +224,90 @@ func TestNormaliseStoredBackfills(t *testing.T) {
 		t.Errorf("no summary with a failed count:\n%s", logs.String())
 	}
 }
+
+type group struct {
+	members    int
+	canonical  int64
+	locations  []string
+	workplaces []string
+}
+
+// groupOf reads the job_groups row for a company slug and title key.
+func groupOf(t *testing.T, e *env, slug, key string) (group, bool) {
+	t.Helper()
+	var g group
+	err := e.pool.QueryRow(t.Context(),
+		`SELECT g.members, g.canonical_posting_id, g.locations, g.workplaces
+		 FROM job_groups g JOIN companies c ON c.id = g.company_id
+		 WHERE c.board_slug = $1 AND g.title_key = $2`, slug, key).
+		Scan(&g.members, &g.canonical, &g.locations, &g.workplaces)
+	if err == pgx.ErrNoRows { //nolint:errorlint // pgx returns the sentinel itself
+		return g, false
+	}
+	if err != nil {
+		t.Fatalf("reading group %q: %v", key, err)
+	}
+	return g, true
+}
+
+func postingID(t *testing.T, e *env, sourceID string) int64 {
+	t.Helper()
+	var id int64
+	if err := e.pool.QueryRow(t.Context(), `SELECT id FROM postings WHERE source = 'lever' AND source_posting_id = $1`, sourceID).Scan(&id); err != nil {
+		t.Fatalf("reading posting %s: %v", sourceID, err)
+	}
+	return id
+}
+
+func leverPosting(id, title, location, workplace string) job.Raw {
+	return job.Raw{Source: "lever", SourceID: id, URL: "https://example.test/" + id, Title: title,
+		Payload: []byte(fmt.Sprintf(`{"text":%q,"hostedUrl":%q,"workplaceType":%q,"categories":{"location":%q}}`,
+			title, "https://example.test/"+id, workplace, location))}
+}
+
+// M2-02 AC2 + AC4: the same role posted for Berlin and Remote is one group whose canonical
+// record is the one seen first and whose locations and workplaces are the union; a
+// different seniority is its own group; a retitled posting moves group when it is stored.
+func TestJobGroups(t *testing.T) {
+	e := newEnv(t)
+	defer e.pool.Close()
+	slug := e.add("lever", "Groups", true, false)
+	berlin, remote, senior := slug+"-berlin", slug+"-remote", slug+"-senior"
+	run := func(src rawsSource) {
+		t.Helper()
+		if _, err := collector.Run(t.Context(), e.pool, collector.Registry{"lever": src}, collector.Config{Concurrency: 1}, quiet()); err != nil {
+			t.Fatalf("Run: %v", err)
+		}
+	}
+	first := rawsSource{leverPosting(berlin, "Backend Engineer - Berlin", "Berlin", "hybrid")}
+	run(first)
+	second := rawsSource{
+		first[0],
+		leverPosting(remote, "Backend Engineer (Remote)", "Remote", "remote"),
+		leverPosting(senior, "Senior Backend Engineer", "Berlin", "hybrid"),
+	}
+	run(second)
+
+	g, ok := groupOf(t, e, slug, "backend engineer")
+	if !ok {
+		t.Fatal(`no "backend engineer" group`)
+	}
+	if g.members != 2 || g.canonical != postingID(t, e, berlin) {
+		t.Errorf("group = %+v, want 2 members with the Berlin posting (seen first) canonical", g)
+	}
+	if strings.Join(g.locations, ",") != "Berlin,Remote" || strings.Join(g.workplaces, ",") != "hybrid,remote" {
+		t.Errorf("group locations %v, workplaces %v; want [Berlin Remote] and [hybrid remote]", g.locations, g.workplaces)
+	}
+	if s, ok := groupOf(t, e, slug, "senior backend engineer"); !ok || s.members != 1 {
+		t.Errorf("senior group = %+v (found %v), want its own group of 1", s, ok)
+	}
+
+	second[1] = leverPosting(remote, "Platform Engineer (Remote)", "Remote", "remote")
+	run(second)
+	if g, _ := groupOf(t, e, slug, "backend engineer"); g.members != 1 {
+		t.Errorf("after the retitle, backend group has %d members, want 1", g.members)
+	}
+	if p, ok := groupOf(t, e, slug, "platform engineer"); !ok || p.members != 1 {
+		t.Errorf("retitled posting's group = %+v (found %v), want a new group of 1", p, ok)
+	}
+}

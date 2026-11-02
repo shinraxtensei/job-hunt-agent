@@ -1,6 +1,6 @@
 # M2-02: Deduplication
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M2 — Rules and a plain tracker
 - **Linear:** [HAM-31](https://linear.app/hamid-corp/issue/HAM-31/m2-02-deduplication)
 - **Estimate:** 1 day

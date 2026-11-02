@@ -65,16 +65,16 @@ func (q *Queries) ListPostingsToNormalise(ctx context.Context, arg ListPostingsT
 
 const upsertJob = `-- name: UpsertJob :exec
 INSERT INTO jobs (posting_id, company_id, title, url, locations, country_codes, workplace,
-	team, department, employment_type, published_at, normaliser_version, posting_hash)
+	team, department, employment_type, published_at, normaliser_version, posting_hash, title_key)
 VALUES ($1, $2, $3, $4, $5, $6, $7,
-	$8, $9, $10, $11, $12, $13)
+	$8, $9, $10, $11, $12, $13, $14)
 ON CONFLICT (posting_id) DO UPDATE SET
 	company_id = EXCLUDED.company_id, title = EXCLUDED.title, url = EXCLUDED.url,
 	locations = EXCLUDED.locations, country_codes = EXCLUDED.country_codes,
 	workplace = EXCLUDED.workplace, team = EXCLUDED.team, department = EXCLUDED.department,
 	employment_type = EXCLUDED.employment_type, published_at = EXCLUDED.published_at,
 	normaliser_version = EXCLUDED.normaliser_version, posting_hash = EXCLUDED.posting_hash,
-	normalised_at = now()
+	title_key = EXCLUDED.title_key, normalised_at = now()
 `
 
 type UpsertJobParams struct {
@@ -91,6 +91,7 @@ type UpsertJobParams struct {
 	PublishedAt       pgtype.Timestamptz
 	NormaliserVersion int32
 	PostingHash       []byte
+	TitleKey          string
 }
 
 // Writes a posting's normalised record (ADR-0008), replacing any older one.
@@ -109,6 +110,7 @@ func (q *Queries) UpsertJob(ctx context.Context, arg UpsertJobParams) error {
 		arg.PublishedAt,
 		arg.NormaliserVersion,
 		arg.PostingHash,
+		arg.TitleKey,
 	)
 	return err
 }

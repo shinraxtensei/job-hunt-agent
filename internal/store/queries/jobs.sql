@@ -1,16 +1,16 @@
 -- name: UpsertJob :exec
 -- Writes a posting's normalised record (ADR-0008), replacing any older one.
 INSERT INTO jobs (posting_id, company_id, title, url, locations, country_codes, workplace,
-	team, department, employment_type, published_at, normaliser_version, posting_hash)
+	team, department, employment_type, published_at, normaliser_version, posting_hash, title_key)
 VALUES (@posting_id, @company_id, @title, @url, @locations, @country_codes, @workplace,
-	@team, @department, @employment_type, @published_at, @normaliser_version, @posting_hash)
+	@team, @department, @employment_type, @published_at, @normaliser_version, @posting_hash, @title_key)
 ON CONFLICT (posting_id) DO UPDATE SET
 	company_id = EXCLUDED.company_id, title = EXCLUDED.title, url = EXCLUDED.url,
 	locations = EXCLUDED.locations, country_codes = EXCLUDED.country_codes,
 	workplace = EXCLUDED.workplace, team = EXCLUDED.team, department = EXCLUDED.department,
 	employment_type = EXCLUDED.employment_type, published_at = EXCLUDED.published_at,
 	normaliser_version = EXCLUDED.normaliser_version, posting_hash = EXCLUDED.posting_hash,
-	normalised_at = now();
+	title_key = EXCLUDED.title_key, normalised_at = now();
 
 -- name: ListPostingsToNormalise :many
 -- The next batch (by posting id, after after_id) of postings whose job record is missing,

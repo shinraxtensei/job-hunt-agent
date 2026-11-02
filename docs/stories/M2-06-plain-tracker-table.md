@@ -35,6 +35,12 @@ embedded in the Go API binary so the tool stays one process).
    "Reset to my defaults" control returns to the preset, and a line says how many jobs
    the current filters hide with a link to the hidden view, which shows why each job
    was hidden (`/api/leads/hidden`).
+2c. **Given** a lead with more than one member in its duplicate group
+   **When** it is shown
+   **Then** it reads "N postings" and expands to the list from
+   `GET /api/leads/{id}/members` (title, team, department, locations, workplace, first
+   seen, link), so every merge can be checked by eye; a lead with one posting shows no
+   count.
 3. **Given** a phone-width screen (375 px)
    **When** I open the page
    **Then** it is readable without horizontal page scroll (rows become cards); checked

@@ -38,6 +38,12 @@ gone: no per-posting recheck is needed for board postings. Only manually added p
 5. **Given** closed postings
    **When** jobs are classified (M2-03)
    **Then** `closed` is a facet: hidden by the default preset, visible with a filter.
+6. **Given** a duplicate group (M2-02, `job_groups`) with closed and open members
+   **When** the group is read
+   **Then** its canonical posting is the **open** member seen first, and the group is closed
+   only when **all** its members are closed. Tested with a group of one closed member seen
+   first and one open member seen later (canonical = the open one), and a group of only
+   closed members (closed).
 
 ## Out of scope
 

@@ -40,6 +40,12 @@ tracker in M6. No auth: local only now, behind Tailscale after Deploy (ADR-0002)
    **Then** facets returns every facet value with its count under the current filters
    (to build the filter controls), and presets lists the available presets with their
    filters.
+2d. **Given** a lead whose duplicate group (M2-02, `job_groups`) has more than one member
+   **When** I call `GET /api/leads/{id}/members`
+   **Then** I get every posting in the lead's group, each with title, team, department,
+   locations, workplace, first-seen-at and URL, canonical first, then by first seen; an
+   unknown id returns 404. In `GET /api/leads`, each lead's member count comes with the
+   URL of its members endpoint, so a merge can always be checked.
 3. **Given** many results
    **When** I page
    **Then** cursor pagination (`limit` default 50, max 200, `cursor` opaque) returns every

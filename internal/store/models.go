@@ -54,6 +54,16 @@ type Job struct {
 	NormaliserVersion int32
 	PostingHash       []byte
 	NormalisedAt      pgtype.Timestamptz
+	TitleKey          string
+}
+
+type JobGroup struct {
+	CompanyID          int64
+	TitleKey           string
+	Members            int32
+	CanonicalPostingID interface{}
+	Locations          interface{}
+	Workplaces         interface{}
 }
 
 type Posting struct {

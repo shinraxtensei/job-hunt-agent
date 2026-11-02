@@ -76,6 +76,7 @@ fuzz: ## Fuzz the source parsers and the normaliser for 30s each (not part of ch
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/greenhouse/
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/ashby/
 	go test -run '^$$' -fuzz=FuzzNormalise -fuzztime=30s ./internal/job/
+	go test -run '^$$' -fuzz=FuzzTitleKey -fuzztime=30s ./internal/job/
 
 vuln: ## Scan dependencies for known vulnerabilities
 	$(TOOL) govulncheck ./...

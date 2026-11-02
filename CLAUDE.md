@@ -126,6 +126,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0006 | Record collector runs in Postgres from M1-02; goleak in tests | Accepted |
 | 0007 | Track posting changes with a content hash; keep the latest payload | Accepted |
 | 0008 | A `jobs` table, 1:1 with `postings`, holds the normalised job record | Accepted |
+| 0009 | Group duplicate jobs by company and a title key stored on `jobs` | Accepted |
 
 ## Project skills
 
