@@ -31,11 +31,13 @@ posting, ADR-0008) and rebuilt by `collector classify`:
 | `seniority` | text NOT NULL, CHECK | `intern` `junior` `mid` `senior` `staff_plus` `lead_manager` `unknown` |
 | `experience_min_years` | integer NULL | an explicit minimum from the description; NULL when none |
 | `remote_scopes` | text[] NOT NULL DEFAULT '{}' | **every** remote scope the job's locations name: `worldwide` `emea` `europe` `africa` `americas` `apac` `us_only` `country:<CODE>` (ISO alpha-2, upper case) `unknown`; empty when no location is remote. A remote rule passes if **any** scope is accepted |
-| `countries` | text[] NOT NULL DEFAULT '{}' | ISO alpha-2 codes: the board's codes (Lever) plus country names found in `locations` via a fixed table |
+| `countries` | text[] NOT NULL DEFAULT '{}' | ISO alpha-2 codes: the board's codes (Lever) plus country and city names found in `locations` via fixed tables |
 | `classifier_version` | integer NOT NULL DEFAULT 0 | `job.ClassifierVersion` that produced the facets |
 
 Cities stay in `locations`; a preset's cities are matched against them as whole words
-(the same token comparison as ADR-0009), so no city table is needed.
+(the same token comparison as ADR-0009). A fixed city→country table, built from the cities
+in the local data (classifier version 2, owner request), fills `countries` for bare-city
+locations ("Amsterdam", "NL - Amsterdam") so country rules such as relocation can match.
 
 **Classifiers** are pure functions in `internal/job` with fixed word tables, title first,
 then team/department; `unknown` is a normal answer and nothing is guessed. The tables are

@@ -1,0 +1,14 @@
+# The owner's preset (M2-03, ADR-0011): what the tracker shows when no filter is chosen.
+# Every value is a filter; hidden jobs stay stored and say which filters hid them.
+# Check what it hides with: go run ./cmd/collector preview default
+name: default
+description: My profile (resume, 2026-11)
+role_family: [backend, fullstack, frontend, mobile, platform, data, ai_ml, unknown]
+seniority: [junior, mid, senior, unknown]
+experience_max_years: 5          # hide only an explicit minimum of 6 years or more
+closed: hide                     # hide | show | only
+location:                        # shown if ANY rule matches ANY member of the group
+  - {workplace: [remote], remote_scopes: [worldwide, emea, africa, europe, "country:MA", unknown]}
+  - {workplace: [onsite, hybrid], cities: [Casablanca, Rabat]}
+  - {workplace: [onsite, hybrid], track: [relocation], countries: [EU_EEA, GB, CH, AE]}
+  - {workplace: [unknown]}

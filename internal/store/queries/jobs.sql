@@ -42,3 +42,19 @@ UPDATE jobs SET role_family = @role_family, seniority = @seniority,
 	experience_min_years = @experience_min_years, remote_scopes = @remote_scopes,
 	countries = @countries, classifier_version = @classifier_version
 WHERE posting_id = @posting_id;
+
+-- name: ListGroupsForPresets :many
+-- Every duplicate group of an active company with its canonical job's facets (ADR-0011).
+SELECT g.company_id, g.title_key, g.closed, coalesce(c.track, '')::text AS track, c.name AS company,
+	j.title, j.role_family, j.seniority, j.experience_min_years
+FROM job_groups g
+JOIN companies c ON c.id = g.company_id
+JOIN jobs j ON j.posting_id = g.canonical_posting_id
+WHERE c.active
+ORDER BY g.company_id, g.title_key;
+
+-- name: ListJobPlaces :many
+-- Each job's location facets, for evaluating its group's location rules.
+SELECT company_id, title_key, workplace, locations, remote_scopes, countries
+FROM jobs
+WHERE title_key <> '';

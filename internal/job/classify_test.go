@@ -218,6 +218,16 @@ func TestClassifyRemoteScopesAndCountries(t *testing.T) {
 			[]string{"americas"}, nil},
 		{"US state", job.Record{Workplace: job.Remote, Locations: []string{"Remote - Texas", "Seattle, Washington"}},
 			[]string{"us_only"}, []string{"US"}},
+		// Cities from the local data (bare or "XX - City"): onsite gets a country, remote
+		// gets that country's scope.
+		{"bare city, onsite", job.Record{Workplace: job.Onsite, Locations: []string{"Amsterdam", "Milan", "Lisbon"}},
+			nil, []string{"NL", "IT", "PT"}},
+		{"code-prefixed cities", job.Record{Workplace: job.Hybrid, Locations: []string{"KR - Seoul", "CN - Shanghai", "AU - Melbourne", "UK - London", "BZ - Sao Paulo"}},
+			nil, []string{"KR", "CN", "AU", "GB", "BR"}},
+		{"metro and office names", job.Record{Workplace: job.Onsite, Locations: []string{"Seattle Metro", "DigitalOcean Seattle Office", "Bay Area Metro"}},
+			nil, []string{"US"}},
+		{"remote from a city", job.Record{Workplace: job.Remote, Locations: []string{"Remote - Berlin"}},
+			[]string{"country:DE"}, []string{"DE"}},
 		{"europe", job.Record{Workplace: job.Remote, Locations: []string{"Remote - Europe"}},
 			[]string{"europe"}, nil},
 		{"French", job.Record{Workplace: job.Unknown, Locations: []string{"All France (remote)"}},
@@ -225,6 +235,8 @@ func TestClassifyRemoteScopesAndCountries(t *testing.T) {
 		{"hybrid is not remote", job.Record{Workplace: job.Hybrid, Locations: []string{"Paris, France"}},
 			nil, []string{"FR"}},
 		{"onsite city only", job.Record{Workplace: job.Onsite, Locations: []string{"Casablanca"}},
+			nil, []string{"MA"}},
+		{"city not in the table", job.Record{Workplace: job.Onsite, Locations: []string{"Béziers"}},
 			nil, nil},
 		{"remote and an office", job.Record{Workplace: job.Unknown, Locations: []string{"Berlin, Germany", "Remote, Spain"}},
 			[]string{"country:ES"}, []string{"DE", "ES"}},
@@ -291,4 +303,16 @@ func FuzzClassify(f *testing.F) {
 			t.Fatalf("experience %d, scopes %v", got.ExperienceMinYears, got.RemoteScopes)
 		}
 	})
+}
+
+// Presets match cities as whole words, accents and case folded.
+func TestNamesPlace(t *testing.T) {
+	for loc, want := range map[string]bool{"Casablanca, Morocco": true, "CASABLANCA": true, "Rabatville": false, "": false} {
+		if got := job.NamesPlace(loc, "Casablanca") || job.NamesPlace(loc, "Rabat"); got != want {
+			t.Errorf("%q: %v, want %v", loc, got, want)
+		}
+	}
+	if !job.NamesPlace("São Paulo, Brazil", "Sao Paulo") || job.NamesPlace("Paris", "") {
+		t.Error("accent folding or empty place")
+	}
 }

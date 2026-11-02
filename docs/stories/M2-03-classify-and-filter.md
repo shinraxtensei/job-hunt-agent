@@ -1,6 +1,6 @@
 # M2-03: Classify jobs and filter them, with my profile as the default
 
-- **Status:** In progress
+- **Status:** Done
 - **Milestone:** M2 — Rules and a plain tracker
 - **Linear:** [HAM-32](https://linear.app/hamid-corp/issue/HAM-32)
 - **Estimate:** 1½ days

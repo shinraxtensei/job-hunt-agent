@@ -43,6 +43,7 @@ internal/
   job/               domain: Job record, hard rules, dedup — pure, no I/O
   collector/         fetch from sources and store postings (one transaction per company)
   watchlist/         load data/companies.yaml and sync it into companies
+  preset/            filter presets (data/presets/*.yaml) and their evaluation (ADR-0011)
   source/            one adapter package per board (lever/, greenhouse/, ...)
   store/             Postgres access: pgx + sqlc (queries in store/queries/*.sql)
   queue/             SKIP LOCKED job table
@@ -51,6 +52,7 @@ agents/              Python (uv): extract/, score/, tailor/, evals/
 web/                 TypeScript UI
 db/migrations/       plain SQL migrations (goose), forward-only
 data/companies.yaml  the reviewed watch list (ADR-0005)
+data/presets/        filter presets; default.yaml is the owner's profile (ADR-0011)
 deploy/              compose.yaml, Caddyfile, scripts
 docs/                prd.md, adr/, stories/, threat-model.md
 testdata/            golden files (recorded board responses, sample postings)

@@ -11,7 +11,7 @@ import (
 // ClassifierVersion is stored with every job's facets (ADR-0011). Bump it whenever
 // Classify's output for the same record changes; `collector classify` then rebuilds older
 // rows without re-normalising them.
-const ClassifierVersion = 1
+const ClassifierVersion = 2 // 2: city→country table
 
 // RoleFamilies and Seniorities are every value the jobs table CHECKs allow.
 var (
@@ -236,8 +236,8 @@ var remoteWords = table(map[string][]string{"": {"remote", "remotely", "anywhere
 	"homebased", "work from home", "wfh", "teletravail", "worldwide"}})
 
 // geo maps region words to "r:<scope>" and country names to "c:<code>" (a fixed table:
-// English and French names). Cities are not here: presets match them in locations.
-var geo = table(map[string][]string{
+// English and French names), plus the cities table.
+var geo = append(table(cities), table(map[string][]string{
 	"r:worldwide": {"worldwide", "global", "anywhere"},
 	"r:emea":      {"emea", "emear"},
 	"r:europe":    {"europe", "european", "eu"},
@@ -279,7 +279,41 @@ var geo = table(map[string][]string{
 	"c:AU": {"australia", "australie"}, "c:NZ": {"new zealand", "nouvelle zelande"}, "c:TH": {"thailand", "thailande"},
 	"c:VN": {"vietnam", "viet nam"}, "c:ID": {"indonesia", "indonesie"}, "c:MY": {"malaysia", "malaisie"},
 	"c:PH": {"philippines"}, "c:PK": {"pakistan"},
-})
+})...)
+
+// cities maps the cities that appear in the local data's locations (2026-11-02) to their
+// country, so a bare "Amsterdam" or "NL - Amsterdam" gets one. A fixed table, not a
+// gazetteer: a city missing here leaves the location without a country. Ambiguous names
+// ("Cambridge", "Georgia") are left out.
+var cities = map[string][]string{
+	"c:US": {"san francisco", "bay area", "seattle", "chicago", "boston", "denver", "austin", "atlanta", "los angeles",
+		"miami", "dallas", "houston", "portland", "raleigh", "philadelphia", "phoenix", "san diego", "san jose",
+		"sacramento", "salt lake city", "nashville", "minneapolis", "charlotte", "boise", "irvine", "las vegas",
+		"tampa", "milwaukee", "indianapolis", "kansas city", "oklahoma city", "san antonio", "palo alto",
+		"mountain view", "menlo park", "sunnyvale", "pittsburgh", "detroit"},
+	"c:CA": {"toronto", "vancouver", "montreal", "ottawa", "calgary", "british columbia", "ontario", "quebec"},
+	"c:MX": {"mexico city", "guadalajara"}, "c:BR": {"sao paulo", "rio de janeiro", "sao jose dos campos"},
+	"c:AR": {"buenos aires"}, "c:CO": {"bogota", "medellin"},
+	"c:GB": {"london", "birmingham", "manchester", "cardiff", "edinburgh", "bristol", "leeds", "glasgow"},
+	"c:IE": {"dublin", "cork"},
+	"c:FR": {"paris", "nantes", "lyon", "bordeaux", "toulouse", "lille", "marseille", "montpellier", "rennes", "grenoble"},
+	"c:DE": {"berlin", "munich", "munchen", "hamburg", "frankfurt", "cologne", "koln", "stuttgart", "dusseldorf"},
+	"c:NL": {"amsterdam", "rotterdam", "utrecht", "eindhoven", "the hague"},
+	"c:BE": {"brussels", "bruxelles", "antwerp"}, "c:ES": {"barcelona", "madrid", "valencia", "malaga"},
+	"c:PT": {"lisbon", "lisboa", "porto"}, "c:IT": {"milan", "milano", "rome", "roma", "turin", "torino"},
+	"c:CH": {"zurich", "geneva", "geneve", "zug", "basel", "lausanne"}, "c:AT": {"vienna", "wien"},
+	"c:SE": {"stockholm", "gothenburg"}, "c:DK": {"copenhagen"}, "c:NO": {"oslo"}, "c:FI": {"helsinki"},
+	"c:PL": {"warsaw", "krakow", "wroclaw"}, "c:CZ": {"prague", "brno"}, "c:LT": {"vilnius"}, "c:EE": {"tallinn"},
+	"c:RO": {"bucharest", "cluj"}, "c:HU": {"budapest"}, "c:GR": {"athens"},
+	"c:IN": {"bengaluru", "bangalore", "hyderabad", "mumbai", "pune", "delhi", "new delhi", "gurgaon", "gurugram", "chennai", "noida"},
+	"c:CN": {"shanghai", "beijing", "shenzhen", "guangzhou", "hangzhou", "xiamen", "fuzhou", "ningbo", "qingdao",
+		"tianjin", "wenzhou", "wuhan", "xi an", "yiwu", "zhengzhou"},
+	"c:JP": {"tokyo", "osaka"}, "c:KR": {"seoul"}, "c:TW": {"taipei"}, "c:MY": {"kuala lumpur"},
+	"c:VN": {"hanoi", "ho chi minh city"}, "c:ID": {"jakarta"}, "c:IL": {"tel aviv"},
+	"c:AU": {"sydney", "melbourne", "brisbane", "perth"}, "c:NZ": {"auckland", "wellington"},
+	"c:AE": {"dubai", "abu dhabi"}, "c:MA": {"casablanca", "rabat", "tangier", "tanger", "marrakech"},
+	"c:ZA": {"cape town", "johannesburg"}, "c:NG": {"lagos"}, "c:KE": {"nairobi"}, "c:EG": {"cairo"},
+}
 
 // geoIn returns the geo values found in t, left to right, the longest phrase at each word.
 func geoIn(t []string) []string {
@@ -389,4 +423,12 @@ var tagRe = regexp.MustCompile(`<[^>]*(?:>|$)`) // an unclosed tag runs to the e
 // plain unescapes HTML entities and replaces tags with spaces.
 func plain(s string) string {
 	return tagRe.ReplaceAllString(html.UnescapeString(s), " ")
+}
+
+// NamesPlace reports whether location names place as whole words, accents and case
+// folded ("Casablanca" in "Casablanca, Morocco"; "Rabat" not in "Rabatville"). Both are
+// only compared as text.
+func NamesPlace(location, place string) bool {
+	p := tokens(place)
+	return len(p) > 0 && containsRun(tokens(location), p)
 }

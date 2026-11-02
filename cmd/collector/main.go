@@ -5,6 +5,7 @@
 //	collector companies sync   data/companies.yaml into the companies table
 //	collector normalise        (re)build missing or stale job records (ADR-0008)
 //	collector classify         rebuild facets made by an older classifier (ADR-0011)
+//	collector preview <name>   show what data/presets/<name>.yaml shows and hides, and why
 //
 // Environment: DATABASE_URL (app role, required); COLLECTOR_CONCURRENCY (default 8);
 // COLLECTOR_HOST_INTERVAL (minimum gap per host, default and minimum 1s);
@@ -16,8 +17,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand/v2"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -27,6 +31,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/shinraxtensei/job-hunter/internal/collector"
+	"github.com/shinraxtensei/job-hunter/internal/preset"
 	"github.com/shinraxtensei/job-hunter/internal/source/ashby"
 	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
 	"github.com/shinraxtensei/job-hunter/internal/source/lever"
@@ -34,13 +39,15 @@ import (
 )
 
 const (
-	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify"
+	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify | collector preview <preset>"
 
 	// normaliseBatch is how many postings `collector normalise` writes per transaction.
 	normaliseBatch = 500
 
 	// watchListPath is relative to the working directory: run from the repo root.
 	watchListPath = "data/companies.yaml"
+	// presetsDir holds the filter presets (ADR-0011).
+	presetsDir = "data/presets"
 
 	// stopDeadline is how long the process may take to exit after SIGINT/SIGTERM (AC4).
 	stopDeadline = 10 * time.Second
@@ -79,6 +86,10 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 	leverURL := getenv("LEVER_BASE_URL")
 	if leverURL == "" {
 		leverURL = lever.BaseURL
+	}
+
+	if len(args) == 2 && args[0] == "preview" {
+		return preview(ctx, dsn, args[1])
 	}
 
 	switch strings.Join(args, " ") {
@@ -203,5 +214,31 @@ func withConn(ctx context.Context, log *slog.Logger, dsn string, fn func(*pgx.Co
 	if err := fn(conn); err != nil {
 		return 1, err
 	}
+	return 0, nil
+}
+
+// presetName is a preset file's base name: it never reaches outside presetsDir.
+var presetName = regexp.MustCompile(`^[a-z0-9_-]+$`)
+
+// preview prints what a preset shows and hides over the stored groups, with 10 random
+// samples of each.
+func preview(ctx context.Context, dsn, name string) (int, error) {
+	if !presetName.MatchString(name) {
+		return 1, fmt.Errorf("preset name %q: want lowercase letters, digits, - or _", name)
+	}
+	p, err := preset.Load(filepath.Join(presetsDir, name+".yaml"))
+	if err != nil {
+		return 1, err
+	}
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return 1, fmt.Errorf("connecting to database: %w", err)
+	}
+	defer pool.Close()
+	groups, err := collector.Groups(ctx, pool)
+	if err != nil {
+		return 1, err
+	}
+	collector.Preview(os.Stdout, p, groups, 10, rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))) //nolint:gosec // sampling, not security
 	return 0, nil
 }

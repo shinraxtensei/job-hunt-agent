@@ -11,6 +11,102 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const listGroupsForPresets = `-- name: ListGroupsForPresets :many
+SELECT g.company_id, g.title_key, g.closed, coalesce(c.track, '')::text AS track, c.name AS company,
+	j.title, j.role_family, j.seniority, j.experience_min_years
+FROM job_groups g
+JOIN companies c ON c.id = g.company_id
+JOIN jobs j ON j.posting_id = g.canonical_posting_id
+WHERE c.active
+ORDER BY g.company_id, g.title_key
+`
+
+type ListGroupsForPresetsRow struct {
+	CompanyID          int64
+	TitleKey           string
+	Closed             bool
+	Track              string
+	Company            string
+	Title              string
+	RoleFamily         string
+	Seniority          string
+	ExperienceMinYears pgtype.Int4
+}
+
+// Every duplicate group of an active company with its canonical job's facets (ADR-0011).
+func (q *Queries) ListGroupsForPresets(ctx context.Context) ([]ListGroupsForPresetsRow, error) {
+	rows, err := q.db.Query(ctx, listGroupsForPresets)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListGroupsForPresetsRow
+	for rows.Next() {
+		var i ListGroupsForPresetsRow
+		if err := rows.Scan(
+			&i.CompanyID,
+			&i.TitleKey,
+			&i.Closed,
+			&i.Track,
+			&i.Company,
+			&i.Title,
+			&i.RoleFamily,
+			&i.Seniority,
+			&i.ExperienceMinYears,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listJobPlaces = `-- name: ListJobPlaces :many
+SELECT company_id, title_key, workplace, locations, remote_scopes, countries
+FROM jobs
+WHERE title_key <> ''
+`
+
+type ListJobPlacesRow struct {
+	CompanyID    int64
+	TitleKey     string
+	Workplace    string
+	Locations    []string
+	RemoteScopes []string
+	Countries    []string
+}
+
+// Each job's location facets, for evaluating its group's location rules.
+func (q *Queries) ListJobPlaces(ctx context.Context) ([]ListJobPlacesRow, error) {
+	rows, err := q.db.Query(ctx, listJobPlaces)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListJobPlacesRow
+	for rows.Next() {
+		var i ListJobPlacesRow
+		if err := rows.Scan(
+			&i.CompanyID,
+			&i.TitleKey,
+			&i.Workplace,
+			&i.Locations,
+			&i.RemoteScopes,
+			&i.Countries,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listJobsToClassify = `-- name: ListJobsToClassify :many
 SELECT j.posting_id, p.source, p.raw_payload
 FROM jobs j
