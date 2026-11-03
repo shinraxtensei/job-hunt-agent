@@ -57,6 +57,12 @@ on Workable (see the change log).
 M1-08 (daily schedule and monitoring) and M1-09 (backups) moved to **D: Deploy to a server**: both
 only make sense on an always-on server.
 
+**Notes (watch-list upkeep)**
+- 2026-11-03: Doctolib's Greenhouse board returned 404 (collector run 10 was `partial`).
+  Their careers page now links `jobs.ashbyhq.com/doctolib/…`; the Ashby board lists 150
+  jobs. The watch list moved Doctolib to `ashby/doctolib`; the old `greenhouse/doctolib`
+  row is deactivated by `companies sync` (ADR-0005), so its postings leave the tracker.
+
 ## M2: Rules and a plain tracker (usable from here) ✅ done 2026-11-02
 
 **Goal:** the owner opens one page each morning and sees today's new leads that fit his

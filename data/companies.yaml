@@ -66,7 +66,7 @@
 # --- Relocation (EU): tech
 - { name: Cloudflare, board_type: greenhouse, board_slug: cloudflare, track: relocation }  # 463
 - { name: Datadog, board_type: greenhouse, board_slug: datadog, track: relocation }  # 397
-- { name: Doctolib, board_type: greenhouse, board_slug: doctolib, track: relocation }  # 153
+- { name: Doctolib, board_type: ashby, board_slug: doctolib, track: relocation }  # 150 (moved from Greenhouse; checked 2026-11-03)
 - { name: Spotify, board_type: lever, board_slug: spotify, track: relocation }  # 89
 - { name: Cockroach Labs, board_type: greenhouse, board_slug: cockroachlabs, track: relocation }  # 12
 

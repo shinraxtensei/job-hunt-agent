@@ -88,7 +88,7 @@ vuln: ## Scan dependencies for known vulnerabilities
 up: ## Start the whole stack (Postgres, migrations, API + tracker on http://127.0.0.1:8080)
 	@test -f .env || { echo "no .env: cp .env.example .env and fill it in"; exit 1; }
 	GIT_SHA=$$(git rev-parse --short HEAD) $(COMPOSE) up -d --build --wait
-	@echo "tracker: http://127.0.0.1:$${JOBHUNT_HTTP_PORT:-8080}"
+	@port=$${JOBHUNT_HTTP_PORT:-$$(sed -n 's/^JOBHUNT_HTTP_PORT=//p' .env)}; echo "tracker: http://127.0.0.1:$${port:-8080}"
 
 down: ## Stop the stack; data stays in the named volume
 	$(COMPOSE) down
