@@ -1,0 +1,14 @@
+# Only what the image needs; never secrets or local state.
+.git
+.github
+.claude
+.env
+.env.*
+!.env.example
+**/node_modules
+web/test-results
+web/playwright-report
+internal/webui/dist/app
+docs
+deploy
+*.dump

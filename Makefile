@@ -18,7 +18,8 @@ COMPOSE := docker compose -f deploy/compose.yaml --env-file .env
 SQLC_IMAGE := sqlc/sqlc:1.31.1@sha256:70f53171d27b2424e9358869975455a6e955a5aa8e58a998a270a6e34e525537
 
 .PHONY: help check fmt fmt-check vet lint test-go test-integration test-py evals \
-	sqlc sqlc-check migration vuln up down fuzz web-install web-check web-build web-dev
+	sqlc sqlc-check migration vuln up down collect backup restore smoke fuzz \
+	web-install web-check web-build web-dev
 
 help: ## List every target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -84,12 +85,26 @@ fuzz: ## Fuzz the source parsers and the normaliser for 30s each (not part of ch
 vuln: ## Scan dependencies for known vulnerabilities
 	$(TOOL) govulncheck ./...
 
-up: ## Start the local stack (Postgres) and wait until it is healthy
+up: ## Start the whole stack (Postgres, migrations, API + tracker on http://127.0.0.1:8080)
 	@test -f .env || { echo "no .env: cp .env.example .env and fill it in"; exit 1; }
-	$(COMPOSE) up -d --wait
+	GIT_SHA=$$(git rev-parse --short HEAD) $(COMPOSE) up -d --build --wait
+	@echo "tracker: http://127.0.0.1:$${JOBHUNT_HTTP_PORT:-8080}"
 
-down: ## Stop the local stack; data stays in the named volume
+down: ## Stop the stack; data stays in the named volume
 	$(COMPOSE) down
+
+collect: ## Run a collection inside the stack, now (no schedule until milestone D)
+	$(COMPOSE) run --rm collector run
+
+backup: ## pg_dump the database to $$JOBHUNT_BACKUP_DIR (default ~/job-hunter-backups), keep 14
+	@COMPOSE="$(COMPOSE)" deploy/scripts/backup.sh
+
+restore: ## Restore a backup into the stack: make restore FILE=~/job-hunter-backups/jobhunt-....dump
+	@test -n "$(FILE)" || { echo "usage: make restore FILE=path/to/backup.dump"; exit 1; }
+	@COMPOSE="$(COMPOSE)" deploy/scripts/restore.sh "$(FILE)"
+
+smoke: ## Compose smoke test in a throwaway project (what CI runs): build, up, check, backup/restore, down
+	deploy/scripts/smoke.sh
 
 # --- web/ (M2-06, ADR-0013). Node 26 (web/.nvmrc); npm ci refuses another version.
 WEB := npm --prefix web

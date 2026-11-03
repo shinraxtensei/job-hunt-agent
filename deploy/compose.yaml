@@ -1,19 +1,38 @@
+# The whole stack on the Mac (L-01, ADR-0016): `make up`, then http://127.0.0.1:8080
+# (JOBHUNT_HTTP_PORT and JOBHUNT_DB_PORT change the published ports).
+# Every published port is on 127.0.0.1 only: the API has no auth (ADR-0002).
+# Passwords come from .env (git-ignored); keep them URL-safe (letters, digits, - _ .),
+# since they are used inside connection URLs below.
 name: jobhunt
+
+x-app: &app
+  image: jobhunt:local
+  build:
+    context: ..
+    args:
+      GIT_SHA: ${GIT_SHA:-unknown}
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
 
 services:
   postgres:
     # Major version tag for readability; the digest is what is actually pulled.
     image: postgres:18@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
     restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp, /var/run/postgresql]
+    security_opt: [no-new-privileges:true]
     environment:
       POSTGRES_DB: jobhunt
-      # Bootstrap superuser: used only by the init script and for admin by hand.
+      # Bootstrap superuser: used only by the init script, backups and admin by hand.
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
       JOBHUNT_OWNER_PASSWORD: ${JOBHUNT_OWNER_PASSWORD:?set in .env}
       JOBHUNT_APP_PASSWORD: ${JOBHUNT_APP_PASSWORD:?set in .env}
     ports:
-      - "127.0.0.1:5432:5432" # loopback only
+      - "127.0.0.1:${JOBHUNT_DB_PORT:-5432}:5432" # loopback only; for `go run` and psql on the Mac
     volumes:
       # Postgres 18+ images keep data under /var/lib/postgresql/<major>/docker.
       - pgdata:/var/lib/postgresql
@@ -23,6 +42,47 @@ services:
       interval: 2s
       timeout: 3s
       retries: 15
+
+  # Applies migrations, then exits; the API starts only after it succeeded.
+  migrate:
+    <<: *app
+    command: ["/app/migrate", "up"]
+    restart: "no"
+    environment:
+      MIGRATIONS_DATABASE_URL: postgres://jobhunt_owner:${JOBHUNT_OWNER_PASSWORD:?set in .env}@postgres:5432/jobhunt?sslmode=disable
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    <<: *app
+    command: ["/app/api"]
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://jobhunt_app:${JOBHUNT_APP_PASSWORD:?set in .env}@postgres:5432/jobhunt?sslmode=disable
+      # Inside the container the API must listen on all interfaces; the port is
+      # published on 127.0.0.1 only (below).
+      API_ADDR: 0.0.0.0:8080
+      API_PUBLISHED_ON_LOOPBACK: "true"
+    ports:
+      - "127.0.0.1:${JOBHUNT_HTTP_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "/app/api", "healthcheck"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  # On demand only: `make collect` (no schedule until D).
+  collector:
+    <<: *app
+    profiles: [tools]
+    entrypoint: ["/app/collector"]
+    command: ["run"]
+    environment:
+      DATABASE_URL: postgres://jobhunt_app:${JOBHUNT_APP_PASSWORD:?set in .env}@postgres:5432/jobhunt?sslmode=disable
+    depends_on:
+      migrate: { condition: service_completed_successfully }
 
 volumes:
   pgdata:

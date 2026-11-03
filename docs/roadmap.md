@@ -34,7 +34,7 @@ CI guarding it. Every later milestone adds muscle to this skeleton.
 **Stories:** M0-01 Go module and tooling · M0-02 CI pipeline · M0-03 Local Postgres and
 migrations · M0-04 First Lever posting end to end
 
-M0-05 (server and deploy) moved to **D: Deploy**, after M2.
+M0-05 (server and deploy) moved to **D: Deploy to a server**, now the last milestone.
 
 ## M1: Collector
 
@@ -54,7 +54,7 @@ M1-07 Idempotent posting upsert · M1-10 Slow but progressing downloads
 M1-06 (Workable adapter) moved to the **M7** backlog: no active watch-list company posts
 on Workable (see the change log).
 
-M1-08 (daily schedule and monitoring) and M1-09 (backups) moved to **D: Deploy**: both
+M1-08 (daily schedule and monitoring) and M1-09 (backups) moved to **D: Deploy to a server**: both
 only make sense on an always-on server.
 
 ## M2: Rules and a plain tracker (usable from here) ✅ done 2026-11-02
@@ -82,37 +82,22 @@ M2-06 Plain tracker table (TypeScript) · M2-07 Manual add by link · M2-08 Trac
 Order: M2-01 → M2-02 → M2-03 (uses M2-04's `closed` facet, can start before it) →
 M2-05 → M2-06. M2-04 and M2-07 can go any time after M2-01.
 
-## D: Deploy (after M2)
+## L: Whole stack on the Mac (before M3)
 
-**Goal:** the usable tracker from M2 runs on an always-on server only the owner can reach,
-collects every morning on its own, and its data is backed up.
+**Goal:** the owner runs the whole project on his Mac with one command, the same way it
+will run on a server later, and his data survives restarts and can be backed up.
 
 **Exit criteria**
-- A push to `master` deploys automatically; the server is reachable only over Tailscale.
-- The collector runs daily on the server; runs are recorded and a missed run alerts the owner.
-- A nightly encrypted backup exists off the server, and a restore was tested once.
+- `make up` starts Postgres, runs migrations and starts the API serving the tracker at
+  http://127.0.0.1:8080; every port is bound to 127.0.0.1. `make down` stops it; data
+  stays in a named volume.
+- `make collect` runs a collection inside the stack, on demand (no daily schedule until D).
+- Images are multi-stage, pinned by digest, run as a non-root user with a read-only root
+  filesystem where possible: the same images D will deploy.
+- `make backup` / `make restore FILE=…` work, and a restore was tested once.
+- CI builds the stack and smoke-tests it (healthz, leads).
 
-**Stories:** M0-05 Server, Tailscale and deploy · M1-08 Daily schedule and run monitoring ·
-M1-09 Nightly backup and tested restore (story IDs kept from their original milestones)
-
-## S: Sharing with friends (after D, not scheduled)
-
-**Goal:** a few friends, possibly in other fields (sales, marketing...), use the tracker
-with their own filters, without seeing anything private of the owner's.
-
-**Before anything is shared:**
-- **Access:** ADR-0002 (no auth, Tailscale only) must be revisited. The cheapest option
-  is sharing the server's Tailscale node with each friend (no auth code); the
-  alternative is real accounts. Decide in a new ADR.
-- **Privacy boundary:** collected jobs and facets are shared data; the owner's CV,
-  evidence bank, scores, tailored documents and applications are never visible to
-  anyone else. Needs a threat-model update.
-- **Per-user presets:** a friend's filters are theirs (saved per user, not in the repo).
-- **Coverage:** the watch list is chosen for the owner's targets; friends in other fields
-  may want more companies. Collection stays one shared watch list.
-- Scoring, tailoring and documents (M3–M5) stay owner-only.
-
-**Stories:** written when this milestone is scheduled.
+**Stories:** L-01 Whole stack in Docker Compose on the Mac
 
 ## M3: Extraction and scoring
 
@@ -120,6 +105,7 @@ with their own filters, without seeing anything private of the owner's.
 reason, gaps and a CV variant.
 
 **Exit criteria**
+- Runs with `make up` on the Mac.
 - The Python worker claims work from the Postgres queue (ADR-0001) and survives restarts.
 - Extraction returns a validated schema; malformed output retries once, then `needs_review`.
 - Scoring follows the PRD weights, held in configuration.
@@ -138,6 +124,7 @@ M3-05 Skill map and search profile · M3-06 Scoring agent · M3-07 Eval set and
 report.
 
 **Exit criteria**
+- Runs with `make up` on the Mac.
 - The Master CV is imported as tagged evidence lines; edits go through the UI or a file.
 - The tailoring agent writes only from evidence lines; every bullet carries evidence IDs.
 - The coverage report lists covered skills and honest gaps.
@@ -152,6 +139,7 @@ M4-03 Coverage report · M4-04 Guardrail tests · M4-05 Draft review page
 claims.
 
 **Exit criteria**
+- Runs with `make up` on the Mac.
 - Cover letter under 250 words, from evidence only.
 - The independent claim checker blocks unsupported or altered sentences.
 - One-page PDF export for CV and cover letter; every sent version is kept.
@@ -164,6 +152,7 @@ M5-04 Document versions linked to applications
 **Goal:** every application has a status, a history and a next step.
 
 **Exit criteria**
+- Runs with `make up` on the Mac.
 - Statuses from new to offer/rejected/closed/skipped, with a dated history.
 - Each application stores a snapshot of the posting as applied to (title, URL, raw payload
   and `content_hash` at that moment). `postings` keeps only the latest payload (ADR-0007),
@@ -187,6 +176,7 @@ contacts · M6-04 Follow-up reminders · M6-05 Skip reasons
 **Goal:** the morning brief comes to the owner, and coverage grows beyond the ATS boards.
 
 **Exit criteria**
+- Runs with `make up` on the Mac.
 - Morning digest by the chosen channel: top new leads, follow-ups due, postings closing.
 - Adapters for at least two remote boards and one Moroccan board whose terms allow it.
 
@@ -220,12 +210,48 @@ sites or other systems, from memory); confirm when the adapter is chosen.
 **Goal:** the system learns from outcomes, and the project is ready to show.
 
 **Exit criteria**
+- Runs with `make up` on the Mac.
 - Monthly weight review from skip reasons and outcomes is documented and run once.
 - Public repository with README, architecture diagram, ADRs and collector benchmarks.
 - Threat model reviewed against the finished system.
 
 **Stories:** M8-01 Feedback report and weight tuning · M8-02 Collector benchmarks ·
 M8-03 Public README and architecture write-up · M8-04 Threat model review
+
+## D: Deploy to a server (last)
+
+**Goal:** the finished stack, already running with `make up` on the Mac (L–M8), runs on an
+always-on server only the owner can reach, collects every morning on its own, and its
+data is backed up off the server. Until then, collection runs on demand (`make collect`).
+
+**Exit criteria**
+- A push to `master` deploys automatically; the server is reachable only over Tailscale.
+- The collector runs daily on the server; runs are recorded and a missed run alerts the owner.
+- A nightly encrypted backup exists off the server, and a restore was tested once.
+- Access is decided: ADR-0002 (no built-in auth, Tailscale only) is Accepted or replaced.
+- The server runs the same images as the Mac (L-01).
+
+**Stories:** M0-05 Server, Tailscale and deploy · M1-08 Daily schedule and run monitoring ·
+M1-09 Nightly backup and tested restore (story IDs kept from their original milestones)
+
+## S: Sharing with friends (after D, not scheduled)
+
+**Goal:** a few friends, possibly in other fields (sales, marketing...), use the tracker
+with their own filters, without seeing anything private of the owner's.
+
+**Before anything is shared:**
+- **Access:** ADR-0002 (no auth, Tailscale only) must be revisited. The cheapest option
+  is sharing the server's Tailscale node with each friend (no auth code); the
+  alternative is real accounts. Decide in a new ADR.
+- **Privacy boundary:** collected jobs and facets are shared data; the owner's CV,
+  evidence bank, scores, tailored documents and applications are never visible to
+  anyone else. Needs a threat-model update.
+- **Per-user presets:** a friend's filters are theirs (saved per user, not in the repo).
+- **Coverage:** the watch list is chosen for the owner's targets; friends in other fields
+  may want more companies. Collection stays one shared watch list.
+- Scoring, tailoring and documents (M3–M5) stay owner-only.
+
+**Stories:** written when this milestone is scheduled.
 
 ---
 
@@ -239,3 +265,4 @@ M8-03 Public README and architecture write-up · M8-04 Threat model review
 | 2026-11-01 | M2 stories written. Liveness: closure is detected from full-board fetches; only manually added postings get the 2-day recheck. | The collector already fetches whole boards, so a per-posting recheck would only duplicate requests. |
 | 2026-11-01 | M2-03: hard rules that drop postings replaced by classification plus filter presets; the owner's profile is the `default` preset. New milestone **S: Sharing with friends**, unscheduled, after D. | The owner wants to widen filters at will (seniority included) and to share the tracker with friends in other fields, who need the same data with different filters. Dropping would lose exactly the jobs they want. Sharing changes the trust boundary (ADR-0002), so it gets its own milestone. |
 | 2026-11-02 | **M2 complete.** M2-01…M2-07 done, plus two stories added during the milestone: M2-08 Tracker polish (matched location, labels) and M2-09 Classifier country coverage (all ISO 3166-1 countries, `latam`). Decisions: ADR-0008…ADR-0015. On the local data: 5,902 jobs in 4,486 duplicate groups; the default preset shows 508 and hides 3,978, each with its reasons; closed postings detected from full-board fetches; jobs can be added by link (`collector add`), with board links fetched only through the boards' own APIs. The tracker page (Vite + React, embedded in the API binary, same-origin CSP) passes axe and AA contrast at 375 and 1280 px in both themes. Held back: TypeScript 7 (Dependabot #26) until typescript-eslint supports it (typescript-eslint#10940). Next: **D: Deploy**. | Every M2 exit criterion is met and seen working locally. TypeScript 7 passes `tsc`, Vite and Vitest, but typescript-eslint 8.72.1 (latest) requires TypeScript < 6.1 and refuses to run, so `npm ci` and the lint step fail. |
+| 2026-11-03 | **D: Deploy to a server** moved from after M2 to the end (after M8); M0-05, M1-08 and M1-09 stay in it, and **S: Sharing** stays after D (it needs a server). New milestone **L: Whole stack on the Mac** before M3 (story L-01). Every milestone from M3 on must run with `make up` on the Mac. ADR-0002 stays Proposed; it is decided in D. | Owner's choice: the whole project runs on the Mac first and the server comes last. Nothing needs daily automatic collection until then: collection runs on demand with `make collect` (`collector run` inside the stack). Running the same images locally now means D only has to move them. |

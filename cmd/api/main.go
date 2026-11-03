@@ -6,6 +6,11 @@
 //	DATABASE_URL   app-role connection string (required)
 //	API_ADDR       listen address (default 127.0.0.1:8080; anything else logs a warning)
 //	PRESETS_DIR    filter presets (default data/presets)
+//	API_PUBLISHED_ON_LOOPBACK  "true" when a container listens on all interfaces but its
+//	               port is published on 127.0.0.1 only (deploy/compose.yaml)
+//
+// `api healthcheck` exits 0 when the running API answers /healthz (Compose's healthcheck:
+// the image has no shell or curl).
 package main
 
 import (
@@ -19,6 +24,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -31,7 +37,21 @@ import (
 // shutdownTimeout is how long in-flight requests get after a signal.
 const shutdownTimeout = 10 * time.Second
 
+// buildCommit is set at build time (-ldflags -X main.buildCommit=…) where .git is absent,
+// as in the image.
+var buildCommit string
+
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "healthcheck" {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		err := probe(ctx, healthcheckURL(cmp.Or(os.Getenv("API_ADDR"), "127.0.0.1:8080")))
+		cancel()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "unhealthy:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	log := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	err := run(ctx, log, os.Getenv)
@@ -48,7 +68,11 @@ func run(ctx context.Context, log *slog.Logger, getenv func(string) string) erro
 		return errors.New("DATABASE_URL must be set")
 	}
 	addr := cmp.Or(getenv("API_ADDR"), "127.0.0.1:8080")
-	if !loopback(addr) {
+	switch {
+	case loopback(addr):
+	case getenv("API_PUBLISHED_ON_LOOPBACK") == "true":
+		log.Info("listening on all interfaces in a container; its port is published on 127.0.0.1 only", "addr", addr)
+	default:
 		log.Warn("API_ADDR is not loopback: the API has no auth (ADR-0002)", "addr", addr)
 	}
 	pool, err := pgxpool.New(ctx, dsn)
@@ -112,8 +136,41 @@ func loopback(addr string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-// commit is the VCS revision the binary was built from, or "unknown" (go run).
+// healthcheckURL is where the API listening on addr answers /healthz on this machine. It is
+// always loopback: only the port is taken from addr, and only if it is a valid number.
+func healthcheckURL(addr string) string {
+	port := 8080
+	if _, p, err := net.SplitHostPort(addr); err == nil {
+		if n, err := strconv.Atoi(p); err == nil && n > 0 && n < 65536 {
+			port = n
+		}
+	}
+	return "http://127.0.0.1:" + strconv.Itoa(port) + "/healthz"
+}
+
+// probe returns nil when GET u answers 200.
+func probe(ctx context.Context, u string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil) //nolint:gosec // G704: u is healthcheckURL's loopback URL
+	if err != nil {
+		return fmt.Errorf("building request: %w", err)
+	}
+	resp, err := http.DefaultClient.Do(req) //nolint:gosec // G704: as above, loopback only
+	if err != nil {
+		return fmt.Errorf("calling %s: %w", u, err)
+	}
+	_ = resp.Body.Close() // only the status matters
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("%s answered %s", u, resp.Status)
+	}
+	return nil
+}
+
+// commit is the revision the binary was built from: the build flag, else the VCS stamp,
+// else "unknown" (go run).
 func commit() string {
+	if buildCommit != "" && buildCommit != "unknown" {
+		return buildCommit
+	}
 	rev, dirty := "unknown", false
 	if info, ok := debug.ReadBuildInfo(); ok {
 		for _, s := range info.Settings {

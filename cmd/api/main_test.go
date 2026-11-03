@@ -37,3 +37,46 @@ func TestRoutes(t *testing.T) {
 		}
 	}
 }
+
+// L-01: the image has no curl, so the API binary checks itself for Compose's healthcheck.
+func TestHealthcheckURL(t *testing.T) {
+	for addr, want := range map[string]string{
+		"0.0.0.0:8080":   "http://127.0.0.1:8080/healthz",
+		":8080":          "http://127.0.0.1:8080/healthz",
+		"127.0.0.1:9000": "http://127.0.0.1:9000/healthz",
+		"[::1]:8080":     "http://127.0.0.1:8080/healthz",
+		"evil.com:80":    "http://127.0.0.1:80/healthz",   // never another host
+		"0.0.0.0:http":   "http://127.0.0.1:8080/healthz", // not a number: the default
+		"garbage":        "http://127.0.0.1:8080/healthz",
+	} {
+		if got := healthcheckURL(addr); got != want {
+			t.Errorf("healthcheckURL(%q) = %q, want %q", addr, got, want)
+		}
+	}
+}
+
+func TestProbe(t *testing.T) {
+	ok := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }))
+	defer ok.Close()
+	down := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusServiceUnavailable) }))
+	defer down.Close()
+	if err := probe(t.Context(), ok.URL); err != nil {
+		t.Errorf("healthy: %v", err)
+	}
+	if err := probe(t.Context(), down.URL); err == nil {
+		t.Error("503 counted as healthy")
+	}
+	if err := probe(t.Context(), "http://127.0.0.1:1/healthz"); err == nil {
+		t.Error("nothing listening counted as healthy")
+	}
+}
+
+// The image is built without .git, so the commit comes from a build flag.
+func TestCommitPrefersBuildFlag(t *testing.T) {
+	old := buildCommit
+	defer func() { buildCommit = old }()
+	buildCommit = "abc1234"
+	if got := commit(); got != "abc1234" {
+		t.Errorf("commit() = %q, want the build flag", got)
+	}
+}

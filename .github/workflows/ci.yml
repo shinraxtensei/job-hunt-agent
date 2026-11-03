@@ -15,6 +15,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # L-01: the whole stack as the owner runs it (make up), built from the Dockerfile and
+  # deploy/compose.yaml, then healthz, leads, the page and a backup restored.
+  compose-smoke:
+    name: compose smoke
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: .env from the example
+        run: cp .env.example .env
+      - name: smoke
+        run: deploy/scripts/smoke.sh
+
   check:
     name: make check
     runs-on: ubuntu-24.04

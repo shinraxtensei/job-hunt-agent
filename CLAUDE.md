@@ -74,7 +74,10 @@ testdata/            golden files (recorded board responses, sample postings)
 | New migration | `make migration name=<snake_case>` |
 | Vulnerability scan | `make vuln` → govulncheck |
 | Fuzz the source parsers (30s each) | `make fuzz` |
-| Local stack | `make up` / `make down` |
+| Whole stack on the Mac (Postgres, migrations, API + tracker on http://127.0.0.1:8080) | `make up` / `make down` |
+| Collect now, inside the stack (no schedule until D) | `make collect` |
+| Back up / restore the database (`JOBHUNT_BACKUP_DIR`, default ~/job-hunter-backups, keeps 14) | `make backup` / `make restore FILE=…` |
+| Compose smoke test (what CI runs) | `make smoke` |
 | Add a job by link (board postings fetched through the board's API; other links never fetched) | `go run ./cmd/collector add <url> [--title T --company C --location L]` |
 | Location strings the classifier can't place (to grow its tables) | `go run ./cmd/collector classify --report-unknown` |
 | Web checks: audit, types, lint, unit, build, Playwright + axe (Node 26, `web/.nvmrc`) | `make web-check` |
@@ -119,7 +122,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 - [ ] `make check` green locally and in CI
 - [ ] ADR written if a decision was made
 - [ ] This file updated if a convention changed
-- [ ] Seen working: locally until milestone D (Deploy) is done, on the server after that
+- [ ] Seen working: locally (`make up` on the Mac) until milestone D (Deploy to a server, the last milestone) is done, on the server after that
 
 ## ADR index
 
@@ -140,6 +143,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0013 | Build the tracker page with Vite, React and TypeScript, embedded in the API binary | Accepted |
 | 0014 | Vendor reviewed third-party agent skills, pinned by commit | Accepted |
 | 0015 | Manual postings: origin on postings, board-less companies, recheck by posting | Accepted |
+| 0016 | One distroless image and a Compose stack, the same on the Mac and the server | Accepted |
 
 ## Project skills
 

@@ -11,6 +11,16 @@ updates:
       go:
         patterns: ["*"]
 
+  # Base images in the Dockerfile and deploy/compose.yaml, pinned by digest (ADR-0016).
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker-compose
+    directory: /deploy
+    schedule:
+      interval: weekly
+
   - package-ecosystem: github-actions
     directory: /
     schedule:
