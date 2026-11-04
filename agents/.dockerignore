@@ -1,0 +1,7 @@
+# Only pyproject, the lock and src/ go into the image.
+.venv
+**/__pycache__
+.pytest_cache
+.ruff_cache
+tests
+Dockerfile

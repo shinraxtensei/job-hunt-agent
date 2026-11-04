@@ -27,7 +27,7 @@ help: ## List every target
 
 # test-integration runs every test (unit + integration), so it replaces test-go here.
 # web-check runs first so the embedded page is built before the Go build uses it.
-check: web-check fmt-check sqlc-check vet lint test-integration vuln ## Everything CI runs (needs Docker and Node 26)
+check: web-check fmt-check sqlc-check vet lint test-integration test-py vuln ## Everything CI runs (needs Docker, Node 26 and uv)
 
 fmt: ## Format all Go code
 	@gofmt -w $(GO_DIRS)
@@ -41,8 +41,9 @@ fmt-check: ## Fail if any Go file is not gofmt-clean
 vet: ## Run go vet
 	go vet ./...
 
-lint: ## Run golangci-lint (errcheck, gosec, revive, gocritic, ...)
+lint: ## golangci-lint (Go); ruff (lint + format check) and pyright strict (agents/)
 	@CGO_ENABLED=0 $(TOOL) golangci-lint run ./...
+	cd agents && uv sync --frozen && uv run ruff check . && uv run ruff format --check . && uv run pyright
 
 test-go: ## Go tests with the race detector
 	go test -race ./...
@@ -50,11 +51,11 @@ test-go: ## Go tests with the race detector
 test-integration: ## All Go tests plus integration tests against a real Postgres (testcontainers)
 	go test -race -tags integration ./...
 
-test-py: ## Python tests
-	@echo "test-py: not implemented yet (M3-01)"; exit 1
+test-py: ## Python tests, including integration tests against a real Postgres (testcontainers)
+	cd agents && uv sync --frozen && uv run pytest
 
 evals: ## Agent evals
-	@echo "evals: not implemented yet (M3-01)"; exit 1
+	@echo "evals: not implemented yet (M3-04)"; exit 1
 
 sqlc: ## Regenerate sqlc code from store/queries
 	docker run --rm -u "$$(id -u):$$(id -g)" -v "$(CURDIR):/src" -w /src $(SQLC_IMAGE) generate

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Compose smoke test (L-01), run by CI and by `make smoke`: build the images, start the
-# stack, check /healthz, /api/leads and the page, round-trip a backup through a restore,
+# stack, check /healthz, /api/leads, the page and the worker, round-trip a backup through a restore,
 # check the backup rotation keeps 14, then stop it and delete its volume.
 # It uses its own project name, so it never touches the owner's stack or data.
 set -eu
@@ -38,6 +38,25 @@ curl -fsS $base/ | grep -q '<div id="root">' || {
 	exit 1
 }
 echo "page: ok"
+
+# The worker (M3-01): healthy (up --wait already waited for its healthcheck), connected
+# as the app role, and a SIGTERM stops it cleanly with exit code 0.
+[ "$($COMPOSE ps --format '{{.Health}}' worker)" = healthy ] || {
+	echo "worker not healthy" >&2
+	exit 1
+}
+$COMPOSE logs worker | grep '"worker started"' | grep -q '"user": "jobhunt_app"' || {
+	echo "worker did not start as jobhunt_app" >&2
+	exit 1
+}
+$COMPOSE stop -t 10 worker
+code=$(docker inspect -f '{{.State.ExitCode}}' "$($COMPOSE ps -aq worker)")
+[ "$code" = 0 ] || {
+	echo "worker exited $code on SIGTERM, want 0" >&2
+	exit 1
+}
+$COMPOSE logs worker | grep -q '"worker stopped"'
+echo "worker: ok"
 
 # Rotation: 15 older backups plus a new one leave 14.
 for i in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do

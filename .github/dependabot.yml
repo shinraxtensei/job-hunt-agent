@@ -43,3 +43,16 @@ updates:
       # is <6.1 and it refuses TS 7 (typescript-eslint#10940). Remove when that ships.
       - dependency-name: typescript
         versions: [">=7"]
+
+  # The Python worker (ADR-0017): its lock, and its base images in agents/Dockerfile.
+  - package-ecosystem: uv
+    directory: /agents
+    schedule:
+      interval: weekly
+    groups:
+      python:
+        patterns: ["*"]
+  - package-ecosystem: docker
+    directory: /agents
+    schedule:
+      interval: weekly

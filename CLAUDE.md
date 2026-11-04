@@ -48,7 +48,8 @@ internal/
   store/             Postgres access: pgx + sqlc (queries in store/queries/*.sql)
   queue/             SKIP LOCKED job table
   httpapi/           net/http handlers (Go 1.22+ routing)
-agents/              Python (uv): extract/, score/, tailor/, evals/
+agents/              Python 3.15 (uv, ADR-0017): src/jobhunt_agents/ (worker, settings, db), tests/;
+                     extract/, score/, tailor/, evals/ come in M3+; agents/Dockerfile is the worker image
 web/                 TypeScript UI (Vite + React, ADR-0013); built into web/dist/app, embedded in cmd/api
 db/migrations/       plain SQL migrations (goose), forward-only
 data/companies.yaml  the reviewed watch list (ADR-0005)
@@ -62,19 +63,19 @@ testdata/            golden files (recorded board responses, sample postings)
 
 | Task | Command |
 |---|---|
-| Everything CI runs (needs Docker and Node 26: includes integration and Playwright tests) | `make check` |
+| Everything CI runs (needs Docker, Node 26 and uv: includes integration and Playwright tests) | `make check` |
 | Go tests (always with race detector) | `make test-go` → `go test -race ./...` |
 | All Go tests + integration tests (testcontainers) | `make test-integration` → `go test -race -tags integration ./...` |
-| Python tests | `make test-py` → `uv run pytest` |
+| Python tests (integration tests need Docker) | `make test-py` → `cd agents && uv run pytest` |
 | Agent evals | `make evals` |
-| Lint | `make lint` → golangci-lint, ruff, pyright |
+| Lint | `make lint` → golangci-lint; ruff check, ruff format --check, pyright strict |
 | Format Go / check formatting | `make fmt` / `make fmt-check` |
 | Regenerate sqlc | `make sqlc` |
 | Check committed sqlc code is current (part of `make check`) | `make sqlc-check` |
 | New migration | `make migration name=<snake_case>` |
 | Vulnerability scan | `make vuln` → govulncheck |
 | Fuzz the source parsers (30s each) | `make fuzz` |
-| Whole stack on the Mac (Postgres, migrations, API + tracker on http://127.0.0.1:8080) | `make up` / `make down` |
+| Whole stack on the Mac (Postgres, migrations, API + tracker on http://127.0.0.1:8080, Python worker) | `make up` / `make down` |
 | Collect now, inside the stack (no schedule until D) | `make collect` |
 | Back up / restore the database (`JOBHUNT_BACKUP_DIR`, default ~/job-hunter-backups, keeps 14) | `make backup` / `make restore FILE=…` |
 | Compose smoke test (what CI runs) | `make smoke` |
@@ -144,6 +145,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0014 | Vendor reviewed third-party agent skills, pinned by commit | Accepted |
 | 0015 | Manual postings: origin on postings, board-less companies, recheck by posting | Accepted |
 | 0016 | One distroless image and a Compose stack, the same on the Mac and the server | Accepted |
+| 0017 | Python 3.15 with uv, psycopg 3 and Pydantic, in a slim image pinned by digest | Accepted |
 
 ## Project skills
 

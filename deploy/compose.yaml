@@ -73,6 +73,28 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
 
+  # The Python worker (M3-01, ADR-0017): no port; idles until the queue exists (M3-02).
+  # SIGTERM finishes the current iteration; Compose waits 10 s before SIGKILL.
+  worker:
+    image: jobhunt-worker:local
+    build:
+      context: ../agents
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    restart: unless-stopped
+    stop_grace_period: 10s
+    environment:
+      DATABASE_URL: postgres://jobhunt_app:${JOBHUNT_APP_PASSWORD:?set in .env}@postgres:5432/jobhunt?sslmode=disable
+    healthcheck:
+      test: ["CMD", "python", "-m", "jobhunt_agents", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
   # On demand only: `make collect` (no schedule until D).
   collector:
     <<: *app

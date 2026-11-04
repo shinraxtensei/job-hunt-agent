@@ -39,7 +39,7 @@ func TestMakeHelpListsEveryCommand(t *testing.T) {
 
 // AC4: targets that are not built yet say so and exit 1, instead of failing silently.
 func TestUnimplementedTargetsExitNonZero(t *testing.T) {
-	for _, target := range []string{"test-py", "evals"} {
+	for _, target := range []string{"evals"} {
 		t.Run(target, func(t *testing.T) {
 			out, err := exec.Command("make", "-C", repoRoot(t), target).CombinedOutput()
 			if err == nil {

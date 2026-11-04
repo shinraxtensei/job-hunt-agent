@@ -1,6 +1,6 @@
 # M3-01: Python project and worker skeleton
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M3 — Extraction and scoring
 - **Linear:** [HAM-40](https://linear.app/hamid-corp/issue/HAM-40/m3-01-python-project-and-worker-skeleton)
 - **Estimate:** 1 day
