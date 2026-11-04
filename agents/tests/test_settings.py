@@ -58,3 +58,21 @@ def test_database_url_value_never_in_error(monkeypatch: pytest.MonkeyPatch) -> N
     with pytest.raises(ConfigError) as err:
         load()
     assert "s3cret-pw" not in str(err.value)
+
+
+# M3-03 AC5: the API key is a secret: never in reprs or dumps; optional (no key, no
+# model work); the budget cap defaults to $1.00 a day.
+def test_api_key_and_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DATABASE_URL", SECRET)
+    assert load().anthropic_api_key is None
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")  # ANTHROPIC_API_KEY= in .env: unset
+    assert load().anthropic_api_key is None
+    assert load().model_daily_budget_usd == 1
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-secret-xyz")
+    s = load()
+    assert s.anthropic_api_key is not None
+    assert s.anthropic_api_key.get_secret_value() == "sk-ant-secret-xyz"
+    assert "sk-ant-secret-xyz" not in repr(s) + s.model_dump_json()
+    monkeypatch.setenv("MODEL_DAILY_BUDGET_USD", "-1")
+    with pytest.raises(ConfigError, match="MODEL_DAILY_BUDGET_USD"):
+        load()

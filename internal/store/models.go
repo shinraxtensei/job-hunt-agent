@@ -76,6 +76,23 @@ type JobGroup struct {
 	Closed             bool
 }
 
+type ModelCall struct {
+	ID                       int64
+	CreatedAt                pgtype.Timestamptz
+	Agent                    string
+	PromptFile               string
+	PromptVersion            int32
+	Model                    string
+	InputTokens              int32
+	OutputTokens             int32
+	CacheReadInputTokens     int32
+	CacheCreationInputTokens int32
+	CostUsd                  pgtype.Numeric
+	LatencyMs                int32
+	Outcome                  string
+	PostingID                pgtype.Int8
+}
+
 type Posting struct {
 	ID              int64
 	CompanyID       int64

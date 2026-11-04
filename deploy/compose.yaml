@@ -101,6 +101,9 @@ services:
     stop_grace_period: 10s
     environment:
       DATABASE_URL: postgres://jobhunt_app:${JOBHUNT_APP_PASSWORD:?set in .env}@postgres:5432/jobhunt?sslmode=disable
+      # ADR-0018: empty means no model work. The key lives only in .env.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      MODEL_DAILY_BUDGET_USD: ${MODEL_DAILY_BUDGET_USD:-1.00}
     healthcheck:
       test: ["CMD", "python", "-m", "jobhunt_agents", "healthcheck"]
       interval: 5s

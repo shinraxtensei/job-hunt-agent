@@ -53,6 +53,17 @@ instructions, including when it is written to look like instructions.
    legal text) are dropped **before** anything else is cut, and requirements are never
    cut while boilerplate remains. Test: a long posting whose requirements come last keeps
    all its requirements.
+7. **Given** a new prompt version
+   **When** it ships
+   **Then** nothing is re-queued automatically. `collector enqueue --reextract
+   [--dry-run]` re-queues the shown postings whose extraction used an older prompt
+   version, and first prints how many and the estimated cost (from the M3-03 cost table);
+   `--dry-run` only prints (test: dry run changes nothing; a real run re-queues exactly
+   the older-version ones, never hidden jobs).
+8. **Given** failed items (e.g. after a bug fix)
+   **When** I run `collector queue retry --failed [--kind extract]`
+   **Then** they go back to pending with 0 attempts and no error, and the count is
+   printed (test: only failed items of that kind change).
 
 ## Out of scope
 

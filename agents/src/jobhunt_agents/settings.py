@@ -1,5 +1,6 @@
 """Configuration from environment variables only, validated once at start-up (M3-01 AC4)."""
 
+from decimal import Decimal
 from pathlib import Path
 from typing import Literal
 
@@ -13,7 +14,10 @@ class ConfigError(Exception):
 
 class Settings(BaseSettings):
     # No env_file: Compose passes the environment; .env is never read from here.
-    model_config = SettingsConfigDict(case_sensitive=False, extra="ignore", frozen=True)
+    # env_ignore_empty: an empty variable (ANTHROPIC_API_KEY= in .env) means unset.
+    model_config = SettingsConfigDict(
+        case_sensitive=False, extra="ignore", frozen=True, env_ignore_empty=True
+    )
 
     database_url: SecretStr
     worker_poll_seconds: float = Field(default=5.0, gt=0, le=300)
@@ -23,6 +27,10 @@ class Settings(BaseSettings):
     # The database unreachable this long is fatal (Compose restarts the worker).
     worker_db_outage_seconds: float = Field(default=60, gt=0, le=3600)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    # M3-03, ADR-0018: no key, no model work (handlers that need the model aren't run).
+    anthropic_api_key: SecretStr | None = None
+    # Today's (UTC) model cost at which the worker stops claiming work.
+    model_daily_budget_usd: Decimal = Field(default=Decimal("1.00"), ge=0, le=100)
     heartbeat_file: Path = Path("/tmp/jobhunt-worker.heartbeat")  # noqa: S108 - a tmpfs in Compose
 
 

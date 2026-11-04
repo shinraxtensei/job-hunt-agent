@@ -1,6 +1,6 @@
 # 0003. Call the model provider SDK directly, no LangChain
 
-- **Status:** Proposed
+- **Status:** Accepted (M3-03: the Anthropic SDK, ADR-0018; `decide()` and the client in `agents/src/jobhunt_agents/model.py`)
 - **Date:** 2026-10-31
 - **Story:** Milestone 3 — extraction and scoring
 
@@ -16,7 +16,7 @@ prompt, response, tokens, and cost.
 
 Use the model provider's official Python SDK directly. Every input and output is a
 Pydantic model; structured output is requested from the provider and validated again on
-our side. Prompts are versioned files in `agents/<agent>/prompts/`. Yes/no and pick-one
+our side. Prompts are versioned files in `agents/src/jobhunt_agents/prompts/<agent>/v<N>.md`. Yes/no and pick-one
 judgments go through a single `decide()` interface so the model behind it can change
 without touching callers (PRD: decision layer).
 

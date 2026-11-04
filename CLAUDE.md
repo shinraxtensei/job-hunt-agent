@@ -48,7 +48,8 @@ internal/
   store/             Postgres access: pgx + sqlc (queries in store/queries/*.sql)
   queue/             work queue counts (ADR-0001); the reconcile step is in collector/
   httpapi/           net/http handlers (Go 1.22+ routing)
-agents/              Python 3.15 (uv, ADR-0017): src/jobhunt_agents/ (worker, settings, db), tests/;
+agents/              Python 3.15 (uv, ADR-0017): src/jobhunt_agents/ (worker, queue, model client,
+                     settings, db; prompts/<agent>/v<N>.md), tests/ (fakes.py: the fake provider);
                      extract/, score/, tailor/, evals/ come in M3+; agents/Dockerfile is the worker image
 web/                 TypeScript UI (Vite + React, ADR-0013); built into web/dist/app, embedded in cmd/api
 db/migrations/       plain SQL migrations (goose), forward-only
@@ -108,7 +109,8 @@ Never run `python` or `pytest` directly — always through `uv run`.
 - Every model input and output is a Pydantic model. Malformed output: retry once, then
   mark the job `needs_review` — never guess.
 - Call the provider SDK directly. No LangChain (ADR-0003).
-- Prompts live in `agents/<agent>/prompts/` as versioned files, not inline strings.
+- Prompts live in `agents/src/jobhunt_agents/prompts/<agent>/v<N>.md` as versioned files, not inline strings.
+- Every model call goes through `ModelClient` (`model.py`); CI never calls the real API (`tests/fakes.py`).
 - Log model, tokens, and cost per call to the `model_calls` table.
 
 ## Testing expectations
@@ -134,7 +136,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 |---|---|---|
 | 0001 | Use PostgreSQL as the work queue instead of Redis (leases, fencing, reconcile) | Accepted |
 | 0002 | No built-in auth; restrict access with Tailscale | Proposed |
-| 0003 | Call the model provider SDK directly, no LangChain | Proposed |
+| 0003 | Call the model provider SDK directly, no LangChain | Accepted |
 | 0004 | Use pgx, sqlc and goose for database access | Accepted |
 | 0005 | Companies table: track, active, one row per board, YAML watch list | Accepted |
 | 0006 | Record collector runs in Postgres from M1-02; goleak in tests | Accepted |
@@ -149,6 +151,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0015 | Manual postings: origin on postings, board-less companies, recheck by posting | Accepted |
 | 0016 | One distroless image and a Compose stack, the same on the Mac and the server | Accepted |
 | 0017 | Python 3.15 with uv, psycopg 3 and Pydantic, in a slim image pinned by digest | Accepted |
+| 0018 | Use Claude Haiku 5.5 through the Anthropic API, sync calls with prompt caching | Accepted |
 
 ## Project skills
 

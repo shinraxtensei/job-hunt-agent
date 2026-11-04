@@ -41,6 +41,11 @@ class ItemError(Exception):
     Any other exception is stored as its class name only."""
 
 
+class NeedsReview(ItemError):
+    """Retrying won't help (the model client already retried): the item fails at once and
+    waits for the owner (ADR-0001's needs_review)."""
+
+
 _CLAIM = """
 WITH expired AS (  -- a lease that ran out on the last attempt: give up on it
     UPDATE work_items
@@ -71,7 +76,7 @@ WHERE id = %(id)s AND claim_token = %(token)s
 
 _FAIL = """
 UPDATE work_items
-SET state = CASE WHEN attempts >= max_attempts THEN 'failed' ELSE 'pending' END,
+SET state = CASE WHEN %(final)s OR attempts >= max_attempts THEN 'failed' ELSE 'pending' END,
     run_after = now() + least(%(cap)s, %(base)s * power(2, attempts - 1)),
     last_error = left(%(error)s, %(max_error)s),
     locked_until = NULL, claim_token = NULL, updated_at = now()
@@ -92,10 +97,12 @@ def complete(conn: psycopg.Connection, item: Item) -> bool:
         return conn.execute(_COMPLETE, {"id": item.id, "token": item.claim_token}).rowcount == 1
 
 
-def fail(conn: psycopg.Connection, item: Item, error: str) -> bool:
-    """Schedules a retry with backoff, or marks the item failed on its last attempt;
-    False if this claim no longer owns it. `error` must hold no posting text."""
+def fail(conn: psycopg.Connection, item: Item, error: str, *, final: bool = False) -> bool:
+    """Schedules a retry with backoff, or marks the item failed on its last attempt (or at
+    once if final); False if this claim no longer owns it. `error` must hold no posting
+    text."""
     params = {
+        "final": final,
         "id": item.id,
         "token": item.claim_token,
         "error": error,
@@ -131,7 +138,7 @@ def process_one(pool: ConnectionPool, handlers: Mapping[str, Handler], lease: ti
         err = safe_error(e)
         log.warning("item failed", extra={**fields, "error": err})
         with pool.connection() as conn:
-            owned = fail(conn, item, err)
+            owned = fail(conn, item, err, final=isinstance(e, NeedsReview))
     else:
         with pool.connection() as conn:
             owned = complete(conn, item)

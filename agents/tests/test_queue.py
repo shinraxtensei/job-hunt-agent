@@ -9,7 +9,7 @@ import pytest
 from psycopg.rows import dict_row
 
 from jobhunt_agents.db import open_pool
-from jobhunt_agents.queue import Item, ItemError, claim, complete, fail, process_one
+from jobhunt_agents.queue import Item, ItemError, NeedsReview, claim, complete, fail, process_one
 from tests.conftest import ROOT, Go
 
 pytestmark = pytest.mark.integration
@@ -185,3 +185,20 @@ def test_no_handlers_claims_nothing(app_dsn: str, go: Go) -> None:
     with open_pool(app_dsn, max_size=2) as pool:
         assert not process_one(pool, {}, LEASE)
     assert state_of(app_dsn, posting) == "pending"
+
+
+# M3-03: a NeedsReview error (the model client already retried) fails the item at once,
+# without the backoff retries: it waits for the owner.
+def test_needs_review_fails_at_once(app_dsn: str, go: Go) -> None:
+    posting = go.add_shown_job()
+
+    def handler(_item: Item) -> None:
+        raise NeedsReview("refusal")
+
+    with open_pool(app_dsn, max_size=2) as pool:
+        assert process_one(pool, {"extract": handler}, LEASE)
+    with psycopg.connect(app_dsn) as conn:
+        r = conn.execute(
+            "SELECT state, attempts, last_error FROM work_items WHERE posting_id = %s", (posting,)
+        ).fetchone()
+    assert r == ("failed", 1, "NeedsReview: refusal")

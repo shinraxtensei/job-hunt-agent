@@ -1,6 +1,6 @@
 # M3-03: `decide()` interface and model client
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M3 — Extraction and scoring
 - **Linear:** [HAM-42](https://linear.app/hamid-corp/issue/HAM-42/m3-03-decide-interface-and-model-client)
 - **Estimate:** 1 day
