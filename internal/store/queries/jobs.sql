@@ -44,12 +44,14 @@ UPDATE jobs SET role_family = @role_family, seniority = @seniority,
 WHERE posting_id = @posting_id;
 
 -- name: ListGroupsForPresets :many
--- Every duplicate group of an active company with its canonical job's facets (ADR-0011).
+-- Every duplicate group of an active company with its canonical job's facets (ADR-0011),
+-- and its canonical posting's id and content hash (the reconcile step, ADR-0001).
 SELECT g.company_id, g.title_key, g.closed, coalesce(c.track, '')::text AS track, c.name AS company,
-	j.title, j.role_family, j.seniority, j.experience_min_years
+	j.title, j.role_family, j.seniority, j.experience_min_years, cp.id AS posting_id, cp.content_hash
 FROM job_groups g
 JOIN companies c ON c.id = g.company_id
 JOIN jobs j ON j.posting_id = g.canonical_posting_id
+JOIN postings cp ON cp.id = g.canonical_posting_id
 WHERE c.active OR EXISTS (
 	SELECT 1 FROM jobs m JOIN postings mp ON mp.id = m.posting_id
 	WHERE m.company_id = g.company_id AND m.title_key = g.title_key AND mp.origin = 'manual'

@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     database_url: SecretStr
     worker_poll_seconds: float = Field(default=5.0, gt=0, le=300)
     worker_pool_max: int = Field(default=2, ge=1, le=10)
+    # A claimed item is someone else's after this long without an acknowledgement.
+    worker_lease_seconds: float = Field(default=600, ge=10, le=3600)
+    # The database unreachable this long is fatal (Compose restarts the worker).
+    worker_db_outage_seconds: float = Field(default=60, gt=0, le=3600)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     heartbeat_file: Path = Path("/tmp/jobhunt-worker.heartbeat")  # noqa: S108 - a tmpfs in Compose
 

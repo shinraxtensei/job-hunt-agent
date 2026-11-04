@@ -92,3 +92,19 @@ type Posting struct {
 	Origin          string
 	LastRecheckedAt pgtype.Timestamptz
 }
+
+type WorkItem struct {
+	ID          int64
+	PostingID   int64
+	Kind        string
+	ContentHash []byte
+	State       string
+	Attempts    int32
+	MaxAttempts int32
+	RunAfter    pgtype.Timestamptz
+	LockedUntil pgtype.Timestamptz
+	ClaimToken  pgtype.UUID
+	LastError   pgtype.Text
+	CreatedAt   pgtype.Timestamptz
+	UpdatedAt   pgtype.Timestamptz
+}

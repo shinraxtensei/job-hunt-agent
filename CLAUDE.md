@@ -46,12 +46,13 @@ internal/
   preset/            filter presets (data/presets/*.yaml) and their evaluation (ADR-0011)
   source/            one adapter package per board (lever/, greenhouse/, ...)
   store/             Postgres access: pgx + sqlc (queries in store/queries/*.sql)
-  queue/             SKIP LOCKED job table
+  queue/             work queue counts (ADR-0001); the reconcile step is in collector/
   httpapi/           net/http handlers (Go 1.22+ routing)
 agents/              Python 3.15 (uv, ADR-0017): src/jobhunt_agents/ (worker, settings, db), tests/;
                      extract/, score/, tailor/, evals/ come in M3+; agents/Dockerfile is the worker image
 web/                 TypeScript UI (Vite + React, ADR-0013); built into web/dist/app, embedded in cmd/api
 db/migrations/       plain SQL migrations (goose), forward-only
+db/contract/         work_items.columns: the Go <-> Python queue contract, checked by both sides
 data/companies.yaml  the reviewed watch list (ADR-0005)
 data/presets/        filter presets; default.yaml is the owner's profile (ADR-0011)
 deploy/              compose.yaml, Caddyfile, scripts
@@ -66,7 +67,7 @@ testdata/            golden files (recorded board responses, sample postings)
 | Everything CI runs (needs Docker, Node 26 and uv: includes integration and Playwright tests) | `make check` |
 | Go tests (always with race detector) | `make test-go` → `go test -race ./...` |
 | All Go tests + integration tests (testcontainers) | `make test-integration` → `go test -race -tags integration ./...` |
-| Python tests (integration tests need Docker) | `make test-py` → `cd agents && uv run pytest` |
+| Python tests (integration tests need Docker and Go: they build cmd/migrate and cmd/collector) | `make test-py` → `cd agents && uv run pytest` |
 | Agent evals | `make evals` |
 | Lint | `make lint` → golangci-lint; ruff check, ruff format --check, pyright strict |
 | Format Go / check formatting | `make fmt` / `make fmt-check` |
@@ -81,6 +82,8 @@ testdata/            golden files (recorded board responses, sample postings)
 | Compose smoke test (what CI runs) | `make smoke` |
 | Add a job by link (board postings fetched through the board's API; other links never fetched) | `go run ./cmd/collector add <url> [--title T --company C --location L]` |
 | Location strings the classifier can't place (to grow its tables) | `go run ./cmd/collector classify --report-unknown` |
+| Queue extraction for what the default preset shows (after a preset change; run/add do it too) | `go run ./cmd/collector enqueue` |
+| Work queue counts by state (also `GET /api/queue`) | `go run ./cmd/collector queue` |
 | Web checks: audit, types, lint, unit, build, Playwright + axe (Node 26, `web/.nvmrc`) | `make web-check` |
 | Build the tracker page into the API binary | `make web-build` |
 | Tracker page dev server (proxies `/api` to 127.0.0.1:8080) | `make web-dev` |
@@ -129,7 +132,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 
 | # | Title | Status |
 |---|---|---|
-| 0001 | Use PostgreSQL as the work queue instead of Redis | Proposed |
+| 0001 | Use PostgreSQL as the work queue instead of Redis (leases, fencing, reconcile) | Accepted |
 | 0002 | No built-in auth; restrict access with Tailscale | Proposed |
 | 0003 | Call the model provider SDK directly, no LangChain | Proposed |
 | 0004 | Use pgx, sqlc and goose for database access | Accepted |

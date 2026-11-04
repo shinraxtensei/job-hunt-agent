@@ -12,9 +12,11 @@ import (
 )
 
 // GroupRow is one duplicate group ready for preset evaluation, with its canonical title
-// and company for display.
+// and company for display, and its canonical posting for the queue (ADR-0001).
 type GroupRow struct {
 	Company, Title string
+	PostingID      int64
+	ContentHash    []byte
 	preset.Group
 }
 
@@ -41,7 +43,7 @@ func Groups(ctx context.Context, db DB) ([]GroupRow, error) {
 	}
 	out := make([]GroupRow, 0, len(gs))
 	for _, g := range gs {
-		out = append(out, GroupRow{Company: g.Company, Title: g.Title, Group: preset.Group{
+		out = append(out, GroupRow{Company: g.Company, Title: g.Title, PostingID: g.PostingID, ContentHash: g.ContentHash, Group: preset.Group{
 			RoleFamily: g.RoleFamily, Seniority: g.Seniority, ExperienceMinYears: int(g.ExperienceMinYears.Int32),
 			Track: g.Track, Closed: g.Closed, Members: members[key{g.CompanyID, g.TitleKey}],
 		}})

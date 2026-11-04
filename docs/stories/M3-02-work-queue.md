@@ -1,6 +1,6 @@
 # M3-02: Work queue claim and retry
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M3 — Extraction and scoring
 - **Linear:** [HAM-41](https://linear.app/hamid-corp/issue/HAM-41/m3-02-work-queue-claim-and-retry)
 - **Estimate:** 1 day

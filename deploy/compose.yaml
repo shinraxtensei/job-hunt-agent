@@ -73,7 +73,21 @@ services:
     depends_on:
       migrate: { condition: service_completed_successfully }
 
-  # The Python worker (M3-01, ADR-0017): no port; idles until the queue exists (M3-02).
+  # Queues extraction for what the default preset shows (ADR-0001), then exits; the
+  # worker starts only after it succeeded. `collector run` and `add` reconcile too.
+  reconcile:
+    <<: *app
+    entrypoint: ["/app/collector"]
+    command: ["enqueue"]
+    restart: "no"
+    environment:
+      DATABASE_URL: postgres://jobhunt_app:${JOBHUNT_APP_PASSWORD:?set in .env}@postgres:5432/jobhunt?sslmode=disable
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+
+  # The Python worker (M3-01, ADR-0017; queue M3-02): no port. Claims work items for the
+  # kinds it has handlers for (none until M3-04). A fatal error (the database gone for a
+  # minute) exits; restart: unless-stopped brings it back.
   # SIGTERM finishes the current iteration; Compose waits 10 s before SIGKILL.
   worker:
     image: jobhunt-worker:local
@@ -93,7 +107,7 @@ services:
       timeout: 5s
       retries: 10
     depends_on:
-      migrate: { condition: service_completed_successfully }
+      reconcile: { condition: service_completed_successfully }
 
   # On demand only: `make collect` (no schedule until D).
   collector:

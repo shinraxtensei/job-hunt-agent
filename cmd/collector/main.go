@@ -11,6 +11,10 @@
 //	collector add <url> [--title T --company C --location L]
 //	                           add a job by its link (M2-07, ADR-0015): board postings are
 //	                           fetched through the board's API; other links never are
+//	collector enqueue          queue an extract item for every lead the default preset
+//	                           shows that has none for its content (ADR-0001); run, add
+//	                           and the worker's start do this too
+//	collector queue            work items by state
 //
 // Environment: DATABASE_URL (app role, required); COLLECTOR_CONCURRENCY (default 8);
 // COLLECTOR_HOST_INTERVAL (minimum gap per host, default and minimum 1s);
@@ -39,6 +43,7 @@ import (
 
 	"github.com/shinraxtensei/job-hunter/internal/collector"
 	"github.com/shinraxtensei/job-hunter/internal/preset"
+	"github.com/shinraxtensei/job-hunter/internal/queue"
 	"github.com/shinraxtensei/job-hunter/internal/source/ashby"
 	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
 	"github.com/shinraxtensei/job-hunter/internal/source/lever"
@@ -46,7 +51,7 @@ import (
 )
 
 const (
-	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify [--report-unknown] | collector preview <preset> | collector add <url> [--title T --company C --location L]"
+	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify [--report-unknown] | collector preview <preset> | collector add <url> [--title T --company C --location L] | collector enqueue | collector queue"
 
 	// normaliseBatch is how many postings `collector normalise` writes per transaction.
 	normaliseBatch = 500
@@ -124,7 +129,31 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 		if err != nil {
 			return 1, err
 		}
-		return exitCode(res.Outcome), nil
+		if code := exitCode(res.Outcome); code != 0 {
+			return code, nil
+		}
+		return reconcile(ctx, log, pool)
+
+	case "enqueue":
+		pool, err := pgxpool.New(ctx, dsn)
+		if err != nil {
+			return 1, fmt.Errorf("connecting to database: %w", err)
+		}
+		defer pool.Close()
+		return reconcile(ctx, log, pool)
+
+	case "queue":
+		pool, err := pgxpool.New(ctx, dsn)
+		if err != nil {
+			return 1, fmt.Errorf("connecting to database: %w", err)
+		}
+		defer pool.Close()
+		c, err := queue.Count(ctx, pool)
+		if err != nil {
+			return 1, err
+		}
+		fmt.Printf("pending %d\nrunning %d\nfailed  %d (needs review)\ndone    %d\n", c.Pending, c.Running, c.Failed, c.Done)
+		return 0, nil
 
 	case "normalise":
 		pool, err := pgxpool.New(ctx, dsn)
@@ -321,8 +350,22 @@ func add(ctx context.Context, log *slog.Logger, dsn, leverURL string, args []str
 	}
 	if res.Existed {
 		fmt.Printf("already exists (id %d)\n", res.PostingID)
-		return 0, nil
+	} else {
+		fmt.Printf("added %s, id %d\n", kind, res.PostingID)
 	}
-	fmt.Printf("added %s, id %d\n", kind, res.PostingID)
+	return reconcile(ctx, log, pool)
+}
+
+// reconcile queues extraction for what the default preset shows (ADR-0001).
+func reconcile(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool) (int, error) {
+	p, err := preset.Load(filepath.Join(presetsDir, "default.yaml"))
+	if err != nil {
+		return 1, err
+	}
+	n, err := collector.Reconcile(ctx, pool, p)
+	if err != nil {
+		return 1, err
+	}
+	log.Info("queue reconciled", "preset", p.Name, "enqueued", n)
 	return 0, nil
 }

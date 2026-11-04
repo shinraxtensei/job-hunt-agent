@@ -1,6 +1,6 @@
 #!/bin/sh
 # Compose smoke test (L-01), run by CI and by `make smoke`: build the images, start the
-# stack, check /healthz, /api/leads, the page and the worker, round-trip a backup through a restore,
+# stack, check /healthz, /api/leads, the page, the worker and the queue, round-trip a backup through a restore,
 # check the backup rotation keeps 14, then stop it and delete its volume.
 # It uses its own project name, so it never touches the owner's stack or data.
 set -eu
@@ -57,6 +57,18 @@ code=$(docker inspect -f '{{.State.ExitCode}}' "$($COMPOSE ps -aq worker)")
 }
 $COMPOSE logs worker | grep -q '"worker stopped"'
 echo "worker: ok"
+
+# The queue (M3-02): reconcile ran before the worker; counts from the API and the CLI.
+$COMPOSE logs reconcile | grep -q '"queue reconciled"' || {
+	echo "reconcile did not run" >&2
+	exit 1
+}
+curl -fsS $base/api/queue | grep -q '"pending"' || {
+	echo "/api/queue did not answer" >&2
+	exit 1
+}
+$COMPOSE run --rm collector queue | grep -q '^pending '
+echo "queue: ok"
 
 # Rotation: 15 older backups plus a new one leave 14.
 for i in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/shinraxtensei/job-hunter/internal/queue"
 	"github.com/shinraxtensei/job-hunter/internal/store"
 )
 
@@ -39,6 +40,7 @@ func New(db DB, presetsDir, commit string, now func() time.Time, log *slog.Logge
 	mux.HandleFunc("GET /api/facets", a.facets)
 	mux.HandleFunc("GET /api/presets", a.presets)
 	mux.HandleFunc("GET /api/companies", a.companies)
+	mux.HandleFunc("GET /api/queue", a.queue)
 	mux.HandleFunc("GET /healthz", a.healthz)
 	mux.HandleFunc("/", func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "", "no such endpoint")
@@ -77,6 +79,16 @@ func (a *api) fail(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	a.log.Error("request failed", "path", r.URL.Path, "err", err)
 	writeError(w, http.StatusInternalServerError, "", "internal error")
+}
+
+// queue answers the work queue's counts by state (M3-02).
+func (a *api) queue(w http.ResponseWriter, r *http.Request) {
+	c, err := queue.Count(r.Context(), a.db)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, c)
 }
 
 func (a *api) healthz(w http.ResponseWriter, r *http.Request) {

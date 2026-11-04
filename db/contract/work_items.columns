@@ -1,0 +1,17 @@
+# The work_items table is the Go <-> Python contract (ADR-0001): Go enqueues, Python
+# claims. Both sides' contract tests compare the migrated table to this file
+# (column, data type, nullable), so a column changed on one side fails the other.
+# Change it only with a migration and an ADR.
+id bigint NO
+posting_id bigint NO
+kind text NO
+content_hash bytea NO
+state text NO
+attempts integer NO
+max_attempts integer NO
+run_after timestamp with time zone NO
+locked_until timestamp with time zone YES
+claim_token uuid YES
+last_error text YES
+created_at timestamp with time zone NO
+updated_at timestamp with time zone NO

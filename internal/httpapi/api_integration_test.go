@@ -124,6 +124,7 @@ func TestGolden(t *testing.T) {
 		{"presets", "/api/presets", 200},
 		{"companies", "/api/companies", 200},
 		{"healthz", "/healthz", 200},
+		{"queue", "/api/queue", 200},
 		{"bad_seniority", "/api/leads?seniority=ancient", 400},
 		{"bad_scope", "/api/leads?remote_scope=mars", 400},
 		{"unknown_param", "/api/leads?colour=blue", 400},
