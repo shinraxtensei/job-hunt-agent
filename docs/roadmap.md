@@ -124,6 +124,10 @@ retry · M3-03 `decide()` interface and model client · M3-04 Extraction agent �
 M3-05 Skill map and search profile · M3-06 Scoring agent · M3-07 Eval set and
 `make evals` · M3-08 Score, reason and gaps in the tracker
 
+Order: M3-01 → M3-02 → M3-03 → M3-05 → M3-07 → M3-04 → M3-06 → M3-08. M3-07 samples and
+labels the eval set before the first extraction prompt; its thresholds are set after
+M3-04's first baseline run.
+
 ## M4: Evidence bank and tailoring
 
 **Goal:** the owner picks a lead and gets an honest tailored CV draft with a coverage
