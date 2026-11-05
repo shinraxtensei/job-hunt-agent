@@ -12,3 +12,5 @@ internal/webui/dist/app
 docs
 deploy
 *.dump
+# Personal files (M3-05) never go into an image; the worker mounts them read-only.
+data/profile

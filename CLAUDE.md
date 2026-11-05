@@ -56,6 +56,7 @@ db/migrations/       plain SQL migrations (goose), forward-only
 db/contract/         work_items.columns: the Go <-> Python queue contract, checked by both sides
 data/companies.yaml  the reviewed watch list (ADR-0005)
 data/presets/        filter presets; default.yaml is the owner's profile (ADR-0011)
+data/profile/        skill_map.yaml + search_profile.yaml: PERSONAL, git-ignored; *.example.yaml show the format (M3-05, ADR-0019)
 deploy/              compose.yaml, Caddyfile, scripts
 docs/                prd.md, adr/, stories/, threat-model.md
 testdata/            golden files (recorded board responses, sample postings)
@@ -79,7 +80,7 @@ testdata/            golden files (recorded board responses, sample postings)
 | Fuzz the source parsers (30s each) | `make fuzz` |
 | Whole stack on the Mac (Postgres, migrations, API + tracker on http://127.0.0.1:8080, Python worker) | `make up` / `make down` |
 | Collect now, inside the stack (no schedule until D) | `make collect` |
-| Back up / restore the database (`JOBHUNT_BACKUP_DIR`, default ~/job-hunter-backups, keeps 14) | `make backup` / `make restore FILE=…` |
+| Back up / restore the database and the personal files (`JOBHUNT_BACKUP_DIR`, default ~/job-hunter-backups, keeps 14) | `make backup` / `make restore FILE=…` |
 | Compose smoke test (what CI runs) | `make smoke` |
 | Add a job by link (board postings fetched through the board's API; other links never fetched) | `go run ./cmd/collector add <url> [--title T --company C --location L]` |
 | Location strings the classifier can't place (to grow its tables) | `go run ./cmd/collector classify --report-unknown` |
@@ -152,6 +153,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0016 | One distroless image and a Compose stack, the same on the Mac and the server | Accepted |
 | 0017 | Python 3.15 with uv, psycopg 3 and Pydantic, in a slim image pinned by digest | Accepted |
 | 0018 | Use Claude Haiku 5.5 through the Anthropic API, sync calls with prompt caching | Accepted |
+| 0019 | The worker reads the profile files itself, with ruamel.yaml | Accepted |
 
 ## Project skills
 

@@ -1,6 +1,6 @@
 # M3-05: Skill map and search profile
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M3 — Extraction and scoring
 - **Linear:** [HAM-44](https://linear.app/hamid-corp/issue/HAM-44/m3-05-skill-map-and-search-profile)
 - **Estimate:** ½ day

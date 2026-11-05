@@ -1,0 +1,39 @@
+# Skill map example (M3-05). The real file is data/profile/skill_map.yaml: personal,
+# git-ignored. Copy this file there and make it yours. Scoring (M3-06) compares each
+# lead's required skills with it.
+#
+#   proven    shipped in real work; `evidence` says where (required, M4 turns it into
+#             CV bullets)
+#   familiar  used it, couldn't defend it as a main skill
+#   learning  learning it now
+#
+# aliases: other names postings use. Matching ignores case, accents, spaces, dots and
+# dashes ("Node.js" = "node js" = "Node-JS"); a name or alias may belong to one skill only.
+
+skills:
+  - name: PostgreSQL
+    level: proven
+    aliases: [Postgres, psql]
+    evidence: Example Corp billing service, schema and query tuning
+  - name: Node.js
+    level: proven
+    aliases: [NodeJS, Node]
+    evidence: Example Corp public API
+  - name: TypeScript
+    level: proven
+    aliases: [TS]
+    evidence: Example Corp public API
+  - name: Docker
+    level: familiar
+    aliases: [Docker Compose]
+  - name: Kubernetes
+    level: familiar
+    aliases: [K8s]
+  - name: CI/CD
+    level: familiar
+    aliases: [continuous integration, intégration continue]
+  - name: C++
+    level: familiar
+  - name: Go
+    level: learning
+    aliases: [Golang]

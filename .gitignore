@@ -48,3 +48,8 @@ node_modules/
 .DS_Store
 .idea/
 .vscode/
+
+# --- Personal data (M3-05): the real profile stays on the owner's machine; the
+# *.example.yaml files show the format.
+/data/profile/*
+!/data/profile/*.example.yaml

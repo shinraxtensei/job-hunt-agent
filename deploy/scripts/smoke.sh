@@ -1,6 +1,6 @@
 #!/bin/sh
 # Compose smoke test (L-01), run by CI and by `make smoke`: build the images, start the
-# stack, check /healthz, /api/leads, the page, the worker and the queue, round-trip a backup through a restore,
+# stack, check /healthz, /api/leads, the page, the worker and the queue, round-trip a backup (and the personal-files archive) through a restore,
 # check the backup rotation keeps 14, then stop it and delete its volume.
 # It uses its own project name, so it never touches the owner's stack or data.
 set -eu
@@ -73,6 +73,7 @@ echo "queue: ok"
 # Rotation: 15 older backups plus a new one leave 14.
 for i in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do
 	touch -t "2026010100$i" "$backups/jobhunt-20260101T00${i}00Z.dump"
+	touch -t "2026010100$i" "$backups/jobhunt-20260101T00${i}00Z.personal.tar.gz"
 done
 file=$(JOBHUNT_BACKUP_DIR=$backups deploy/scripts/backup.sh)
 n=$(ls -1 "$backups"/jobhunt-*.dump | wc -l | tr -d ' ')
@@ -86,7 +87,32 @@ n=$(ls -1 "$backups"/jobhunt-*.dump | wc -l | tr -d ' ')
 }
 echo "backup: ok ($n kept, newest $(basename "$file"))"
 
-deploy/scripts/restore.sh "$file"
+# M3-05: the personal files go into an archive with the same timestamp, owner-only,
+# rotated the same way (CI has only the example profile files).
+personal="${file%.dump}.personal.tar.gz"
+n=$(ls -1 "$backups"/jobhunt-*.personal.tar.gz | wc -l | tr -d ' ')
+[ "$n" = 14 ] || {
+	echo "rotation kept $n personal archives, want 14" >&2
+	exit 1
+}
+case "$(ls -l "$personal")" in
+-rw-------*) ;;
+*)
+	echo "personal archive is not owner-only: $(ls -l "$personal")" >&2
+	exit 1
+	;;
+esac
+tar -tzf "$personal" | grep -q '^data/profile/skill_map.example.yaml$' || {
+	echo "personal archive lacks data/profile" >&2
+	exit 1
+}
+echo "personal: ok"
+
+out=$(deploy/scripts/restore.sh "$file")
+echo "$out" | grep -q "tar -xzf '$personal'" || {
+	echo "restore did not explain how to put the personal files back" >&2
+	exit 1
+}
 $COMPOSE up -d --wait api
 curl -fsS "$base/api/leads?limit=1" | grep -q '"leads"'
 echo "restore: ok"

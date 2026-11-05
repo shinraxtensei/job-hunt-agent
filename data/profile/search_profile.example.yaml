@@ -1,0 +1,15 @@
+# Search profile example (M3-05). The real file is data/profile/search_profile.yaml:
+# personal, git-ignored. Copy this file there and make it yours.
+#
+# titles: ranked, the job you want most first; each with its English and French forms.
+# experience: what your CV shows, for the seniority part of the score (M3-06).
+
+titles:
+  - en: [Backend Engineer, Backend Developer]
+    fr: [Ingénieur backend, Développeur backend]
+  - en: [Software Engineer]
+    fr: [Ingénieur logiciel]
+
+experience:
+  professional_years: 3
+  seniority: mid   # junior | mid | senior

@@ -12,6 +12,7 @@ import psycopg
 
 from jobhunt_agents.db import open_pool
 from jobhunt_agents.model import AnthropicProvider, ModelClient
+from jobhunt_agents.profile import FILES, ProfileError, ProfileWatcher
 from jobhunt_agents.queue import Handler, process_one
 from jobhunt_agents.settings import ConfigError, Settings, load
 from jobhunt_agents.worker import Worker, healthy
@@ -37,6 +38,7 @@ class JSONFormatter(logging.Formatter):
         "outcome",
         "cost",
         "budget_usd",
+        "version",
     )
 
     def format(self, record: logging.LogRecord) -> str:
@@ -80,9 +82,18 @@ def run(s: Settings) -> None:
                 pool=pool,
                 daily_budget_usd=s.model_daily_budget_usd,
             )
+        # M3-05: reloaded when the files change; M3-06 scores against profile.current().
+        profile = None
+        if all((s.profile_dir / f).is_file() for f in FILES):
+            profile = ProfileWatcher(s.profile_dir)  # an invalid profile stops start-up
+            log.info("profile loaded", extra={"version": profile.current().version[:12]})
+        else:
+            log.info("no profile in PROFILE_DIR; scoring stays off")
         paused_on: list[date] = []
 
         def iterate() -> bool:
+            if profile is not None:
+                profile.current()  # picks up edits without a restart
             # The daily budget (ADR-0018): stop claiming until the next UTC day.
             if client is not None and client.budget_exhausted():
                 today = datetime.now(UTC).date()
@@ -122,6 +133,9 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     try:
         run(s)
+    except ProfileError as e:
+        log.error("profile invalid; fix it and restart", extra={"error": str(e)})  # noqa: TRY400
+        return 2
     except psycopg.OperationalError as e:
         # Fatal: Compose restarts the worker.
         log.error("database unreachable; exiting", extra={"error": type(e).__name__})  # noqa: TRY400

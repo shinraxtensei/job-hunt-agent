@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr | None = None
     # Today's (UTC) model cost at which the worker stops claiming work.
     model_daily_budget_usd: Decimal = Field(default=Decimal("1.00"), ge=0, le=100)
+    # M3-05: the owner's skill map and search profile (data/profile, mounted read-only).
+    profile_dir: Path = Path("/app/profile")
     heartbeat_file: Path = Path("/tmp/jobhunt-worker.heartbeat")  # noqa: S108 - a tmpfs in Compose
 
 

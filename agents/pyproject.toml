@@ -8,6 +8,7 @@ dependencies = [
     "psycopg[binary,pool]>=3.3.8,<4",
     "pydantic>=2.14.2,<3",
     "pydantic-settings>=2.16.2,<3",
+    "ruamel-yaml>=0.19.1,<0.20",
 ]
 
 [project.scripts]
@@ -41,6 +42,8 @@ ignore = ["PLR2004", "TRY003"]
 max-args = 8
 
 [tool.ruff.lint.per-file-ignores]
+# ruamel.yaml values are Any until validated (ADR-0019); validation is one branch per rule.
+"src/jobhunt_agents/profile.py" = ["ANN401", "PLR0912"]
 "tests/**" = ["S101","S105","S106", "S603", "S607", "PLR0913", "ANN401"]
 
 [tool.pyright]

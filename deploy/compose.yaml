@@ -104,6 +104,10 @@ services:
       # ADR-0018: empty means no model work. The key lives only in .env.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       MODEL_DAILY_BUDGET_USD: ${MODEL_DAILY_BUDGET_USD:-1.00}
+      PROFILE_DIR: /app/profile
+    volumes:
+      # M3-05: the owner's skill map and search profile (git-ignored), read-only.
+      - ../data/profile:/app/profile:ro
     healthcheck:
       test: ["CMD", "python", "-m", "jobhunt_agents", "healthcheck"]
       interval: 5s
