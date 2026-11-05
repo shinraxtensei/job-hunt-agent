@@ -39,11 +39,11 @@
       "Vector search",
       "HNSW",
       "IVF",
-      "Elasticsearch",
-      "Lucene"
+      "Elasticsearch"
     ],
     "optional_skills": [
-      "Open source"
+      "Open source",
+      "Lucene"
     ],
     "min_years": null,
     "seniority": "senior",

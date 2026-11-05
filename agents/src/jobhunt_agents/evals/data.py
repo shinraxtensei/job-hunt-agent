@@ -2,6 +2,7 @@
 
     evals/labels/<id>.json     committed: what was sampled, and the owner's labels
     evals/postings/<id>.json   git-ignored, backed up: the posting as stored (payload)
+    evals/split.json           committed: dev and held-out ids (M3-04)
 
 Items are real shown leads (`p<posting id>`) plus injection fixtures (`f<posting id>-<n>`):
 a real posting with an injection appended. A fixture has no labels of its own: its
@@ -19,7 +20,7 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from jobhunt_agents.extraction import Extraction
-from jobhunt_agents.text import posting_text
+from jobhunt_agents.text import bound, posting_text
 
 FitLevel = Literal["very_strong", "strong", "good", "stretch", "no"]
 FIT_LEVELS: tuple[FitLevel, ...] = ("very_strong", "strong", "good", "stretch", "no")
@@ -201,10 +202,52 @@ class EvalSet:
         path = self.labels / f"{item.id}.json"
         path.write_text(item.model_dump_json(indent=2, exclude_none=False) + "\n")
 
+    def make_split(self, *, heldout: int, seed: int) -> dict[str, list[str]]:
+        """Splits the labelled postings into dev and held-out, round-robin over role family
+        x fit strata, and writes split.json. Fixture bases stay in dev, so dev runs carry
+        every injection check. Prompt work is judged on dev; held-out runs once at the end."""
+        rng = random.Random(seed)  # noqa: S311 - sampling, not security
+        bases = {f"p{i.fixture_of}" for i in self.items() if i.fixture_of is not None}
+        strata: dict[tuple[str, str], list[str]] = defaultdict(list)
+        for i in self.items():
+            if i.fixture_of is None and i.id not in bases:
+                strata[(i.role_family, i.fit or "")].append(i.id)
+        groups = [strata[k] for k in sorted(strata)]
+        rng.shuffle(groups)
+        for g in groups:
+            rng.shuffle(g)
+        held: list[str] = []
+        while len(held) < heldout and any(groups):
+            for g in groups:
+                if g and len(held) < heldout:
+                    held.append(g.pop())
+        real = [i.id for i in self.items() if i.fixture_of is None]
+        split = {"dev": [i for i in real if i not in held], "heldout": sorted(held)}
+        (self.dir / "split.json").write_text(json.dumps(split, indent=1) + "\n")
+        return split
+
+    def _split(self) -> dict[str, list[str]]:
+        return json.loads((self.dir / "split.json").read_text())
+
+    def scored(self, name: str) -> set[str]:
+        """The postings a run on this subset (dev, heldout or all) is scored on."""
+        split = self._split()
+        return set(split["dev"]) | set(split["heldout"]) if name == "all" else set(split[name])
+
+    def subset(self, name: str) -> list[Item]:
+        """What a run on `dev` or `heldout` sends to the model: its postings, every
+        injection fixture, and the fixtures' base postings (their outputs are what an
+        injection check compares against)."""
+        want = self.scored(name)
+        want |= {f"p{i.fixture_of}" for i in self.items() if i.fixture_of is not None}
+        return [i for i in self.items() if i.id in want or i.fixture_of is not None]
+
     def text(self, item: Item) -> str:
         """The prepared posting text (needs the local, git-ignored postings)."""
         record = json.loads((self.postings / f"{item.posting_id}.json").read_text())
         text = posting_text(
             record["source"], record["payload"], title=record["title"], location=record["location"]
         )
+        text = bound(text)  # as the agent prepares it (M3-04 AC6); the injection after,
+        # so a fixture never loses its injection to the length bound
         return f"{text}\n\n{item.injection.text}" if item.injection else text

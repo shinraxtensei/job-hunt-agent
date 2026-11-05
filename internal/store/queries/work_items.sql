@@ -11,3 +11,34 @@ WHERE work_items.content_hash <> excluded.content_hash;
 -- name: CountWorkItems :many
 -- Items by state, for `collector queue` and GET /api/queue.
 SELECT state, count(*)::bigint AS n FROM work_items GROUP BY state;
+
+-- name: CurrentPromptVersion :one
+-- The prompt version the worker runs for an agent (it records it at start-up).
+SELECT version FROM agent_prompts WHERE agent = @agent;
+
+-- name: OutdatedExtractions :many
+-- Of these postings, the ones whose current content was extracted only with a prompt
+-- older than @version (M3-04 AC7). Never-extracted postings are the queue's job.
+SELECT e.posting_id FROM extractions e
+JOIN postings p ON p.id = e.posting_id AND p.content_hash = e.content_hash
+WHERE e.posting_id = ANY(@posting_ids::bigint[])
+GROUP BY e.posting_id
+HAVING max(e.prompt_version) < @version::int;
+
+-- name: RequeueExtract :execrows
+-- Puts these postings' extract items back to pending (not one a worker holds).
+UPDATE work_items
+SET state = 'pending', attempts = 0, run_after = now(), last_error = NULL, updated_at = now()
+WHERE kind = 'extract' AND posting_id = ANY(@posting_ids::bigint[]) AND state <> 'running';
+
+-- name: AverageExtractCost :one
+-- The mean cost of a successful extraction so far, for estimates (ADR-0018's table is
+-- per token; this is per posting, measured).
+SELECT coalesce(avg(cost_usd), 0)::float8 AS usd, count(*)::bigint AS n
+FROM model_calls WHERE agent = 'extract' AND outcome = 'ok';
+
+-- name: RetryFailed :execrows
+-- M3-04 AC8: failed items of a kind back to pending, with 0 attempts and no error.
+UPDATE work_items
+SET state = 'pending', attempts = 0, run_after = now(), last_error = NULL, updated_at = now()
+WHERE state = 'failed' AND kind = @kind;

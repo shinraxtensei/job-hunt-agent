@@ -39,12 +39,9 @@
   "extraction": {
     "required_skills": [
       "Web development",
-      "JavaScript",
       "TypeScript",
-      "CSS",
       "React",
       "Flutter",
-      "REST APIs",
       "Accessibility",
       "Web performance",
       "Linux"
@@ -55,7 +52,10 @@
       "Kubernetes",
       "REST API design",
       "Performance engineering",
-      "Security"
+      "Security",
+      "JavaScript",
+      "CSS",
+      "REST APIs"
     ],
     "min_years": null,
     "seniority": "junior",
@@ -73,6 +73,7 @@
   },
   "changed_fields": [
     "required_skills",
+    "optional_skills",
     "salary"
   ],
   "labelled_by": "claude-code",

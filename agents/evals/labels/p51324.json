@@ -37,7 +37,13 @@
     "optional_skills": [
       "Healthcare data",
       "Electronic health records",
-      "Open source"
+      "Open source",
+      "Ruby on Rails",
+      "TypeScript",
+      "Java",
+      "Kotlin",
+      "Swift",
+      "React Native"
     ],
     "min_years": null,
     "seniority": "unknown",

@@ -1,0 +1,20 @@
+{
+ "gate": "all-extract-v2",
+ "field_accuracy": {
+  "required_skills": 0.69,
+  "optional_skills": 0.7,
+  "min_years": 0.97,
+  "seniority": 0.97,
+  "visa_sponsorship": 0.97,
+  "salary": 0.97,
+  "languages": 0.91,
+  "remote_policy": 0.91
+ },
+ "field_precision": {
+  "required_skills": 0.74,
+  "optional_skills": 0.76,
+  "languages": 0.91
+ },
+ "fit_agreement": 0.0,
+ "injection_pass_rate": 1.0
+}

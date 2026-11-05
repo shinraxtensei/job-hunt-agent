@@ -1,0 +1,1028 @@
+{
+ "prompt": "extract/v2.md",
+ "model": "claude-haiku-5-5",
+ "at": "2026-11-05T14:18:04+00:00",
+ "cost_usd": "0.026368",
+ "scored": [
+  "p10495",
+  "p11",
+  "p1165",
+  "p1291",
+  "p1581",
+  "p2057",
+  "p2071",
+  "p2139",
+  "p2282",
+  "p2813",
+  "p290",
+  "p2970",
+  "p3061",
+  "p3501",
+  "p35154",
+  "p3727",
+  "p3771",
+  "p3927",
+  "p3928",
+  "p3968",
+  "p40282",
+  "p4067",
+  "p4080",
+  "p4106",
+  "p4114",
+  "p41589",
+  "p4216",
+  "p4446",
+  "p4960",
+  "p4974",
+  "p51316",
+  "p51324",
+  "p5516",
+  "p5732",
+  "p5740",
+  "p9115"
+ ],
+ "outputs": {
+  "p3928": {
+   "extraction": {
+    "required_skills": [
+     "AML",
+     "Financial crime",
+     "Transaction monitoring",
+     "FEC",
+     "Python",
+     "PySpark",
+     "Looker"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+     "English"
+    ],
+    "remote_policy": "onsite"
+   }
+  },
+  "p4446": {
+   "extraction": {
+    "required_skills": [
+     "DNS",
+     "CDN",
+     "Zero Trust",
+     "Network security",
+     "Workers"
+    ],
+    "optional_skills": [
+     "Retrieval-Augmented Generation (RAG)",
+     "LLM orchestration",
+     "PCI DSS",
+     "HIPAA",
+     "SOC 2"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+     "min": 234000,
+     "max": 292000,
+     "currency": "USD",
+     "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "p51324": {
+   "extraction": {
+    "required_skills": [
+     "Python",
+     "Deep learning"
+    ],
+    "optional_skills": [
+     "Medical data",
+     "Clinical text",
+     "Electronic health records"
+    ],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+     "English"
+    ],
+    "remote_policy": "hybrid"
+   }
+  },
+  "p3727": {
+   "extraction": {
+    "required_skills": [
+     "Android",
+     "Java",
+     "Kotlin",
+     "Clean architecture",
+     "Android SDK",
+     "Unit testing",
+     "Integration testing",
+     "CI/CD",
+     "Bluetooth Low Energy",
+     "Payments",
+     "Tap to Pay"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+   }
+  },
+  "p4974": {
+   "extraction": {
+    "required_skills": [
+     "Machine learning",
+     "Statistics",
+     "Data pipelines",
+     "Streaming data"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "hybrid"
+   }
+  },
+  "p10495": {
+   "extraction": {
+    "required_skills": [
+     "React",
+     "React Native",
+     "JavaScript",
+     "CSS",
+     "CI/CD",
+     "REST APIs",
+     "Test-driven development",
+     "Frontend",
+     "Mobile development",
+     "Browser APIs",
+     "Design system",
+     "Accessibility"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+     "English"
+    ],
+    "remote_policy": "unknown"
+   }
+  },
+  "p1581": {
+   "extraction": {
+    "required_skills": [
+     "Java",
+     "Lucene",
+     "Vector search",
+     "HNSW",
+     "IVF",
+     "Search relevance"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+     "min": 128300,
+     "max": 203000,
+     "currency": "CAD",
+     "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "p2139": {
+   "extraction": {
+    "required_skills": [
+     "JavaScript",
+     "CSS",
+     "React",
+     "Flutter",
+     "TypeScript",
+     "Linux",
+     "REST APIs",
+     "Accessibility",
+     "Performance",
+     "Frontend"
+    ],
+    "optional_skills": [
+     "LXD",
+     "Docker",
+     "Kubernetes",
+     "Security"
+    ],
+    "min_years": null,
+    "seniority": "junior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+     "min": 48000,
+     "max": 70000,
+     "currency": "USD",
+     "period": "year"
+    },
+    "languages": [
+     "English"
+    ],
+    "remote_policy": "remote"
+   }
+  },
+  "p4067": {
+   "extraction": {
+    "required_skills": [
+     "Kotlin",
+     "Android",
+     "MVVM",
+     "Jetpack Compose",
+     "Room",
+     "Dagger",
+     "RxJava",
+     "Retrofit",
+     "Moshi",
+     "Coroutines",
+     "Espresso"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "hybrid"
+   }
+  },
+  "p3061": {
+   "extraction": {
+    "required_skills": [
+     "Developmental editing",
+     "Line editing",
+     "Copyediting",
+     "Fact-checking",
+     "Proofreading",
+     "Permissions",
+     "Editorial production",
+     "Project management"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "p2071": {
+   "extraction": {
+    "required_skills": [
+     "Python",
+     "Distributed systems"
+    ],
+    "optional_skills": [
+     "Linux",
+     "Kubernetes",
+     "Cloud computing",
+     "OpenStack"
+    ],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+   }
+  },
+  "p51316": {
+   "extraction": {
+    "required_skills": [
+     "Technical onboarding",
+     "Technical support",
+     "Stakeholder management",
+     "Customer support",
+     "AI tools"
+    ],
+    "optional_skills": [
+     "Telephony"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+     "min": 58000,
+     "max": 63000,
+     "currency": "EUR",
+     "period": "year"
+    },
+    "languages": [
+     "German",
+     "English"
+    ],
+    "remote_policy": "hybrid"
+   }
+  },
+  "p2970": {
+   "extraction": {
+    "required_skills": [
+     "Full stack",
+     "Frontend",
+     "Backend",
+     "Data modeling"
+    ],
+    "optional_skills": [
+     "Financial systems"
+    ],
+    "min_years": 2,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+   }
+  },
+  "p9115": {
+   "extraction": {
+    "required_skills": [
+     "Full-stack engineering",
+     "Frontend",
+     "Backend",
+     "TypeScript",
+     "GraphQL",
+     "Temporal",
+     "Rust",
+     "REST APIs"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+     "English"
+    ],
+    "remote_policy": "remote"
+   }
+  },
+  "p3968": {
+   "extraction": {
+    "required_skills": [
+     "SQL",
+     "Python",
+     "Airflow",
+     "PySpark",
+     "Pandas",
+     "Hadoop",
+     "Jupyter",
+     "A/B testing",
+     "Statistical analysis"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+     "min": 169000,
+     "max": 232000,
+     "currency": "USD",
+     "period": "year"
+    },
+    "languages": [
+     "English"
+    ],
+    "remote_policy": "onsite"
+   }
+  },
+  "p3501": {
+   "extraction": {
+    "required_skills": [
+     "Go",
+     "Backend",
+     "Kafka",
+     "Distributed systems",
+     "API design",
+     "PostgreSQL",
+     "Snowflake",
+     "Event sourcing",
+     "CDC",
+     "Fintech",
+     "Payments",
+     "Testing",
+     "Observability",
+     "Incident response"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+   }
+  },
+  "p4114": {
+   "extraction": {
+    "required_skills": [
+     "Reception"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+     "German",
+     "English"
+    ],
+    "remote_policy": "unknown"
+   }
+  },
+  "p5732": {
+   "extraction": {
+    "required_skills": [
+     "Haskell",
+     "C",
+     "SQL",
+     "PL/pgSQL",
+     "PostgreSQL",
+     "PostgREST",
+     "Hasql",
+     "Linux",
+     "Backend"
+    ],
+    "optional_skills": [],
+    "min_years": 3,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+   }
+  },
+  "p4216": {
+   "extraction": {
+    "required_skills": [
+     "SQL",
+     "Python",
+     "Looker",
+     "Amplitude",
+     "A/B testing",
+     "Machine learning",
+     "AI",
+     "Gemini",
+     "Data visualisation"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": {
+     "min": 32000,
+     "max": 48000,
+     "currency": "EUR",
+     "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "p4960": {
+   "extraction": {
+    "required_skills": [
+     "Reinforcement learning",
+     "AI agents",
+     "Post-training",
+     "Generative modeling",
+     "Simulated environments",
+     "Synthetic data",
+     "Evaluation frameworks"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "lead",
+    "visa_sponsorship": "unknown",
+    "salary": {
+     "min": 244000,
+     "max": 305000,
+     "currency": "USD",
+     "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "hybrid"
+   }
+  },
+  "p3927": {
+   "extraction": {
+    "required_skills": [
+     "Generative AI",
+     "LLMs"
+    ],
+    "optional_skills": [
+     "Machine learning",
+     "On-premise infrastructure"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+   }
+  },
+  "p2813": {
+   "extraction": {
+    "required_skills": [
+     "Device driver development",
+     "Embedded systems",
+     "Operating systems",
+     "Kernel development",
+     "Android",
+     "Automated testing",
+     "Build systems",
+     "Telemetry",
+     "C",
+     "C++",
+     "Kotlin",
+     "Java"
+    ],
+    "optional_skills": [
+     "ARM",
+     "Microcontrollers",
+     "EMV",
+     "Cryptography",
+     "POS hardware",
+     "PCI"
+    ],
+    "min_years": 2,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+     "English",
+     "Mandarin Chinese"
+    ],
+    "remote_policy": "unknown"
+   }
+  },
+  "p40282": {
+   "extraction": {
+    "required_skills": [
+     "Payment systems",
+     "Microsoft Office",
+     "Fraud detection",
+     "KYC",
+     "Chargeback management",
+     "Visa",
+     "Mastercard",
+     "Data analysis"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "p2057": {
+   "extraction": {
+    "required_skills": [
+     "Infrastructure as Code",
+     "GitOps",
+     "Site reliability engineering",
+     "CI/CD",
+     "Python",
+     "Linux",
+     "Linux networking",
+     "Routing",
+     "Firewalls",
+     "Linux storage",
+     "Ceph",
+     "Databases",
+     "Cloud computing",
+     "Unit testing",
+     "Version control",
+     "Agile",
+     "Ubuntu",
+     "Debian"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+     "English"
+    ],
+    "remote_policy": "remote"
+   }
+  },
+  "p2282": {
+   "extraction": {
+    "required_skills": [
+     "Frontend",
+     "Accessibility",
+     "Artificial intelligence"
+    ],
+    "optional_skills": [
+     "Vue",
+     "React",
+     "Angular",
+     "TypeScript",
+     "JavaScript",
+     "PostgreSQL",
+     "Redis",
+     "Object storage",
+     "REST APIs",
+     "GraphQL",
+     "Kubernetes",
+     "Google Kubernetes Engine",
+     "Docker",
+     "Google Cloud Platform",
+     "Prometheus",
+     "Sentry",
+     "Git",
+     "GitLab Runner",
+     "GitLab CI/CD"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+   }
+  },
+  "p4080": {
+   "extraction": {
+    "required_skills": [
+     "Swift",
+     "SwiftUI",
+     "iOS"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "hybrid"
+   }
+  },
+  "p5740": {
+   "extraction": {
+    "required_skills": [
+     "Rust",
+     "Backend",
+     "SQL",
+     "PostgreSQL",
+     "SQLite",
+     "Turso",
+     "Relational databases"
+    ],
+    "optional_skills": [
+     "Supabase"
+    ],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+   }
+  },
+  "p1165": {
+   "extraction": {
+    "required_skills": [
+     "Object-oriented programming"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "junior",
+    "visa_sponsorship": "no",
+    "salary": null,
+    "languages": [
+     "English"
+    ],
+    "remote_policy": "hybrid"
+   }
+  },
+  "p5516": {
+   "extraction": {
+    "required_skills": [
+     "Full stack",
+     "Frontend",
+     "Backend",
+     "TypeScript",
+     "Serverless",
+     "EKS",
+     "SQS",
+     "MongoDB",
+     "Node.js",
+     "React",
+     "Billing",
+     "Credit card processing",
+     "Usage-based billing",
+     "Metering",
+     "CSP marketplaces",
+     "AWS",
+     "GCP",
+     "Azure",
+     "Invoicing",
+     "Sales tax",
+     "Auditing",
+     "Distributed systems"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+   }
+  },
+  "p35154": {
+   "extraction": {
+    "required_skills": [
+     "JavaScript",
+     "TypeScript",
+     "React",
+     "Node.js",
+     "Frontend",
+     "Backend",
+     "System design"
+    ],
+    "optional_skills": [
+     "React Flow",
+     "Elastic stack",
+     "OpenTelemetry",
+     "Go",
+     "Kubernetes"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+     "min": 61100,
+     "max": 96600,
+     "currency": "EUR",
+     "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "p11": {
+   "extraction": {
+    "required_skills": [
+     "Java",
+     "SQL",
+     "Data warehousing",
+     "Data pipelines",
+     "Backend",
+     "Data lineage",
+     "Metadata management",
+     "Data quality",
+     "Data governance",
+     "Data orchestration",
+     "OpenLineage",
+     "Apache Iceberg"
+    ],
+    "optional_skills": [
+     "Apache Beam",
+     "Apache Flink",
+     "Apache Spark"
+    ],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "hybrid"
+   }
+  },
+  "p41589": {
+   "extraction": {
+    "required_skills": [
+     "Ruby on Rails",
+     "GraphQL",
+     "REST APIs",
+     "Authorization",
+     "Backend"
+    ],
+    "optional_skills": [
+     "PostgreSQL",
+     "Rust",
+     "gRPC",
+     "Protocol Buffers",
+     "Cedar",
+     "Zanzibar",
+     "Go",
+     "Service-oriented architecture"
+    ],
+    "min_years": 2,
+    "seniority": "mid",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+   }
+  },
+  "p290": {
+   "extraction": {
+    "required_skills": [],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "p4106": {
+   "extraction": {
+    "required_skills": [
+     "JVM",
+     "AWS",
+     "GitHub Actions",
+     "CI/CD",
+     "Kubernetes",
+     "Service-oriented architecture",
+     "Backend"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "p1291": {
+   "extraction": {
+    "required_skills": [
+     "GCP",
+     "BigQuery",
+     "dbt",
+     "SQL",
+     "Python",
+     "HRIS",
+     "ATS",
+     "Workday",
+     "Greenhouse",
+     "Dashboards",
+     "Data visualization",
+     "Looker",
+     "Tableau",
+     "Streamlit",
+     "Plotly"
+    ],
+    "optional_skills": [
+     "LLMs"
+    ],
+    "min_years": 2,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "p3771": {
+   "extraction": {
+    "required_skills": [
+     "Go",
+     "REST APIs",
+     "Docker",
+     "AWS",
+     "Kubernetes",
+     "PostgreSQL",
+     "Kafka",
+     "SQL",
+     "NoSQL",
+     "System design",
+     "Data modeling",
+     "Backend"
+    ],
+    "optional_skills": [],
+    "min_years": 3,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "f3928-1": {
+   "extraction": {
+    "required_skills": [
+     "AML",
+     "Compliance",
+     "Financial crime",
+     "Transaction monitoring",
+     "Python",
+     "PySpark",
+     "Looker"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+     "English"
+    ],
+    "remote_policy": "onsite"
+   }
+  },
+  "f4446-2": {
+   "extraction": {
+    "required_skills": [
+     "DNS",
+     "CDN",
+     "Zero Trust",
+     "Network Security",
+     "Cloudflare Workers"
+    ],
+    "optional_skills": [
+     "Technical Enablement",
+     "LLM orchestration",
+     "RAG",
+     "Model-access controls",
+     "PCI DSS",
+     "HIPAA",
+     "SOC 2"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+     "min": 234000,
+     "max": 292000,
+     "currency": "USD",
+     "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "unknown"
+   }
+  },
+  "f51324-3": {
+   "extraction": {
+    "required_skills": [
+     "Python",
+     "Deep learning frameworks"
+    ],
+    "optional_skills": [
+     "Healthcare data",
+     "Electronic health records"
+    ],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+     "English"
+    ],
+    "remote_policy": "hybrid"
+   }
+  },
+  "f3727-4": {
+   "extraction": {
+    "required_skills": [
+     "Android",
+     "Java",
+     "Kotlin",
+     "Clean architecture",
+     "Android SDK",
+     "Bluetooth Low Energy",
+     "Unit testing",
+     "Integration testing",
+     "CI/CD"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+   }
+  }
+ }
+}

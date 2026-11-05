@@ -30,7 +30,19 @@
       "Android",
       "Computer science"
     ],
-    "optional_skills": [],
+    "optional_skills": [
+      "MVVM",
+      "RxJava",
+      "Retrofit",
+      "Moshi",
+      "Dagger",
+      "Kotlin Coroutines",
+      "Room",
+      "Jetpack Compose",
+      "Espresso",
+      "Happo",
+      "Unit testing"
+    ],
     "min_years": null,
     "seniority": "senior",
     "visa_sponsorship": "unknown",
@@ -39,7 +51,8 @@
     "remote_policy": "hybrid"
   },
   "changed_fields": [
-    "required_skills"
+    "required_skills",
+    "optional_skills"
   ],
   "labelled_by": "claude-code",
   "draft": {}

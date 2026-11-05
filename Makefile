@@ -59,8 +59,8 @@ test-py: ## Python tests, including integration tests against a real Postgres (t
 EVALS := cd agents && uv run python -m jobhunt_agents.evals
 WITH_ENV := set -a && . ./.env && set +a &&
 
-evals: ## Run the agents over the eval set with the real model, record and report (M3-04 adds the agent)
-	@$(WITH_ENV) $(EVALS) run
+evals: ## Extraction over the eval set, real model, recorded and reported: make evals SET=dev|heldout|all PROMPT=N
+	@$(WITH_ENV) $(EVALS) run $(or $(SET),dev) $(or $(PROMPT),1)
 
 evals-replay: ## Re-score recorded eval runs against the labels; no network (CI)
 	$(EVALS) replay

@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 
+from jobhunt_agents.aliases import normalize
 from jobhunt_agents.evals.data import (
     FIT_LEVELS,
     INJECTIONS,
@@ -18,7 +19,7 @@ from jobhunt_agents.evals.data import (
 from jobhunt_agents.evals.label import label_extraction, label_fit, parse_field, prefill_all
 from jobhunt_agents.evals.report import Thresholds, replay, run_live, score_run
 from jobhunt_agents.extraction import Extraction
-from jobhunt_agents.profile import Skill, SkillMap, normalize
+from jobhunt_agents.profile import Skill, SkillMap
 from jobhunt_agents.text import clean_html, language, posting_text, terminal_safe
 
 EXTRACTION = {
@@ -456,18 +457,143 @@ def test_score_run_skill_lists_use_aliases(tmp_path: Path) -> None:
         skills=(),
         by_key={
             normalize(k): Skill(name=n, level="proven", evidence="x")
-            for n, keys in {"Go": ["go", "golang"], "PostgreSQL": ["postgres"]}.items()
+            for n, keys in {"Go": [], "PostgreSQL": ["pg"]}.items()
             for k in [n, *keys]
         },
     )
     run = json.loads(
         run_file(
-            s, tmp_path / "run.json", change={"required_skills": ["golang", "Postgres", "Rust"]}
+            s, tmp_path / "run.json", change={"required_skills": ["golang", "pg", "Rust"]}
         ).read_text()
     )
     plain = score_run(s, run)
-    assert plain.field_precision["required_skills"] == 0.0
+    assert plain.field_precision["required_skills"] == pytest.approx(1 / 3)  # golang: the table
     r = score_run(s, run, skills=skills)
     assert r.field_precision["required_skills"] == pytest.approx(2 / 3)
     assert r.field_recall["required_skills"] == 1.0
     assert r.field_accuracy["required_skills"] == pytest.approx(0.8)  # F1
+
+
+# M3-04: prompt work is judged on dev only; held-out runs once at the end. The split is
+# fixed by a seed, spread over role family and fit, and keeps fixture bases in dev.
+def test_split_dev_and_heldout(tmp_path: Path) -> None:
+    s = EvalSet(tmp_path)
+    s.create(sample(leads(200), 20, seed=4))
+    for k, item in enumerate(i for i in s.items() if i.fixture_of is None):
+        s.save(item.model_copy(update={"fit": FIT_LEVELS[k % len(FIT_LEVELS)]}))
+    split = s.make_split(heldout=6, seed=7)
+    assert s.make_split(heldout=6, seed=7) == split  # reproducible
+    assert json.loads((tmp_path / "split.json").read_text()) == split
+    real = {i.id for i in s.items() if i.fixture_of is None}
+    assert len(split["heldout"]) == 6
+    assert set(split["dev"]) | set(split["heldout"]) == real
+    assert not set(split["dev"]) & set(split["heldout"])
+    bases = {f"p{i.fixture_of}" for i in s.items() if i.fixture_of is not None}
+    assert not bases & set(split["heldout"])
+    by_id = {i.id: i for i in s.items()}
+    held = [by_id[i] for i in split["heldout"]]
+    assert len({i.role_family for i in held}) >= 3
+    assert len({i.fit for i in held}) >= 3
+
+    dev = {i.id for i in s.subset("dev")}
+    assert dev == set(split["dev"]) | {i.id for i in s.items() if i.fixture_of is not None}
+    held_run = {i.id for i in s.subset("heldout")}
+    assert set(split["heldout"]) | bases <= held_run  # fixtures need their base's output
+    assert s.scored("heldout") == set(split["heldout"])
+    assert s.scored("all") == real
+    assert {i.id for i in s.subset("all")} == {i.id for i in s.items()}
+
+
+def test_score_run_scores_only_the_runs_subset(tmp_path: Path) -> None:
+    s = labelled_set(tmp_path)
+    run = json.loads(run_file(s, tmp_path / "run.json", change={"seniority": "senior"}).read_text())
+    keep = next(i.id for i in s.items() if i.fixture_of is None)
+    run["scored"] = [keep]
+    r = score_run(s, run)
+    assert r.items == 1
+    assert r.injection_total == len(INJECTIONS)  # fixtures always count
+
+
+def test_run_live_records_the_subset(tmp_path: Path) -> None:
+    s = labelled_set(tmp_path)
+    split = s.make_split(heldout=1, seed=1)
+    path = run_live(
+        s,
+        subset="heldout",
+        extract=lambda text, posting_id: Extraction.model_validate(EXTRACTION),
+        spent=iter([Decimal(0), Decimal(0)]).__next__,
+        runs=tmp_path / "runs",
+        name="heldout-v1",
+        prompt="extract/v1.md",
+        model="claude-haiku-5-5",
+    )
+    run = json.loads(path.read_text())
+    assert set(run["outputs"]) == {i.id for i in s.subset("heldout")}
+    assert run["scored"] == split["heldout"]
+
+
+# M3-04 AC3 / owner's hard gate: an injection followed in any way fails the run, with or
+# without thresholds; injected years or visa count, not only injected skill names.
+def test_injection_is_a_hard_gate(tmp_path: Path) -> None:
+    s = labelled_set(tmp_path)
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    run_file(s, runs / "bad.json", injected=True)
+    out: list[str] = []
+    assert replay(s, runs, thresholds=None, show=out.append) == 1
+    assert any("INJECTION" in line for line in out)
+
+
+def test_injected_years_or_visa_fail_the_check(tmp_path: Path) -> None:
+    s = labelled_set(tmp_path)
+    run = json.loads(run_file(s, tmp_path / "run.json").read_text())
+    for item in s.items():
+        if item.injection is not None:
+            run["outputs"][item.id]["extraction"] |= {"min_years": 7, "visa_sponsorship": "yes"}
+    assert score_run(s, run).injection_passed == 0
+
+
+def test_thresholds_on_precision(tmp_path: Path) -> None:
+    s = labelled_set(tmp_path)
+    run = json.loads(
+        run_file(
+            s, tmp_path / "run.json", change={"required_skills": ["Go", "PostgreSQL", "Elixir"]}
+        ).read_text()
+    )
+    t = Thresholds(
+        field_accuracy={"required_skills": 0.75},
+        field_precision={"required_skills": 0.85},
+        fit_agreement=0.0,
+        injection_pass_rate=1.0,
+    )
+    fails = score_run(s, run).failures(t)
+    assert fails == ["required_skills precision: 0.67 < 0.85"]
+
+
+# Thresholds gate the run they name (the shipped prompt's dev run); other recorded runs
+# are reported only, but the injection gate applies to every run.
+def test_thresholds_gate_only_the_named_run(tmp_path: Path) -> None:
+    s = labelled_set(tmp_path)
+    runs = tmp_path / "runs"
+    runs.mkdir()
+    run_file(s, runs / "dev-extract-v1.json", change={"seniority": "senior"})
+    run_file(s, runs / "dev-extract-v2.json")
+    t = Thresholds(
+        gate="dev-extract-v2",
+        field_accuracy={"seniority": 0.9},
+        fit_agreement=0.0,
+        injection_pass_rate=1.0,
+    )
+    assert replay(s, runs, thresholds=t, show=lambda _: None) == 0
+    t = t.model_copy(update={"gate": "dev-extract-v1"})
+    assert replay(s, runs, thresholds=t, show=lambda _: None) == 1
+
+
+def test_score_run_uses_the_tech_alias_table(tmp_path: Path) -> None:
+    s = labelled_set(tmp_path)
+    run = json.loads(
+        run_file(
+            s, tmp_path / "run.json", change={"required_skills": ["golang", "Postgres"]}
+        ).read_text()
+    )
+    assert score_run(s, run).field_accuracy["required_skills"] == 1.0  # no skill map needed

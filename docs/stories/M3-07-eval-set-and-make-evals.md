@@ -51,7 +51,11 @@ Strictly from the posting text; nothing inferred. Agreed with the owner on 2026-
   technologies the duties say the person will use day to day (e.g. "Build TypeScript +
   GraphQL APIs" → TypeScript, GraphQL). Tools **and** named domains (AML, payments,
   vector search).
-- **optional_skills**: only items marked nice-to-have / bonus / a plus / preferred.
+- **optional_skills**: items marked nice-to-have / bonus / a plus / preferred, **and**
+  the technologies of a "team stack / our app uses / we build on" section (a description
+  of the team's tools rather than of the candidate or the duties), unless the
+  requirements or duties name them too, which makes them required (added 2026-11-05,
+  M3-04 review).
 - **Skill names are canonical and matchable**: the kind of name a skill map holds
   (a technology, tool or named domain). No soft skills and no activity phrases
   ("incremental refactoring", "research leadership"); rewrite to a real skill name
@@ -70,8 +74,10 @@ the pre-fill (lists compared as sets of folded names). The CLI saves every answe
 is given (`draft`), so quitting mid-posting loses nothing.
 
 **Scoring skill lists**: precision, recall and F1 per item, averaged, after folding names
-like M3-05 (case, accents, dots and dashes) and resolving them through the skill map's
-names and aliases when `PROFILE_DIR` has one (the report says which; CI has no personal
+like M3-05 (case, accents, dots and dashes), resolving them through the committed
+tech-alias table (`agents/src/jobhunt_agents/tech_aliases.yaml`: GCP = Google Cloud
+Platform, K8s = Kubernetes, ...; never tuned against held-out) and then through the skill
+map's names and aliases when `PROFILE_DIR` has one (the report says which; CI has no personal
 skill map, so it folds only). Exact-string matching would punish wording, not mistakes.
 
 ## Out of scope

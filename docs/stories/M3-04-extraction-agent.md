@@ -1,6 +1,6 @@
 # M3-04: Extraction agent
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M3 — Extraction and scoring
 - **Linear:** [HAM-43](https://linear.app/hamid-corp/issue/HAM-43/m3-04-extraction-agent)
 - **Estimate:** 1 day
@@ -41,7 +41,8 @@ instructions, including when it is written to look like instructions.
    **Then** no second model call is made (idempotent on `content_hash` + prompt version).
 5. **Given** the prompt
    **When** it changes
-   **Then** it is a new versioned file in `agents/extract/prompts/`, and `make evals`
+   **Then** it is a new versioned file in `agents/src/jobhunt_agents/prompts/extract/`
+   (the CLAUDE.md convention), and `make evals`
    (M3-07) must not get worse. The first version's eval run is the baseline the M3-07
    thresholds are set from.
 6. **Given** a posting description (HTML for Greenhouse and Lever lists, plain text for

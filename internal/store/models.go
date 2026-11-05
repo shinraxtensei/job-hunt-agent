@@ -8,6 +8,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AgentPrompt struct {
+	Agent     string
+	Version   int32
+	UpdatedAt pgtype.Timestamptz
+}
+
 type CollectorRun struct {
 	ID                 int64
 	StartedAt          pgtype.Timestamptz
@@ -40,6 +46,16 @@ type Company struct {
 	CreatedAt pgtype.Timestamptz
 	Track     pgtype.Text
 	Active    bool
+}
+
+type Extraction struct {
+	ID            int64
+	PostingID     int64
+	ContentHash   []byte
+	PromptVersion int32
+	Model         string
+	Data          []byte
+	CreatedAt     pgtype.Timestamptz
 }
 
 type Job struct {

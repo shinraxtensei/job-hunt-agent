@@ -5,19 +5,20 @@
 
 Two personal, git-ignored YAML files in PROFILE_DIR, validated with line numbers before
 anything uses them. Skill names from postings resolve through names and aliases,
-ignoring case, accents and punctuation. The content hash is the profile's version.
+ignoring case, accents and punctuation, and through the committed tech-alias table
+(aliases.py). The content hash is the profile's version.
 """
 
 import hashlib
 import logging
-import re
-import unicodedata
 from pathlib import Path
 from typing import Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict
 from ruamel.yaml import YAML
 from ruamel.yaml.error import MarkedYAMLError
+
+from jobhunt_agents.aliases import canon
 
 log = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ class SkillMap(_Frozen):
 
     def match(self, name: str) -> Skill | None:
         """The skill a name from a posting refers to, or None."""
-        return self.by_key.get(normalize(name))
+        return self.by_key.get(canon(name))
 
 
 class SearchProfile(_Frozen):
@@ -74,16 +75,6 @@ class ProfileError(Exception):
     def __init__(self, problems: list[str]) -> None:
         super().__init__("invalid profile:\n  " + "\n  ".join(problems))
         self.problems = problems
-
-
-_SEP = re.compile(r"[\s\-_.]+")
-
-
-def normalize(s: str) -> str:
-    """Case, accents and separators don't matter: "Développeur Node.js" ~ "developpeur node-js"."""
-    s = unicodedata.normalize("NFKD", s)
-    s = "".join(c for c in s if not unicodedata.combining(c))
-    return _SEP.sub(" ", s.casefold()).strip()
 
 
 class _Problems:
@@ -163,7 +154,7 @@ def _skill_map(text: str, problems: _Problems) -> SkillMap | None:
         if level == "proven" and not evidence:
             problems.add(line, f"proven skill {name!r} needs evidence (where the work is)")
         for key, kline in [(name, line)] + [(a, _line_of_key(m, "aliases")) for a in aliases]:
-            n = normalize(key)
+            n = canon(key)  # two names for one tech (tech_aliases.yaml) are one skill
             if n in owners and owners[n][0] != name:
                 other, oline = owners[n]
                 what = "name" if key == name else "alias"
@@ -177,7 +168,7 @@ def _skill_map(text: str, problems: _Problems) -> SkillMap | None:
                 evidence=evidence.strip() if isinstance(evidence, str) else None,
             )
         )
-    by_key = {n: s for s in skills for n in map(normalize, (s.name, *s.aliases))}
+    by_key = {n: s for s in skills for n in map(canon, (s.name, *s.aliases))}
     return SkillMap(skills=tuple(skills), by_key=by_key)
 
 

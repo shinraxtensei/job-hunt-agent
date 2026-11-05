@@ -38,3 +38,13 @@ func Count(ctx context.Context, db store.DBTX) (Counts, error) {
 	}
 	return c, nil
 }
+
+// RetryFailed puts the failed items of a kind back to pending with 0 attempts and no
+// error (M3-04 AC8), e.g. after a bug fix; it returns how many.
+func RetryFailed(ctx context.Context, db store.DBTX, kind string) (int, error) {
+	n, err := store.New(db).RetryFailed(ctx, kind)
+	if err != nil {
+		return 0, fmt.Errorf("retrying failed items: %w", err)
+	}
+	return int(n), nil
+}

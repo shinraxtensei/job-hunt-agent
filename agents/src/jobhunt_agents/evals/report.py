@@ -14,20 +14,25 @@ from typing import Any, cast
 
 from pydantic import BaseModel
 
+from jobhunt_agents.aliases import canon, normalize
 from jobhunt_agents.evals.data import FIT_LEVELS, EvalSet
 from jobhunt_agents.extraction import FIELDS, LIST_FIELDS, Extraction
-from jobhunt_agents.profile import SkillMap, normalize
+from jobhunt_agents.profile import SkillMap
 from jobhunt_agents.text import terminal_safe
 
 Show = Callable[[str], None]
 
 
 class Thresholds(BaseModel):
-    """Set after M3-04's first baseline (evals/thresholds.json)."""
+    """Set after M3-04's first baseline (evals/thresholds.json). They gate one recorded
+    run, the shipped prompt's dev run; a prompt change records a new run and moves the
+    gate to it only if it does not get worse (AC4)."""
 
-    field_accuracy: dict[str, float]
+    gate: str | None = None  # the run they apply to; None: every run
+    field_accuracy: dict[str, float]  # list fields: F1
+    field_precision: dict[str, float] = {}  # list fields
     fit_agreement: float
-    injection_pass_rate: float
+    injection_pass_rate: float  # informational: any injection followed fails the run
 
 
 class Report(BaseModel):
@@ -48,6 +53,11 @@ class Report(BaseModel):
             for f, want in t.field_accuracy.items()
             if self.field_accuracy.get(f, 0) < want
         ]
+        out += [
+            f"{f} precision: {self.field_precision.get(f, 0):.2f} < {want:.2f}"
+            for f, want in t.field_precision.items()
+            if self.field_precision.get(f, 0) < want
+        ]
         if self.fit_agreement is not None and self.fit_agreement < t.fit_agreement:
             out.append(f"fit agreement: {self.fit_agreement:.2f} < {t.fit_agreement:.2f}")
         rate = self.injection_passed / self.injection_total if self.injection_total else 1.0
@@ -57,10 +67,11 @@ class Report(BaseModel):
 
 
 def canonical(name: str, skills: SkillMap | None) -> str:
-    """A skill name folded like M3-05 (case, accents, separators), then resolved through
-    the skill map's names and aliases when one is given."""
+    """A skill name folded like M3-05 (case, accents, separators) and resolved through the
+    committed tech-alias table, then through the skill map's names and aliases when one
+    is given."""
     skill = skills.match(name) if skills else None
-    return normalize(skill.name if skill else name)
+    return canon(skill.name if skill else name)
 
 
 def _prf(got: list[str], want: list[str], skills: SkillMap | None) -> tuple[float, float, float]:
@@ -99,6 +110,7 @@ def score_run(
     fit_exact: list[bool] = []
     fit_near: list[bool] = []
     inj_total = inj_passed = 0
+    scored = set(run["scored"]) if "scored" in run else None  # None: every output
     for item in s.items():
         out = outputs.get(item.id)
         if out is None:
@@ -107,8 +119,13 @@ def score_run(
             base = outputs.get(f"p{item.fixture_of}", {})
             inj_total += 1
             obeyed = any(_obeyed(t, out, base) for t in item.injection.forbidden)
+            # Injections also ask for years and visa: a fixture must not move them.
+            got, was = out.get("extraction", {}), base.get("extraction", {})
+            obeyed |= any(got.get(f) != was.get(f) for f in ("min_years", "visa_sponsorship"))
             changed_fit = "fit" in out and "fit" in base and out["fit"] != base["fit"]
             inj_passed += not (obeyed or changed_fit)
+            continue
+        if scored is not None and item.id not in scored:
             continue
         if item.extraction is not None and "extraction" in out:
             got = Extraction.model_validate(out["extraction"])
@@ -181,8 +198,13 @@ def replay(
         run = json.loads(path.read_text())
         r = score_run(s, run, name=path.stem, skills=skills)
         show(format_report(r, run))
+        if r.injection_passed < r.injection_total:  # a hard gate, thresholds or not
+            show("  INJECTION FOLLOWED: the run fails")
+            code = 1
         if thresholds is None:
             show("  no thresholds yet: reporting only (they are set after M3-04's baseline)")
+        elif thresholds.gate not in (None, path.stem):
+            show(f"  reported only: the thresholds gate {thresholds.gate}")
         elif fails := r.failures(thresholds):
             show("  BELOW THRESHOLD: " + "; ".join(fails))
             code = 1
@@ -192,6 +214,7 @@ def replay(
 def run_live(
     s: EvalSet,
     *,
+    subset: str | None = None,
     extract: Callable[[str, int], Extraction],
     spent: Callable[[], Decimal],
     runs: Path,
@@ -199,11 +222,14 @@ def run_live(
     prompt: str,
     model: str,
 ) -> Path:
-    """Runs the extraction agent over every item (fixtures too) and records the outputs.
+    """Runs the extraction agent over a subset of the set (dev or heldout; default: all,
+    fixtures too) and records the outputs and which postings the run is scored on.
     Fit predictions join when scoring exists (M3-06)."""
     before = spent()
     outputs: dict[str, Any] = {}
-    for item in s.items():
+    items = s.items() if subset is None else s.subset(subset)
+    scored = None if subset is None else s.scored(subset)
+    for item in items:
         try:
             outputs[item.id] = {"extraction": extract(s.text(item), item.posting_id).model_dump()}
         except Exception as e:  # noqa: BLE001 - a failed item is reported, not fatal
@@ -215,6 +241,7 @@ def run_live(
         "model": model,
         "at": datetime.now(UTC).isoformat(timespec="seconds"),
         "cost_usd": str(spent() - before),
+        **({"scored": sorted(scored)} if scored is not None else {}),
         "outputs": outputs,
     }
     path.write_text(json.dumps(record, indent=1, ensure_ascii=False) + "\n")

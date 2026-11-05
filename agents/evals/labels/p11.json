@@ -42,14 +42,14 @@
       "Metadata management",
       "Data quality",
       "Data governance",
-      "Data lineage",
-      "OpenLineage",
-      "Apache Iceberg"
+      "Data lineage"
     ],
     "optional_skills": [
       "Apache Beam",
       "Apache Flink",
-      "Apache Spark"
+      "Apache Spark",
+      "OpenLineage",
+      "Apache Iceberg"
     ],
     "min_years": null,
     "seniority": "unknown",
@@ -60,6 +60,7 @@
   },
   "changed_fields": [
     "required_skills",
+    "optional_skills",
     "remote_policy"
   ],
   "labelled_by": "claude-code",

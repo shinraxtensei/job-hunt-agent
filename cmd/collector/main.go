@@ -14,7 +14,12 @@
 //	collector enqueue          queue an extract item for every lead the default preset
 //	                           shows that has none for its content (ADR-0001); run, add
 //	                           and the worker's start do this too
+//	collector enqueue --reextract [--dry-run]
+//	                           re-queue the shown postings extracted with an older prompt,
+//	                           after printing how many and the estimated cost (M3-04)
 //	collector queue            work items by state
+//	collector queue retry --failed [--kind extract]
+//	                           failed items back to pending with 0 attempts (M3-04)
 //
 // Environment: DATABASE_URL (app role, required); COLLECTOR_CONCURRENCY (default 8);
 // COLLECTOR_HOST_INTERVAL (minimum gap per host, default and minimum 1s);
@@ -51,7 +56,7 @@ import (
 )
 
 const (
-	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify [--report-unknown] | collector preview <preset> | collector add <url> [--title T --company C --location L] | collector enqueue | collector queue"
+	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify [--report-unknown] | collector preview <preset> | collector add <url> [--title T --company C --location L] | collector enqueue [--reextract [--dry-run]] | collector queue [retry --failed [--kind extract]]"
 
 	// normaliseBatch is how many postings `collector normalise` writes per transaction.
 	normaliseBatch = 500
@@ -141,6 +146,27 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 		}
 		defer pool.Close()
 		return reconcile(ctx, log, pool)
+
+	case "enqueue --reextract", "enqueue --reextract --dry-run":
+		pool, err := pgxpool.New(ctx, dsn)
+		if err != nil {
+			return 1, fmt.Errorf("connecting to database: %w", err)
+		}
+		defer pool.Close()
+		return reextract(ctx, pool, strings.HasSuffix(strings.Join(args, " "), "--dry-run"))
+
+	case "queue retry --failed", "queue retry --failed --kind extract":
+		pool, err := pgxpool.New(ctx, dsn)
+		if err != nil {
+			return 1, fmt.Errorf("connecting to database: %w", err)
+		}
+		defer pool.Close()
+		n, err := queue.RetryFailed(ctx, pool, "extract") // the only kind so far
+		if err != nil {
+			return 1, err
+		}
+		fmt.Printf("retrying %d failed extract items\n", n)
+		return 0, nil
 
 	case "queue":
 		pool, err := pgxpool.New(ctx, dsn)
@@ -354,6 +380,35 @@ func add(ctx context.Context, log *slog.Logger, dsn, leverURL string, args []str
 		fmt.Printf("added %s, id %d\n", kind, res.PostingID)
 	}
 	return reconcile(ctx, log, pool)
+}
+
+// reextract re-queues the shown postings extracted with an older prompt (M3-04 AC7),
+// after printing how many and the estimated cost; a dry run only prints.
+func reextract(ctx context.Context, pool *pgxpool.Pool, dryRun bool) (int, error) {
+	p, err := preset.Load(filepath.Join(presetsDir, "default.yaml"))
+	if err != nil {
+		return 1, err
+	}
+	// The count and estimate come from a dry run first, so they print before anything
+	// changes.
+	res, err := collector.Reextract(ctx, pool, p, true)
+	if err != nil {
+		return 1, err
+	}
+	cost := "unknown (no successful extraction logged yet)"
+	if res.CostKnown {
+		cost = fmt.Sprintf("~$%.4f", res.EstimatedUSD)
+	}
+	fmt.Printf("%d shown postings were extracted with a prompt older than v%d; estimated cost %s\n", res.N, res.Version, cost)
+	if dryRun || res.N == 0 {
+		return 0, nil
+	}
+	res, err = collector.Reextract(ctx, pool, p, false)
+	if err != nil {
+		return 1, err
+	}
+	fmt.Printf("re-queued %d\n", res.N)
+	return 0, nil
 }
 
 // reconcile queues extraction for what the default preset shows (ADR-0001).

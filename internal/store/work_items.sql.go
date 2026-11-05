@@ -9,6 +9,25 @@ import (
 	"context"
 )
 
+const averageExtractCost = `-- name: AverageExtractCost :one
+SELECT coalesce(avg(cost_usd), 0)::float8 AS usd, count(*)::bigint AS n
+FROM model_calls WHERE agent = 'extract' AND outcome = 'ok'
+`
+
+type AverageExtractCostRow struct {
+	Usd float64
+	N   int64
+}
+
+// The mean cost of a successful extraction so far, for estimates (ADR-0018's table is
+// per token; this is per posting, measured).
+func (q *Queries) AverageExtractCost(ctx context.Context) (AverageExtractCostRow, error) {
+	row := q.db.QueryRow(ctx, averageExtractCost)
+	var i AverageExtractCostRow
+	err := row.Scan(&i.Usd, &i.N)
+	return i, err
+}
+
 const countWorkItems = `-- name: CountWorkItems :many
 SELECT state, count(*)::bigint AS n FROM work_items GROUP BY state
 `
@@ -39,6 +58,18 @@ func (q *Queries) CountWorkItems(ctx context.Context) ([]CountWorkItemsRow, erro
 	return items, nil
 }
 
+const currentPromptVersion = `-- name: CurrentPromptVersion :one
+SELECT version FROM agent_prompts WHERE agent = $1
+`
+
+// The prompt version the worker runs for an agent (it records it at start-up).
+func (q *Queries) CurrentPromptVersion(ctx context.Context, agent string) (int32, error) {
+	row := q.db.QueryRow(ctx, currentPromptVersion, agent)
+	var version int32
+	err := row.Scan(&version)
+	return version, err
+}
+
 const enqueueExtract = `-- name: EnqueueExtract :execrows
 INSERT INTO work_items (posting_id, kind, content_hash)
 SELECT unnest($1::bigint[]), 'extract', unnest($2::bytea[])
@@ -57,6 +88,71 @@ type EnqueueExtractParams struct {
 // when the posting's content changed. Idempotent and safe to run concurrently.
 func (q *Queries) EnqueueExtract(ctx context.Context, arg EnqueueExtractParams) (int64, error) {
 	result, err := q.db.Exec(ctx, enqueueExtract, arg.PostingIds, arg.ContentHashes)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const outdatedExtractions = `-- name: OutdatedExtractions :many
+SELECT e.posting_id FROM extractions e
+JOIN postings p ON p.id = e.posting_id AND p.content_hash = e.content_hash
+WHERE e.posting_id = ANY($1::bigint[])
+GROUP BY e.posting_id
+HAVING max(e.prompt_version) < $2::int
+`
+
+type OutdatedExtractionsParams struct {
+	PostingIds []int64
+	Version    int32
+}
+
+// Of these postings, the ones whose current content was extracted only with a prompt
+// older than @version (M3-04 AC7). Never-extracted postings are the queue's job.
+func (q *Queries) OutdatedExtractions(ctx context.Context, arg OutdatedExtractionsParams) ([]int64, error) {
+	rows, err := q.db.Query(ctx, outdatedExtractions, arg.PostingIds, arg.Version)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int64
+	for rows.Next() {
+		var posting_id int64
+		if err := rows.Scan(&posting_id); err != nil {
+			return nil, err
+		}
+		items = append(items, posting_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const requeueExtract = `-- name: RequeueExtract :execrows
+UPDATE work_items
+SET state = 'pending', attempts = 0, run_after = now(), last_error = NULL, updated_at = now()
+WHERE kind = 'extract' AND posting_id = ANY($1::bigint[]) AND state <> 'running'
+`
+
+// Puts these postings' extract items back to pending (not one a worker holds).
+func (q *Queries) RequeueExtract(ctx context.Context, postingIds []int64) (int64, error) {
+	result, err := q.db.Exec(ctx, requeueExtract, postingIds)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const retryFailed = `-- name: RetryFailed :execrows
+UPDATE work_items
+SET state = 'pending', attempts = 0, run_after = now(), last_error = NULL, updated_at = now()
+WHERE state = 'failed' AND kind = $1
+`
+
+// M3-04 AC8: failed items of a kind back to pending, with 0 attempts and no error.
+func (q *Queries) RetryFailed(ctx context.Context, kind string) (int64, error) {
+	result, err := q.db.Exec(ctx, retryFailed, kind)
 	if err != nil {
 		return 0, err
 	}

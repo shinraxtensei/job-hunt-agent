@@ -10,6 +10,7 @@ from types import FrameType
 
 import psycopg
 
+from jobhunt_agents import extract
 from jobhunt_agents.db import open_pool
 from jobhunt_agents.model import AnthropicProvider, ModelClient
 from jobhunt_agents.profile import FILES, ProfileError, ProfileWatcher
@@ -18,10 +19,6 @@ from jobhunt_agents.settings import ConfigError, Settings, load
 from jobhunt_agents.worker import Worker, healthy
 
 log = logging.getLogger("jobhunt_agents")
-
-# What the worker does, by work item kind. Empty until extraction exists (M3-04): with no
-# handler for a kind, its items stay pending.
-HANDLERS: dict[str, Handler] = {}
 
 
 class JSONFormatter(logging.Formatter):
@@ -75,13 +72,18 @@ def run(s: Settings) -> None:
 
         lease = timedelta(seconds=s.worker_lease_seconds)
         client = None
+        # What the worker does, by work item kind; with no handler, a kind's items wait.
+        handlers: dict[str, Handler] = {}
         if s.anthropic_api_key is not None:
-            # M3-04+ build their handlers from this client.
             client = ModelClient(
                 provider=AnthropicProvider(s.anthropic_api_key.get_secret_value()),
                 pool=pool,
                 daily_budget_usd=s.model_daily_budget_usd,
             )
+            handlers["extract"] = extract.handler(pool, extract.Extractor(client))
+            extract.register_prompt(pool)
+        else:
+            log.info("no ANTHROPIC_API_KEY; extract items wait")
         # M3-05: reloaded when the files change; M3-06 scores against profile.current().
         profile = None
         if all((s.profile_dir / f).is_file() for f in FILES):
@@ -104,7 +106,7 @@ def run(s: Settings) -> None:
                         extra={"budget_usd": str(s.model_daily_budget_usd)},
                     )
                 return False
-            return process_one(pool, HANDLERS, lease)
+            return process_one(pool, handlers, lease)
 
         Worker(
             iterate=iterate,

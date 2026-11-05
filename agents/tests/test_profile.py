@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from jobhunt_agents.profile import ProfileError, ProfileWatcher, load, normalize
+from jobhunt_agents.aliases import normalize
+from jobhunt_agents.profile import ProfileError, ProfileWatcher, load
 from tests.conftest import ROOT
 
 PROFILE = ROOT / "data" / "profile"
