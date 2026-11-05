@@ -93,6 +93,16 @@ class AnthropicProvider:
     def __repr__(self) -> str:
         return "AnthropicProvider()"  # never the key
 
+    def count_tokens(self, request: Request) -> int:
+        """Input tokens the request would use (the API's free counting endpoint)."""
+        r = self._client.messages.count_tokens(
+            model=request.model,
+            system=[{"type": "text", "text": request.system}],
+            messages=[{"role": "user", "content": request.user}],
+            output_config={"format": {"type": "json_schema", "schema": request.schema}},
+        )
+        return r.input_tokens
+
     def call(self, request: Request) -> Response:
         m = self._client.messages.create(
             model=request.model,

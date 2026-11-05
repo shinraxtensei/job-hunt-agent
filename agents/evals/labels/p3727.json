@@ -1,0 +1,61 @@
+{
+  "id": "p3727",
+  "order": 3,
+  "posting_id": 3727,
+  "company": "SumUp",
+  "title": "Senior Android Engineer- Hardware",
+  "role_family": "mobile",
+  "language": "en",
+  "length": 5057,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "stretch",
+  "prefill": {
+    "required_skills": [
+      "Java",
+      "Kotlin",
+      "Android",
+      "Android SDKs",
+      "Clean architecture",
+      "Unit testing",
+      "Integration testing",
+      "CI/CD pipelines",
+      "GitHub Actions"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Android",
+      "Java",
+      "Kotlin",
+      "Clean architecture",
+      "Android SDK",
+      "Unit testing",
+      "Integration testing",
+      "CI/CD",
+      "Bluetooth Low Energy"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+  },
+  "changed_fields": [
+    "required_skills",
+    "remote_policy"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

@@ -1,0 +1,67 @@
+{
+  "id": "p41589",
+  "order": 31,
+  "posting_id": 41589,
+  "company": "GitLab",
+  "title": "Intermediate Backend Engineer, Authorization",
+  "role_family": "backend",
+  "language": "en",
+  "length": 8038,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "Ruby on Rails",
+      "role-based access control"
+    ],
+    "optional_skills": [
+      "PostgreSQL",
+      "Rust",
+      "gRPC",
+      "Protocol Buffers",
+      "Cedar",
+      "Go"
+    ],
+    "min_years": 2,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Ruby on Rails",
+      "Authorization",
+      "RBAC",
+      "GraphQL",
+      "REST APIs"
+    ],
+    "optional_skills": [
+      "PostgreSQL",
+      "Rust",
+      "gRPC",
+      "Protocol Buffers",
+      "Cedar",
+      "Zanzibar",
+      "Go",
+      "Service-oriented architecture"
+    ],
+    "min_years": 2,
+    "seniority": "mid",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills",
+    "seniority"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

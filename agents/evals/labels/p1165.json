@@ -1,0 +1,50 @@
+{
+  "id": "p1165",
+  "order": 27,
+  "posting_id": 1165,
+  "company": "Thoughtworks",
+  "title": "Graduate Systems Support Engineer",
+  "role_family": "platform",
+  "language": "en",
+  "length": 4854,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "stretch",
+  "prefill": {
+    "required_skills": [],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "junior",
+    "visa_sponsorship": "no",
+    "salary": null,
+    "languages": [
+      "English"
+    ],
+    "remote_policy": "hybrid"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Programming",
+      "Object-oriented programming",
+      "Incident management",
+      "Logging",
+      "Monitoring"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "junior",
+    "visa_sponsorship": "no",
+    "salary": null,
+    "languages": [
+      "English"
+    ],
+    "remote_policy": "hybrid"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

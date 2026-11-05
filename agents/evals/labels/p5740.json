@@ -1,0 +1,63 @@
+{
+  "id": "p5740",
+  "order": 26,
+  "posting_id": 5740,
+  "company": "Supabase",
+  "title": "Software Engineer - Spark",
+  "role_family": "unknown",
+  "language": "en",
+  "length": 5649,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "strong",
+  "prefill": {
+    "required_skills": [
+      "Rust"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Rust",
+      "Backend",
+      "API design",
+      "Storage engines",
+      "SQL",
+      "Relational databases",
+      "Database internals",
+      "Transactions",
+      "MVCC",
+      "PostgreSQL",
+      "SQLite",
+      "Turso",
+      "Multi-tenancy",
+      "Serverless",
+      "Testing"
+    ],
+    "optional_skills": [
+      "Supabase",
+      "CLI development",
+      "Open source"
+    ],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

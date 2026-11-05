@@ -1,0 +1,68 @@
+{
+  "id": "p5516",
+  "order": 28,
+  "posting_id": 5516,
+  "company": "ClickHouse",
+  "title": "Full Stack Software Engineer - Billing Team",
+  "role_family": "fullstack",
+  "language": "en",
+  "length": 4286,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "good",
+  "prefill": {
+    "required_skills": [
+      "Typescript",
+      "Serverless",
+      "EKS",
+      "SQS",
+      "Mongo",
+      "Node.JS",
+      "React"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "TypeScript",
+      "Serverless",
+      "EKS",
+      "SQS",
+      "MongoDB",
+      "Node.js",
+      "React",
+      "Frontend",
+      "Billing",
+      "Credit card processing",
+      "Usage-based billing",
+      "Metering",
+      "Cloud marketplaces",
+      "Invoicing",
+      "Sales tax",
+      "Distributed systems",
+      "AWS",
+      "GCP",
+      "Azure"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

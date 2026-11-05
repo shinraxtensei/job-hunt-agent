@@ -1,0 +1,56 @@
+{
+  "id": "p4106",
+  "order": 33,
+  "posting_id": 4106,
+  "company": "Trade Republic",
+  "title": "Backend Engineer (Berlin)",
+  "role_family": "backend",
+  "language": "en",
+  "length": 2286,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "good",
+  "prefill": {
+    "required_skills": [
+      "Service-oriented architecture",
+      "Continuous delivery"
+    ],
+    "optional_skills": [
+      "JVM ecosystem"
+    ],
+    "min_years": 5,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "JVM",
+      "Service-oriented architecture",
+      "Continuous delivery",
+      "Platform engineering",
+      "AWS",
+      "GitHub Actions",
+      "CI/CD",
+      "Containers",
+      "Kubernetes"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

@@ -49,7 +49,9 @@ internal/
   queue/             work queue counts (ADR-0001); the reconcile step is in collector/
   httpapi/           net/http handlers (Go 1.22+ routing)
 agents/              Python 3.15 (uv, ADR-0017): src/jobhunt_agents/ (worker, queue, model client,
-                     settings, db; prompts/<agent>/v<N>.md), tests/ (fakes.py: the fake provider);
+                     settings, db, profile, text, extraction schema, evals/; prompts/<agent>/v<N>.md),
+                     tests/ (fakes.py: the fake provider); evals/ (labels/ and runs/ committed,
+                     postings/ git-ignored and backed up);
                      extract/, score/, tailor/, evals/ come in M3+; agents/Dockerfile is the worker image
 web/                 TypeScript UI (Vite + React, ADR-0013); built into web/dist/app, embedded in cmd/api
 db/migrations/       plain SQL migrations (goose), forward-only
@@ -70,7 +72,9 @@ testdata/            golden files (recorded board responses, sample postings)
 | Go tests (always with race detector) | `make test-go` → `go test -race ./...` |
 | All Go tests + integration tests (testcontainers) | `make test-integration` → `go test -race -tags integration ./...` |
 | Python tests (integration tests need Docker and Go: they build cmd/migrate and cmd/collector) | `make test-py` → `cd agents && uv run pytest` |
-| Agent evals | `make evals` |
+| Agent evals: run with the real model, record and report (agent from M3-04) | `make evals` |
+| Re-score recorded eval runs, no network (part of `make check`) | `make evals-replay` |
+| Eval set: sample / label (blind fit pass, model pre-fill, extraction pass) | `make evals-sample` / `make evals-label PASS=fit\|prefill\|extract` |
 | Lint | `make lint` → golangci-lint; ruff check, ruff format --check, pyright strict |
 | Format Go / check formatting | `make fmt` / `make fmt-check` |
 | Regenerate sqlc | `make sqlc` |

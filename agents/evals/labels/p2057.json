@@ -1,0 +1,72 @@
+{
+  "id": "p2057",
+  "order": 23,
+  "posting_id": 2057,
+  "company": "Canonical",
+  "title": "Site Reliability / Gitops Engineer",
+  "role_family": "platform",
+  "language": "en",
+  "length": 5999,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "Infrastructure as Code",
+      "CI/CD",
+      "Python",
+      "Linux networking",
+      "Linux routing",
+      "Linux firewalls",
+      "Linux storage",
+      "Linux server administration",
+      "Version control",
+      "Peer review",
+      "Unit testing",
+      "Agile"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+      "English"
+    ],
+    "remote_policy": "remote"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Infrastructure as Code",
+      "CI/CD",
+      "Python",
+      "Linux networking",
+      "Firewalls",
+      "Linux storage",
+      "Linux administration",
+      "Version control",
+      "Code review",
+      "Unit testing",
+      "Agile",
+      "Cloud computing",
+      "Open source",
+      "Observability"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+      "English"
+    ],
+    "remote_policy": "remote"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

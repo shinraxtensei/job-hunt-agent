@@ -28,27 +28,12 @@ func TestMakeHelpListsEveryCommand(t *testing.T) {
 		t.Fatalf("make help: %v\n%s", err, out)
 	}
 	for _, target := range []string{
-		"check", "test-go", "test-integration", "test-py", "evals",
+		"check", "test-go", "test-integration", "test-py", "evals", "evals-replay",
 		"lint", "sqlc", "sqlc-check", "migration", "vuln", "up", "down", "fuzz", "help",
 	} {
 		if !strings.Contains(string(out), target) {
 			t.Errorf("make help does not list target %q\n%s", target, out)
 		}
-	}
-}
-
-// AC4: targets that are not built yet say so and exit 1, instead of failing silently.
-func TestUnimplementedTargetsExitNonZero(t *testing.T) {
-	for _, target := range []string{"evals"} {
-		t.Run(target, func(t *testing.T) {
-			out, err := exec.Command("make", "-C", repoRoot(t), target).CombinedOutput()
-			if err == nil {
-				t.Fatalf("make %s exited 0, want non-zero\n%s", target, out)
-			}
-			if !strings.Contains(string(out), "not implemented yet") {
-				t.Errorf("make %s does not say it is not implemented yet\n%s", target, out)
-			}
-		})
 	}
 }
 

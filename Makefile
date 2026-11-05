@@ -19,7 +19,7 @@ SQLC_IMAGE := sqlc/sqlc:1.31.1@sha256:70f53171d27b2424e9358869975455a6e955a5aa8e
 
 .PHONY: help check fmt fmt-check vet lint test-go test-integration test-py evals \
 	sqlc sqlc-check migration vuln up down collect backup restore smoke fuzz \
-	web-install web-check web-build web-dev
+	web-install web-check web-build web-dev evals-replay evals-sample evals-label
 
 help: ## List every target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -27,7 +27,7 @@ help: ## List every target
 
 # test-integration runs every test (unit + integration), so it replaces test-go here.
 # web-check runs first so the embedded page is built before the Go build uses it.
-check: web-check fmt-check sqlc-check vet lint test-integration test-py vuln ## Everything CI runs (needs Docker, Node 26 and uv)
+check: web-check fmt-check sqlc-check vet lint test-integration test-py evals-replay vuln ## Everything CI runs (needs Docker, Node 26 and uv)
 
 fmt: ## Format all Go code
 	@gofmt -w $(GO_DIRS)
@@ -54,8 +54,24 @@ test-integration: ## All Go tests plus integration tests against a real Postgres
 test-py: ## Python tests, including integration tests against a real Postgres (testcontainers)
 	cd agents && uv sync --frozen && uv run pytest
 
-evals: ## Agent evals
-	@echo "evals: not implemented yet (M3-04)"; exit 1
+# --- the eval set (M3-07): agents/evals/. Commands that touch the local stack or the
+# model read .env (DATABASE_URL on the Mac, JOBHUNT_HTTP_PORT, ANTHROPIC_API_KEY).
+EVALS := cd agents && uv run python -m jobhunt_agents.evals
+WITH_ENV := set -a && . ./.env && set +a &&
+
+evals: ## Run the agents over the eval set with the real model, record and report (M3-04 adds the agent)
+	@$(WITH_ENV) $(EVALS) run
+
+evals-replay: ## Re-score recorded eval runs against the labels; no network (CI)
+	$(EVALS) replay
+
+evals-sample: ## Draw the eval set from the local stack: 36 shown leads + injection fixtures
+	@$(WITH_ENV) $(EVALS) sample
+
+evals-label: ## Label the eval set: make evals-label PASS=fit | prefill | extract
+	@case "$(PASS)" in fit) cmd=label-fit ;; prefill) cmd=prefill ;; extract) cmd=label-extract ;; \
+		*) echo "usage: make evals-label PASS=fit|prefill|extract"; exit 2 ;; esac; \
+	$(WITH_ENV) $(EVALS) $$cmd
 
 sqlc: ## Regenerate sqlc code from store/queries
 	docker run --rm -u "$$(id -u):$$(id -g)" -v "$(CURDIR):/src" -w /src $(SQLC_IMAGE) generate

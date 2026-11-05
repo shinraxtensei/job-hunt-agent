@@ -1,0 +1,58 @@
+{
+  "id": "p5732",
+  "order": 17,
+  "posting_id": 5732,
+  "company": "Supabase",
+  "title": "Data API Engineer",
+  "role_family": "backend",
+  "language": "en",
+  "length": 3425,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "strong",
+  "prefill": {
+    "required_skills": [
+      "Haskell",
+      "C",
+      "SQL",
+      "plpgsql",
+      "PostgreSQL",
+      "Linux"
+    ],
+    "optional_skills": [],
+    "min_years": 3,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Haskell",
+      "C",
+      "SQL",
+      "PL/pgSQL",
+      "PostgreSQL",
+      "PostgREST",
+      "Hasql",
+      "Open source",
+      "Technical support",
+      "Linux"
+    ],
+    "optional_skills": [],
+    "min_years": 3,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

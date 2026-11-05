@@ -1,0 +1,80 @@
+{
+  "id": "p2139",
+  "order": 7,
+  "posting_id": 2139,
+  "company": "Canonical",
+  "title": "Web Frontend Engineer - JS, CSS, React, Flutter",
+  "role_family": "frontend",
+  "language": "en",
+  "length": 6392,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "strong",
+  "prefill": {
+    "required_skills": [
+      "TypeScript",
+      "React",
+      "Flutter",
+      "Linux"
+    ],
+    "optional_skills": [
+      "LXD",
+      "Docker",
+      "Kubernetes",
+      "REST API design",
+      "Performance engineering",
+      "Security"
+    ],
+    "min_years": null,
+    "seniority": "junior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+      "English"
+    ],
+    "remote_policy": "remote"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Web development",
+      "JavaScript",
+      "TypeScript",
+      "CSS",
+      "React",
+      "Flutter",
+      "REST APIs",
+      "Accessibility",
+      "Web performance",
+      "Linux"
+    ],
+    "optional_skills": [
+      "LXD",
+      "Docker",
+      "Kubernetes",
+      "REST API design",
+      "Performance engineering",
+      "Security"
+    ],
+    "min_years": null,
+    "seniority": "junior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 48000,
+      "max": 70000,
+      "currency": "USD",
+      "period": "year"
+    },
+    "languages": [
+      "English"
+    ],
+    "remote_policy": "remote"
+  },
+  "changed_fields": [
+    "required_skills",
+    "salary"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

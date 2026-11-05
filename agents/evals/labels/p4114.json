@@ -1,0 +1,48 @@
+{
+  "id": "p4114",
+  "order": 16,
+  "posting_id": 4114,
+  "company": "Trade Republic",
+  "title": "Front Desk Agent",
+  "role_family": "unknown",
+  "language": "fr",
+  "length": 3868,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "stretch",
+  "prefill": {
+    "required_skills": [],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+      "German",
+      "English"
+    ],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Front desk"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+      "German",
+      "English"
+    ],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

@@ -1,0 +1,62 @@
+{
+  "id": "p10495",
+  "order": 5,
+  "posting_id": 10495,
+  "company": "Mollie",
+  "title": "Senior UI Engineer",
+  "role_family": "frontend",
+  "language": "en",
+  "length": 4802,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "stretch",
+  "prefill": {
+    "required_skills": [
+      "React",
+      "React Native",
+      "JavaScript",
+      "CI/CD",
+      "CSS",
+      "REST APIs",
+      "Test-driven development",
+      "Browser APIs"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Mobile development",
+      "Web development",
+      "React",
+      "React Native",
+      "JavaScript",
+      "CSS",
+      "Browser APIs",
+      "CI/CD",
+      "Test-driven development",
+      "REST API design",
+      "Design systems",
+      "Accessibility"
+    ],
+    "optional_skills": [],
+    "min_years": 5,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

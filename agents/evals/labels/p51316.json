@@ -1,0 +1,69 @@
+{
+  "id": "p51316",
+  "order": 11,
+  "posting_id": 51316,
+  "company": "Doctolib",
+  "title": "Senior Technical Onboarding Engineer – AI Phone Assistant (x/f/m)",
+  "role_family": "ai_ml",
+  "language": "fr",
+  "length": 5782,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "KI-Tools"
+    ],
+    "optional_skills": [
+      "Telefonanlagen",
+      "Telekommunikationsinfrastruktur"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 58000,
+      "max": 63000,
+      "currency": "EUR",
+      "period": "year"
+    },
+    "languages": [
+      "German",
+      "English"
+    ],
+    "remote_policy": "hybrid"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Customer onboarding",
+      "Technical support",
+      "Customer support"
+    ],
+    "optional_skills": [
+      "PBX",
+      "Telecommunications"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 58000,
+      "max": 63000,
+      "currency": "EUR",
+      "period": "year"
+    },
+    "languages": [
+      "German",
+      "English"
+    ],
+    "remote_policy": "hybrid"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

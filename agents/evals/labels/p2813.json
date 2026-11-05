@@ -1,0 +1,94 @@
+{
+  "id": "p2813",
+  "order": 21,
+  "posting_id": 2813,
+  "company": "Stripe",
+  "title": "Android BSP Engineer",
+  "role_family": "mobile",
+  "language": "en",
+  "length": 3973,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "Device driver development",
+      "Embedded systems",
+      "Operating systems",
+      "Automated testing",
+      "Build systems",
+      "UART",
+      "GPIO",
+      "SPI",
+      "I2C",
+      "C/C++",
+      "Kotlin/Java",
+      "Android OS",
+      "Telemetry data"
+    ],
+    "optional_skills": [
+      "ARM platform",
+      "Microcontrollers",
+      "EMV",
+      "Cryptography",
+      "POS hardware and peripherals",
+      "PCI technology"
+    ],
+    "min_years": 2,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+      "English",
+      "Mandarin Chinese"
+    ],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Device drivers",
+      "Kernel development",
+      "Embedded systems",
+      "Operating systems",
+      "Hardware bring-up",
+      "Automated testing",
+      "Build systems",
+      "UART",
+      "GPIO",
+      "SPI",
+      "I2C",
+      "C",
+      "C++",
+      "Kotlin",
+      "Java",
+      "Android",
+      "Telemetry"
+    ],
+    "optional_skills": [
+      "ARM",
+      "Microcontrollers",
+      "EMV",
+      "Cryptography",
+      "POS hardware",
+      "PCI DSS",
+      "Transaction processing"
+    ],
+    "min_years": 2,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+      "English",
+      "Mandarin Chinese"
+    ],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

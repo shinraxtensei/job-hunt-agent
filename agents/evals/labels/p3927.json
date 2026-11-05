@@ -1,0 +1,56 @@
+{
+  "id": "p3927",
+  "order": 20,
+  "posting_id": 3927,
+  "company": "Adyen",
+  "title": "Senior AI Research Engineer",
+  "role_family": "ai_ml",
+  "language": "en",
+  "length": 7092,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "Generative AI (GenAI)",
+      "Large Language Models (LLMs)"
+    ],
+    "optional_skills": [
+      "Classical machine learning",
+      "On-premise infrastructure"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Generative AI",
+      "LLMs",
+      "AI research",
+      "AI agents"
+    ],
+    "optional_skills": [
+      "Fintech",
+      "Machine learning",
+      "On-premise infrastructure"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

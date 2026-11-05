@@ -1,6 +1,6 @@
 # M3-07: Eval set and `make evals`
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M3 — Extraction and scoring
 - **Linear:** [HAM-46](https://linear.app/hamid-corp/issue/HAM-46/m3-07-eval-set-and-make-evals)
 - **Estimate:** 1 day
@@ -31,7 +31,8 @@ measured from its first version.
    text kept local (git-ignored, backed up by M3-05 AC5), labels committed.
 2. **Given** `make evals`
    **When** it runs against the real model
-   **Then** it reports per-field extraction accuracy, fit-level agreement and the
+   **Then** it reports per-field extraction accuracy (skill lists as precision, recall and
+   F1 after name folding and skill-map aliases), fit-level agreement and the
    injection checks, plus the run's total cost, and fails below the agreed thresholds.
    The thresholds are set **after M3-04's first baseline run** and recorded with it.
 3. **Given** CI
@@ -41,6 +42,37 @@ measured from its first version.
 4. **Given** a PR changing a prompt or a model
    **When** it is opened
    **Then** it includes the `make evals` report before and after.
+
+## Labelling guide (extraction fields)
+
+Strictly from the posting text; nothing inferred. Agreed with the owner on 2026-11-05.
+
+- **required_skills**: what the posting says the candidate must have, plus the
+  technologies the duties say the person will use day to day (e.g. "Build TypeScript +
+  GraphQL APIs" → TypeScript, GraphQL). Tools **and** named domains (AML, payments,
+  vector search).
+- **optional_skills**: only items marked nice-to-have / bonus / a plus / preferred.
+- **Skill names are canonical and matchable**: the kind of name a skill map holds
+  (a technology, tool or named domain). No soft skills and no activity phrases
+  ("incremental refactoring", "research leadership"); rewrite to a real skill name
+  ("System design") or drop. An example after "such as" / "e.g." is not itself a
+  requirement; the thing it exemplifies is.
+- **min_years**: the number stated, else empty. **seniority**: only if stated or the
+  title says it ("Intermediate" → mid, "Manager" leading a team → lead).
+- **visa_sponsorship**: yes/no only if stated (a citizenship requirement is "no"), else
+  unknown. **salary**: only if stated. **languages**: only those stated as required.
+- **remote_policy**: as stated. "Office-first" → onsite; remote only when the text says
+  remote / work from home / hire anywhere.
+
+Each label records `labelled_by` (`owner` from the CLI, `claude-code` when Claude Code
+labelled it under these rules for the owner's spot-check) and `changed_fields` against
+the pre-fill (lists compared as sets of folded names). The CLI saves every answer as it
+is given (`draft`), so quitting mid-posting loses nothing.
+
+**Scoring skill lists**: precision, recall and F1 per item, averaged, after folding names
+like M3-05 (case, accents, dots and dashes) and resolving them through the skill map's
+names and aliases when `PROFILE_DIR` has one (the report says which; CI has no personal
+skill map, so it folds only). Exact-string matching would punish wording, not mistakes.
 
 ## Out of scope
 

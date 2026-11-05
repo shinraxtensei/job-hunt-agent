@@ -1,0 +1,46 @@
+{
+  "id": "p4067",
+  "order": 8,
+  "posting_id": 4067,
+  "company": "Monzo",
+  "title": "Senior Android Engineer",
+  "role_family": "mobile",
+  "language": "en",
+  "length": 7040,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "stretch",
+  "prefill": {
+    "required_skills": [
+      "Kotlin"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "hybrid"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Kotlin",
+      "Android",
+      "Computer science"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "hybrid"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

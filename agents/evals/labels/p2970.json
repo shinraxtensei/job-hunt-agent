@@ -1,0 +1,47 @@
+{
+  "id": "p2970",
+  "order": 12,
+  "posting_id": 2970,
+  "company": "Stripe",
+  "title": "Full Stack Engineer, Money as a Service",
+  "role_family": "fullstack",
+  "language": "en",
+  "length": 3986,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "strong",
+  "prefill": {
+    "required_skills": [],
+    "optional_skills": [],
+    "min_years": 2,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Frontend",
+      "Backend",
+      "Data modeling"
+    ],
+    "optional_skills": [
+      "Financial systems"
+    ],
+    "min_years": 2,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

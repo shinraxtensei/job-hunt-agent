@@ -1,0 +1,63 @@
+{
+  "id": "p3501",
+  "order": 15,
+  "posting_id": 3501,
+  "company": "SumUp",
+  "title": "Backend Engineer - Run & Grow",
+  "role_family": "backend",
+  "language": "en",
+  "length": 7296,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "very_strong",
+  "prefill": {
+    "required_skills": [
+      "Go",
+      "Kafka",
+      "PostgreSQL",
+      "Snowflake",
+      "Event sourcing",
+      "CDC"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Go",
+      "API design",
+      "Distributed systems",
+      "PostgreSQL",
+      "Snowflake",
+      "Kafka",
+      "Event-driven architecture",
+      "Event sourcing",
+      "CDC",
+      "Fintech",
+      "Payments",
+      "Testing",
+      "Observability",
+      "Incident response"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "onsite"
+  },
+  "changed_fields": [
+    "required_skills",
+    "remote_policy"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

@@ -1,0 +1,64 @@
+{
+  "id": "p3771",
+  "order": 35,
+  "posting_id": 3771,
+  "company": "SumUp",
+  "title": "Senior Software Engineer (Golang) – Pricing Domain",
+  "role_family": "unknown",
+  "language": "en",
+  "length": 6041,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "good",
+  "prefill": {
+    "required_skills": [
+      "Golang",
+      "RESTful APIs",
+      "Docker",
+      "AWS",
+      "Kubernetes",
+      "SQL",
+      "NoSQL",
+      "PostgreSQL",
+      "Kafka"
+    ],
+    "optional_skills": [],
+    "min_years": 3,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Go",
+      "REST APIs",
+      "Docker",
+      "AWS",
+      "Kubernetes",
+      "SQL",
+      "NoSQL",
+      "PostgreSQL",
+      "Kafka",
+      "Software architecture",
+      "Software design",
+      "Data modeling",
+      "API design"
+    ],
+    "optional_skills": [],
+    "min_years": 3,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

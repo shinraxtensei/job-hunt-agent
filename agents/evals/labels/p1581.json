@@ -1,0 +1,67 @@
+{
+  "id": "p1581",
+  "order": 6,
+  "posting_id": 1581,
+  "company": "Elastic",
+  "title": "Senior Software Developer - Search Algorithms - Elasticsearch",
+  "role_family": "platform",
+  "language": "en",
+  "length": 8901,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "good",
+  "prefill": {
+    "required_skills": [
+      "Java"
+    ],
+    "optional_skills": [
+      "Elasticsearch"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 128300,
+      "max": 203000,
+      "currency": "CAD",
+      "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Java",
+      "Concurrency",
+      "Search engines",
+      "Vector search",
+      "HNSW",
+      "IVF",
+      "Elasticsearch",
+      "Lucene"
+    ],
+    "optional_skills": [
+      "Open source"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 128300,
+      "max": 203000,
+      "currency": "CAD",
+      "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills",
+    "remote_policy"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

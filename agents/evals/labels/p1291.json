@@ -1,0 +1,61 @@
+{
+  "id": "p1291",
+  "order": 34,
+  "posting_id": 1291,
+  "company": "Elastic",
+  "title": "Analytics Engineer, HR Analytics",
+  "role_family": "data",
+  "language": "en",
+  "length": 6831,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "Google Cloud Platform",
+      "SQL",
+      "Python"
+    ],
+    "optional_skills": [
+      "AI/LLM-based analytics tools"
+    ],
+    "min_years": 2,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Google Cloud Platform",
+      "BigQuery",
+      "dbt",
+      "Data pipelines",
+      "SQL",
+      "Python",
+      "HRIS",
+      "ATS",
+      "Data modeling",
+      "Data visualization",
+      "Data governance",
+      "HR analytics"
+    ],
+    "optional_skills": [
+      "AI/LLM-based analytics tools"
+    ],
+    "min_years": 2,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

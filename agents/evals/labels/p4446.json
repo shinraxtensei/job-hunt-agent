@@ -1,0 +1,72 @@
+{
+  "id": "p4446",
+  "order": 1,
+  "posting_id": 4446,
+  "company": "Cloudflare",
+  "title": "Senior Customer Engineer, Majors - Southwest",
+  "role_family": "unknown",
+  "language": "en",
+  "length": 13900,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "good",
+  "prefill": {
+    "required_skills": [],
+    "optional_skills": [
+      "LLM orchestration",
+      "Retrieval-Augmented Generation (RAG)",
+      "PCI DSS",
+      "HIPAA",
+      "SOC 2"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 234000,
+      "max": 292000,
+      "currency": "USD",
+      "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Solutions engineering",
+      "Sales engineering",
+      "Network architecture",
+      "Network security",
+      "Enterprise sales",
+      "DNS",
+      "CDN",
+      "Zero Trust"
+    ],
+    "optional_skills": [
+      "LLM orchestration",
+      "RAG",
+      "PCI DSS",
+      "HIPAA",
+      "SOC 2"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 234000,
+      "max": 292000,
+      "currency": "USD",
+      "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

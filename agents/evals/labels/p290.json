@@ -1,0 +1,38 @@
+{
+  "id": "p290",
+  "order": 32,
+  "posting_id": 290,
+  "company": "Theodo",
+  "title": "Candidature spontanée - Theodo Maroc",
+  "role_family": "unknown",
+  "language": "fr",
+  "length": 2672,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

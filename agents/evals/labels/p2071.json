@@ -1,0 +1,73 @@
+{
+  "id": "p2071",
+  "order": 10,
+  "posting_id": 2071,
+  "company": "Canonical",
+  "title": "Software Engineer - Data Infrastructure - Kafka",
+  "role_family": "platform",
+  "language": "en",
+  "length": 5302,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "good",
+  "prefill": {
+    "required_skills": [
+      "Python",
+      "Kafka",
+      "Spark"
+    ],
+    "optional_skills": [
+      "Linux",
+      "Kubernetes",
+      "OpenStack",
+      "MySQL",
+      "PostgreSQL",
+      "Oracle",
+      "MongoDB",
+      "Redis",
+      "Elasticsearch"
+    ],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Python",
+      "Distributed systems",
+      "Kafka",
+      "Spark"
+    ],
+    "optional_skills": [
+      "SQL",
+      "MySQL",
+      "PostgreSQL",
+      "Oracle",
+      "NoSQL",
+      "MongoDB",
+      "Redis",
+      "Elasticsearch",
+      "Linux administration",
+      "Public cloud",
+      "OpenStack",
+      "Kubernetes"
+    ],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

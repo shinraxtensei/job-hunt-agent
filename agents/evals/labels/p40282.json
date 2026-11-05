@@ -1,0 +1,50 @@
+{
+  "id": "p40282",
+  "order": 22,
+  "posting_id": 40282,
+  "company": "Jumia",
+  "title": "Fraud Analyst - Jumia (Full Time)",
+  "role_family": "ai_ml",
+  "language": "en",
+  "length": 3187,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "Microsoft Office",
+      "payment systems"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Microsoft Office",
+      "Payments",
+      "Data analysis",
+      "Fraud detection",
+      "KYC",
+      "Chargebacks"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

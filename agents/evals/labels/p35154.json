@@ -1,0 +1,68 @@
+{
+  "id": "p35154",
+  "order": 29,
+  "posting_id": 35154,
+  "company": "Elastic",
+  "title": "Senior Full Stack Engineer - Observability APM UI",
+  "role_family": "fullstack",
+  "language": "en",
+  "length": 8582,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "good",
+  "prefill": {
+    "required_skills": [],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Node.js",
+      "Kibana",
+      "System design",
+      "Usability testing",
+      "Automated testing"
+    ],
+    "optional_skills": [
+      "Reactflow",
+      "Elastic stack",
+      "OpenTelemetry",
+      "Observability",
+      "Data pipelines",
+      "Go",
+      "Kubernetes",
+      "Cloud-native development",
+      "Real-time data",
+      "Open source"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 61100,
+      "max": 96600,
+      "currency": "EUR",
+      "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills",
+    "optional_skills",
+    "seniority",
+    "salary"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

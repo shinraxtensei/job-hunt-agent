@@ -1,0 +1,57 @@
+{
+  "id": "p9115",
+  "order": 13,
+  "posting_id": 9115,
+  "company": "Railway",
+  "title": "Senior Full-Stack Engineer - Product",
+  "role_family": "fullstack",
+  "language": "en",
+  "length": 7613,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "strong",
+  "prefill": {
+    "required_skills": [
+      "TypeScript",
+      "GraphQL",
+      "Temporal"
+    ],
+    "optional_skills": [
+      "Rust"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [
+      "English"
+    ],
+    "remote_policy": "remote"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "TypeScript",
+      "GraphQL",
+      "Temporal",
+      "Frontend architecture",
+      "Background jobs"
+    ],
+    "optional_skills": [
+      "Rust"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "changed_fields": [
+    "required_skills",
+    "languages"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

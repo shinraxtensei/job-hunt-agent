@@ -1,0 +1,93 @@
+{
+  "id": "p2282",
+  "order": 24,
+  "posting_id": 2282,
+  "company": "GitLab",
+  "title": "Senior Frontend Engineer",
+  "role_family": "frontend",
+  "language": "en",
+  "length": 7509,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "frontend architecture",
+      "accessibility",
+      "testing",
+      "performance"
+    ],
+    "optional_skills": [
+      "Vue",
+      "React",
+      "Angular",
+      "TypeScript",
+      "JavaScript",
+      "PostgreSQL",
+      "Redis",
+      "object storage",
+      "REST APIs",
+      "GraphQL",
+      "Kubernetes",
+      "Google Kubernetes Engine",
+      "Docker",
+      "Google Cloud Platform",
+      "Prometheus",
+      "Sentry",
+      "Git",
+      "GitLab Runner",
+      "GitLab CI/CD"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Frontend architecture",
+      "Testing",
+      "Accessibility",
+      "Web performance",
+      "Component libraries",
+      "AI integration",
+      "Observability"
+    ],
+    "optional_skills": [
+      "Vue",
+      "React",
+      "Angular",
+      "TypeScript",
+      "JavaScript",
+      "PostgreSQL",
+      "Redis",
+      "object storage",
+      "REST APIs",
+      "GraphQL",
+      "Kubernetes",
+      "Google Kubernetes Engine",
+      "Docker",
+      "Google Cloud Platform",
+      "Prometheus",
+      "Sentry",
+      "Git",
+      "GitLab Runner",
+      "GitLab CI/CD"
+    ],
+    "min_years": null,
+    "seniority": "senior",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "remote"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

@@ -53,3 +53,5 @@ node_modules/
 # *.example.yaml files show the format.
 /data/profile/*
 !/data/profile/*.example.yaml
+# The eval set's posting texts (M3-07); its labels and recorded runs are committed.
+/agents/evals/postings/

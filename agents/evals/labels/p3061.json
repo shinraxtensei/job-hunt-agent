@@ -1,0 +1,57 @@
+{
+  "id": "p3061",
+  "order": 9,
+  "posting_id": 3061,
+  "company": "Stripe",
+  "title": "Managing Editor, Stripe Press",
+  "role_family": "unknown",
+  "language": "en",
+  "length": 4582,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "developmental editing",
+      "line editing",
+      "copyediting",
+      "fact-checking",
+      "permissions",
+      "proofreading"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Book publishing",
+      "Developmental editing",
+      "Line editing",
+      "Copyediting",
+      "Fact-checking",
+      "Rights and permissions",
+      "Proofreading",
+      "Editorial production",
+      "Project management"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

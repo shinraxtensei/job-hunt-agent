@@ -1,0 +1,59 @@
+{
+  "id": "p4216",
+  "order": 18,
+  "posting_id": 4216,
+  "company": "GoCardless",
+  "title": "Data Analyst II",
+  "role_family": "data",
+  "language": "en",
+  "length": 9004,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "SQL",
+      "Python"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "SQL",
+      "Python",
+      "Data visualisation",
+      "Looker",
+      "Amplitude",
+      "A/B testing",
+      "Gemini",
+      "Product analytics",
+      "Machine learning"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 32000,
+      "max": 48000,
+      "currency": "EUR",
+      "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "changed_fields": [
+    "required_skills",
+    "salary"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

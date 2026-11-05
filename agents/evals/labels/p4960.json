@@ -1,0 +1,65 @@
+{
+  "id": "p4960",
+  "order": 19,
+  "posting_id": 4960,
+  "company": "Datadog",
+  "title": "Research Manager - Post-Training for Agents",
+  "role_family": "unknown",
+  "language": "en",
+  "length": 6481,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "no",
+  "prefill": {
+    "required_skills": [
+      "Reinforcement Learning",
+      "AI Agents",
+      "Post-training",
+      "Simulated environments",
+      "Synthetic data pipelines",
+      "Evaluation frameworks"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 244000,
+      "max": 305000,
+      "currency": "USD",
+      "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "hybrid"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Reinforcement learning",
+      "AI agents",
+      "Post-training",
+      "Simulated environments",
+      "Synthetic data",
+      "Evaluation"
+    ],
+    "optional_skills": [],
+    "min_years": null,
+    "seniority": "lead",
+    "visa_sponsorship": "unknown",
+    "salary": {
+      "min": 244000,
+      "max": 305000,
+      "currency": "USD",
+      "period": "year"
+    },
+    "languages": [],
+    "remote_policy": "hybrid"
+  },
+  "changed_fields": [
+    "required_skills",
+    "seniority"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}

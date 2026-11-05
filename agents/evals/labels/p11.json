@@ -1,0 +1,67 @@
+{
+  "id": "p11",
+  "order": 30,
+  "posting_id": 11,
+  "company": "Spotify",
+  "title": "Backend Engineer - Data Platform",
+  "role_family": "data",
+  "language": "en",
+  "length": 4567,
+  "fixture_of": null,
+  "injection": null,
+  "fit": "good",
+  "prefill": {
+    "required_skills": [
+      "Java",
+      "SQL"
+    ],
+    "optional_skills": [
+      "Apache Beam",
+      "Apache Flink",
+      "Apache Spark"
+    ],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "unknown"
+  },
+  "prefill_model": "claude-haiku-5-5",
+  "prefill_prompt": "eval_prefill/v1.md",
+  "extraction": {
+    "required_skills": [
+      "Java",
+      "Backend",
+      "API design",
+      "API versioning",
+      "SQL",
+      "Data pipelines",
+      "Data warehousing",
+      "Workflow orchestration",
+      "Metadata management",
+      "Data quality",
+      "Data governance",
+      "Data lineage",
+      "OpenLineage",
+      "Apache Iceberg"
+    ],
+    "optional_skills": [
+      "Apache Beam",
+      "Apache Flink",
+      "Apache Spark"
+    ],
+    "min_years": null,
+    "seniority": "unknown",
+    "visa_sponsorship": "unknown",
+    "salary": null,
+    "languages": [],
+    "remote_policy": "hybrid"
+  },
+  "changed_fields": [
+    "required_skills",
+    "remote_policy"
+  ],
+  "labelled_by": "claude-code",
+  "draft": {}
+}
