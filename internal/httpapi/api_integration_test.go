@@ -124,21 +124,25 @@ func world(t *testing.T) *pgxpool.Pool {
 // seedScore stores an extraction and a coded score for posting id, as the worker does:
 // factors with their weights, the freshness and bands it was scored with, and
 // reason_inputs "v2:current".
-func seedScore(t *testing.T, exec func(string, ...any), id int64, points float64, nei bool) {
+func seedScore(t *testing.T, exec func(string, ...any), id int64, points float64, nei bool, location ...float64) {
 	t.Helper()
 	exec(`INSERT INTO extractions (posting_id, content_hash, prompt_version, model, data)
 		SELECT id, content_hash, 2, 'claude-haiku-5-5', '{}' FROM postings WHERE id = $1`, id)
 	v := points / 95 // every factor at the same value: points without freshness
+	loc := v
+	if len(location) > 0 {
+		loc = location[0] // M3-09: a location value of its own (the gate)
+	}
 	factors := fmt.Sprintf(`{"required": {"value": %[1]g, "weight": 35, "detail": "", "matches": []},
 		"title": {"value": %[1]g, "weight": 20, "detail": "target title rank 1"},
 		"seniority": {"value": %[1]g, "weight": 15, "detail": "level senior, minimum none years"},
-		"location": {"value": %[1]g, "weight": 15, "detail": "remote, open to Morocco"},
-		"optional": {"value": %[1]g, "weight": 10, "detail": "none stated"}}`, v)
+		"location": {"value": %[2]g, "weight": 15, "detail": "remote, open to Morocco"},
+		"optional": {"value": %[1]g, "weight": 10, "detail": "none stated"}}`, v, loc)
 	exec(`INSERT INTO scores (posting_id, content_hash, extraction_id, extraction_prompt_version, points, factors,
 			not_enough_info, freshness, bands, weights_version, bands_version, profile_version, reason_inputs)
 		SELECT p.id, p.content_hash, e.id, 2, $2, $3::jsonb, $4,
 			'{"weight": 5, "fresh_days": 7, "stale_days": 45, "unknown": 0.5}',
-			'{"very_strong": 73, "strong": 53, "good": 33, "stretch": 32}', 'w', 'b', 'p', 'v2:current'
+			'{"very_strong": 73, "strong": 53, "good": 33, "stretch": 32, "location_gate": 5}', 'w', 'b', 'p', 'v2:current'
 		FROM postings p JOIN extractions e ON e.posting_id = p.id WHERE p.id = $1`, id, points, factors, nei)
 }
 
@@ -394,7 +398,9 @@ func TestScoreCursorPagination(t *testing.T) {
 			}
 		}
 	})
-	scores := []float64{50, 50, 40, -1, 60, -1, 40} // -1: unscored
+	// -1: unscored; 90 is capped at stretch by the location gate (M3-09): it sorts after
+	// every good lead, whatever its total.
+	scores := []float64{50, 50, 40, -1, 60, -1, 40, 90}
 	for i, sc := range scores {
 		id := int64(9510 + i)
 		payload := fmt.Sprintf(`{"text":"Role %c","workplaceType":"remote","categories":{"location":"Remote"}}`, 'A'+i)
@@ -408,7 +414,11 @@ func TestScoreCursorPagination(t *testing.T) {
 			}
 			exec(`INSERT INTO work_items (posting_id, kind, content_hash, state) SELECT id, 'extract', content_hash, 'done'
 				FROM postings WHERE id = $1`, id)
-			seedScore(t, exec, id, sc, false)
+			if sc == 90 {
+				seedScore(t, exec, id, sc, false, 0.2) // 3 of 15: below the gate
+			} else {
+				seedScore(t, exec, id, sc, false)
+			}
 		}
 	}
 	if _, err := collector.NormaliseStored(t.Context(), db, 100, quiet()); err != nil {
@@ -445,7 +455,7 @@ func TestScoreCursorPagination(t *testing.T) {
 		cursor = body.NextCursor
 	}
 	// no publication date: freshness counts half (+2.5 of 5)
-	want := []float64{62.5, 52.5, 52.5, 42.5, 42.5, -1, -1}
+	want := []float64{62.5, 52.5, 52.5, 42.5, 42.5, 92.5, -1, -1}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("scores in page order = %v, want %v", got, want)
 	}

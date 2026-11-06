@@ -30,8 +30,22 @@ func TestFitLevel(t *testing.T) {
 	b := bands{VeryStrong: 73, Strong: 53, Good: 33, Stretch: 32}
 	for total, want := range map[float64]string{100: "very_strong", 73: "very_strong", 72.9: "strong",
 		53: "strong", 33: "good", 32.5: "stretch", 31.9: "no", 0: "no"} {
-		if got := fitLevel(total, b); got != want {
+		if got := fitLevel(total, 15, b); got != want {
 			t.Errorf("fitLevel(%v) = %s, want %s", total, got, want)
+		}
+	}
+}
+
+// M3-09: the location gate, the same table as agents/tests/test_score.py.
+func TestLocationGate(t *testing.T) {
+	b := bands{VeryStrong: 73, Strong: 53, Good: 33, Stretch: 32, LocationGate: 5}
+	for _, c := range []struct {
+		total, location float64
+		want            string
+	}{{80, 3, "stretch"}, {80, 5, "very_strong"}, {60, 4.9, "stretch"}, {40, 0, "stretch"},
+		{32.5, 3, "stretch"}, {10, 3, "no"}} {
+		if got := fitLevel(c.total, c.location, b); got != c.want {
+			t.Errorf("fitLevel(%v, location %v) = %s, want %s", c.total, c.location, got, c.want)
 		}
 	}
 }

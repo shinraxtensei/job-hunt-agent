@@ -39,6 +39,8 @@ type bands struct {
 	Strong     float64 `json:"strong"`
 	Good       float64 `json:"good"`
 	Stretch    float64 `json:"stretch"`
+	// M3-09: location/remote/visa points below this cap the level at stretch.
+	LocationGate float64 `json:"location_gate"`
 }
 
 // freshness mirrors score.py: 1 up to fresh_days, 0 from stale_days, linear between, in
@@ -54,9 +56,14 @@ func freshness(published *time.Time, now time.Time, p freshnessParams) float64 {
 	return math.Max(0, (p.StaleDays-age)/(p.StaleDays-p.FreshDays))
 }
 
-func fitLevel(total float64, b bands) string {
+// fitLevel is the band of total, capped at stretch when the location points are below
+// the gate (M3-09, as score.py's fit_level). The total itself is never changed.
+func fitLevel(total, location float64, b bands) string {
 	for i, cut := range []float64{b.VeryStrong, b.Strong, b.Good, b.Stretch} {
 		if total >= cut {
+			if location < b.LocationGate && i < 3 {
+				return "stretch"
+			}
 			return FitLevels[i]
 		}
 	}
@@ -91,7 +98,8 @@ func applyScore(l *Lead, r store.ListLeadScoresRow, now time.Time) error {
 	f := freshness(l.PublishedAt, now, fp)
 	total := r.Points.Float64 + fp.Weight*f
 	l.Score = new(round1(total))
-	l.FitLevel = new(fitLevel(round1(total), b)) // the level of the score shown
+	loc := factors["location"]
+	l.FitLevel = new(fitLevel(round1(total), loc.Weight*loc.Value, b)) // the level of the score shown
 	l.NotEnoughInfo = r.NotEnoughInfo.Bool
 	l.Breakdown = []Factor{}
 	for _, k := range factorOrder {

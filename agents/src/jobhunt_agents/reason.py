@@ -21,7 +21,7 @@ from jobhunt_agents.queue import Handler, Item, ItemError
 from jobhunt_agents.score import Config, load_config
 
 AGENT = "reason"
-PROMPT_VERSION = 2  # bump with a new prompts/reason/vN.md; leads regenerate when opened
+PROMPT_VERSION = 3  # bump with a new prompts/reason/vN.md; leads regenerate when opened
 MAX_TOKENS = 400
 VARIANTS = ["BE", "PAY", "DIST", "FS", "AI", "CONS"]
 VARIANT_QUESTION = (
@@ -121,9 +121,14 @@ def _output(allowed: dict[str, str]) -> type[Reason]:
     return type("Reason", (Reason,), {"allowed": allowed})
 
 
-def breakdown(factors: dict[str, Any], not_enough_info: bool, weights: dict[str, float]) -> str:
+def breakdown(
+    factors: dict[str, Any], not_enough_info: bool, weights: dict[str, float], capped: bool = False
+) -> str:
     """What the model reads: factor values, notes and skill levels. No posting text."""
     lines = ["NOT ENOUGH INFO: the posting names no required skills."] if not_enough_info else []
+    if capped:  # M3-09: the location gate
+        where = factors["location"].get("detail") or "location, remote and visa terms"
+        lines.append(f"FIT CAPPED AT STRETCH: you can't work there ({where}).")
     for key, label in _LABELS.items():
         f = factors[key]
         note = f" ({f['detail']})" if f.get("detail") else ""
@@ -152,11 +157,13 @@ class Reasoner:
         not_enough_info: bool,
         weights: dict[str, float],
         posting_id: int | None = None,
+        *,
+        capped: bool = False,
     ) -> Reason:
         return self.client.structured(
             agent=AGENT,
             prompt=self.prompt,
-            data=breakdown(factors, not_enough_info, weights),
+            data=breakdown(factors, not_enough_info, weights, capped),
             output=_output(below_proven(factors)),
             max_tokens=MAX_TOKENS,
             posting_id=posting_id,
@@ -172,7 +179,8 @@ class Reasoner:
 
 
 _LOAD = """
-SELECT s.content_hash, s.factors, s.not_enough_info, s.reason_inputs, j.title, e.data, c.name
+SELECT s.content_hash, s.factors, s.not_enough_info, s.reason_inputs, j.title, e.data, c.name,
+       s.bands
 FROM scores s
 JOIN jobs j ON j.posting_id = s.posting_id
 JOIN companies c ON c.id = j.company_id
@@ -202,9 +210,11 @@ def handler(pool: ConnectionPool, reasoner: Reasoner, cfg: Config | None = None)
             row = conn.execute(_LOAD, (item.posting_id,)).fetchone()
         if row is None:
             raise ItemError("no score for this posting")
-        content_hash, factors, nei, inputs, title, data, company = row
+        content_hash, factors, nei, inputs, title, data, company, bands = row
+        loc = factors["location"]
+        capped = loc["weight"] * loc["value"] < bands.get("location_gate", 0)  # as score.capped
         extraction = drop_company(Extraction.model_validate(data), company).model_dump()
-        got = reasoner.reason(factors, nei, weights, item.posting_id)
+        got = reasoner.reason(factors, nei, weights, item.posting_id, capped=capped)
         variant = reasoner.variant(title, extraction, item.posting_id)
         with pool.connection() as conn:
             conn.execute(

@@ -40,7 +40,7 @@ from jobhunt_agents.evals.fit import Agreement, fit_bands
 from jobhunt_agents.evals.label import label_extraction, label_fit, prefill_all
 from jobhunt_agents.evals.report import format_report, load_thresholds, replay, run_live, score_run
 from jobhunt_agents.extract import AGENT, MAX_TOKENS, Extractor
-from jobhunt_agents.extraction import Extraction
+from jobhunt_agents.extraction import Extraction, drop_company
 from jobhunt_agents.model import (
     MODEL,
     PRICES,
@@ -60,6 +60,7 @@ from jobhunt_agents.score import (
     FitLevel,
     Job,
     band,
+    fit_level,
     job_from_row,
     load_config,
     score,
@@ -196,6 +197,7 @@ def cmd_fit(s: EvalSet, subset: str, source: str) -> int:
     items = [i for i in s.items() if i.id in s.scored(subset) and i.fit is not None]
     now = datetime.now(UTC)
     points: list[float] = []
+    locs: list[float] = []  # location points, for the M3-09 gate
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         for i in items:
             row = conn.execute(JOB_SQL, (i.posting_id,)).fetchone()
@@ -209,14 +211,24 @@ def cmd_fit(s: EvalSet, subset: str, source: str) -> int:
             )
             if e is None:
                 raise SystemExit(f"{i.id}: no extraction label")
-            points.append(total(score(e, job, profile, cfg), job.published_at, now, cfg))
+            sc = score(drop_company(e, i.company), job, profile, cfg)  # as the worker scores
+            points.append(total(sc, job.published_at, now, cfg))
+            locs.append(sc.factors["location"].value * cfg.weights.location)
     labels: list[FitLevel] = [i.fit for i in items if i.fit is not None]
     bands = fit_bands(points, labels) if subset == "dev" else cfg.bands
     print(f"{subset}: {len(items)} postings, extractions from {source}, at {now:%Y-%m-%d}")
     print(f"bands: {bands.model_dump()}" + (" (fitted)" if subset == "dev" else " (scoring.yaml)"))
-    print(Agreement(points, labels, bands).format())
-    for i, p in sorted(zip(items, points, strict=True), key=lambda x: -x[1]):
-        print(f"  {p:5.1f}  {band(p, bands):<11} owner {i.fit:<11} {i.id}")
+    if bands.location_gate > 0:
+        print("without the location gate:")
+        print(Agreement(points, labels, bands).format())
+        print(f"with the location gate (< {bands.location_gate:g} of {cfg.weights.location:g}):")
+    print(Agreement(points, labels, bands, locs).format())
+    for i, p, loc in sorted(zip(items, points, locs, strict=True), key=lambda x: -x[1]):
+        lv = fit_level(p, loc, bands)
+        print(
+            f"  {p:5.1f}  {lv:<11} owner {i.fit:<11} {i.id}"
+            + ("  (capped)" if lv != band(p, bands) else "")
+        )
     return 0
 
 
@@ -228,12 +240,12 @@ def _reason_one(
     rec: dict[str, Any] = {
         "points": round(sc.points, 2),
         "total": round(t, 2),
-        "fit": band(t, cfg.bands),
+        "fit": fit_level(t, sc.factors["location"].value * cfg.weights.location, cfg.bands),
         "not_enough_info": sc.not_enough_info,
     }
     factors = {k: f.model_dump() for k, f in sc.factors.items()}
     try:
-        r = reasoner.reason(factors, sc.not_enough_info, cfg.weights.model_dump())
+        r = reasoner.reason(factors, sc.not_enough_info, cfg.weights.model_dump(), capped=sc.capped)
         rec |= {"reason": r.reason, "gaps": r.gaps[:5]}
         rec["cv_variant"] = reasoner.variant(job.title, e.model_dump(), None)
     except NeedsReview as err:

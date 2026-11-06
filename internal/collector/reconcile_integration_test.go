@@ -181,3 +181,31 @@ func postingsTitled(prefix, title string, n int) rawsSource {
 	}
 	return s
 }
+
+// M3-09 review (ADR-0023): reconcile stores the shown group's matched location on its
+// canonical job, for the scorer. The group's first posting (Austin, on-site) fails the
+// location rule; its remote EMEA posting matches, so that is the matched location.
+func TestReconcileStoresMatchedLocation(t *testing.T) {
+	e := newEnv(t)
+	defer e.pool.Close()
+	slug := e.add("lever", "Matched", true, false)
+	austin, emea := slug+"-austin", slug+"-emea"
+	e.collect(collectorRegistry(rawsSource{leverPosting(austin, "Backend Engineer", "Austin, TX", "onsite")}))
+	e.collect(collectorRegistry(rawsSource{
+		leverPosting(austin, "Backend Engineer", "Austin, TX", "onsite"),
+		leverPosting(emea, "Backend Engineer", "Remote - EMEA", "remote"),
+	}))
+	p, err := preset.Parse([]byte("name: t\nrole_family: [backend]\nlocation:\n  - {workplace: [remote], remote_scopes: [emea]}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.reconcile(p)
+	var got string
+	if err := e.pool.QueryRow(t.Context(), `SELECT j.matched_location FROM jobs j JOIN postings po ON po.id = j.posting_id
+		WHERE po.source_posting_id = $1`, austin).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != "Remote - EMEA" {
+		t.Errorf("matched_location = %q, want %q (the location that passed, not the first)", got, "Remote - EMEA")
+	}
+}

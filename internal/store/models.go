@@ -80,6 +80,7 @@ type Job struct {
 	RemoteScopes       []string
 	Countries          []string
 	ClassifierVersion  int32
+	MatchedLocation    string
 }
 
 type JobGroup struct {

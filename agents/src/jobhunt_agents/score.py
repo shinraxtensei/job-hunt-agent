@@ -97,6 +97,7 @@ class Bands(_Strict):
     strong: float
     good: float
     stretch: float
+    location_gate: float  # location points below this cap the level at stretch (M3-09)
 
     @model_validator(mode="after")
     def _order(self) -> Bands:
@@ -117,9 +118,11 @@ class Config(_Strict):
     bands_version: str
 
 
-SCORE_CODE = 3  # bump when scoring code changes what a score is: every lead re-scores
+SCORE_CODE = 5  # bump when scoring code changes what a score is: every lead re-scores
 # 2: skills named like the posting's company are dropped (M3-06 review)
 # 3: freshness in whole days; stored factors carry their weight (M3-08)
+# 4: the location detail names the place (M3-09)
+# 5: ... the matched location first (ADR-0023)
 
 
 def _hash(v: object) -> str:
@@ -149,6 +152,7 @@ class Job:
     countries: tuple[str, ...]
     locations: tuple[str, ...]
     published_at: datetime | None
+    matched_location: str = ""  # passed the default preset's rules (reconcile, ADR-0023)
 
 
 class Match(_Strict):
@@ -167,6 +171,7 @@ class Scored(_Strict):
     points: float  # weighted sum without freshness
     factors: dict[str, Factor]
     not_enough_info: bool  # no required skills stated: the reason says so
+    capped: bool  # location/remote/visa below the gate: at most stretch (M3-09)
     weights_version: str
     bands_version: str
     profile_version: str
@@ -238,7 +243,21 @@ def location(e: Extraction, job: Job, cfg: Config) -> Factor:
         else (c.elsewhere, "elsewhere")
     )
     v = base + c.visa[e.visa_sponsorship]
-    return Factor(value=max(0.0, min(1.0, v)), detail=f"{where}, visa {e.visa_sponsorship}")
+    wp = _WORKPLACE.get(job.workplace, "")
+    places = [
+        p
+        for p in (job.matched_location, *job.locations)  # the one that passed, else the first
+        if p and normalize(p) not in _WORKPLACE_WORDS
+    ]
+    at = f"{wp} in {places[0]}" if places else wp or "place not given"
+    return Factor(
+        value=max(0.0, min(1.0, v)),
+        detail=f"{where}: {at.strip()}, visa {e.visa_sponsorship}",  # M3-09: names the place
+    )
+
+
+_WORKPLACE = {"onsite": "on-site", "hybrid": "hybrid", "remote": "remote"}
+_WORKPLACE_WORDS = {"hybrid", "remote", "on site", "onsite", "in person"}  # not places
 
 
 def freshness(published_at: datetime | None, now: datetime, cfg: Config) -> float:
@@ -263,6 +282,7 @@ def score(e: Extraction, job: Job, profile: Profile, cfg: Config) -> Scored:
     return Scored(
         points=sum(w[k] * f.value for k, f in factors.items()),
         not_enough_info=not e.required_skills,
+        capped=capped(w["location"] * factors["location"].value, cfg.bands),
         factors=factors,
         weights_version=cfg.weights_version,
         bands_version=cfg.bands_version,
@@ -273,6 +293,21 @@ def score(e: Extraction, job: Job, profile: Profile, cfg: Config) -> Scored:
 def total(s: Scored, published_at: datetime | None, now: datetime, cfg: Config) -> float:
     """The score shown: stored points plus freshness at `now`."""
     return s.points + cfg.weights.freshness * freshness(published_at, now, cfg)
+
+
+def capped(location_points: float, b: Bands) -> bool:
+    """M3-09: a lead you can't work at (location/remote/visa below the gate) is at most a
+    stretch, whatever its other factors."""
+    return location_points < b.location_gate
+
+
+def fit_level(total_points: float, location_points: float, b: Bands) -> FitLevel:
+    """The band of the total, capped at stretch by the location gate. The total itself is
+    never changed."""
+    level = band(total_points, b)
+    if capped(location_points, b) and level in ("very_strong", "strong", "good"):
+        return "stretch"
+    return level
 
 
 def band(points: float, b: Bands) -> FitLevel:
@@ -289,14 +324,14 @@ def band(points: float, b: Bands) -> FitLevel:
 
 JOB_SQL = """
 SELECT title, seniority, experience_min_years, workplace, remote_scopes, countries,
-       locations, published_at
+       locations, published_at, matched_location
 FROM jobs WHERE posting_id = %s
 """
 
 
 def job_from_row(row: tuple[Any, ...]) -> Job:
     """A row of JOB_SQL."""
-    t, sen, years, workplace, scopes, countries, locations, published = row
+    t, sen, years, workplace, scopes, countries, locations, published, matched = row
     return Job(
         title=t,
         seniority=sen,
@@ -306,4 +341,5 @@ def job_from_row(row: tuple[Any, ...]) -> Job:
         countries=tuple(countries),
         locations=tuple(locations),
         published_at=published,
+        matched_location=matched,
     )

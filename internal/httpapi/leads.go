@@ -145,9 +145,11 @@ func union(have, more []string) []string {
 }
 
 // cursor is the position after the last lead of a page: the sort key of that lead. In
-// score order the key starts with the shown score (unscored: -1, last).
+// score order the key starts with the fit level (M3-09: capped levels count) and the
+// shown score (unscored: last).
 type cursor struct {
 	M string  `json:"m,omitempty"` // "score" or "" (date)
+	F int     `json:"f,omitempty"` // fit level rank, 0 = very strong
 	S float64 `json:"s,omitempty"`
 	T int64   `json:"t"` // first seen, Unix microseconds
 	C int64   `json:"c"`
@@ -157,7 +159,7 @@ type cursor struct {
 func cursorOf(l Lead, sort string) string {
 	c := cursor{T: l.FirstSeenAt.UnixMicro(), C: l.companyID, K: l.titleKey}
 	if sort == "score" {
-		c.M, c.S = sort, rank(l)
+		c.M, c.F, c.S = sort, levelRank(l), rank(l)
 	}
 	b, _ := json.Marshal(c) // plain struct: can't fail
 	return base64.RawURLEncoding.EncodeToString(b)
@@ -172,9 +174,20 @@ func rank(l Lead) float64 {
 	return *l.Score
 }
 
-// after reports whether l sorts strictly after c: best score first in score order, then
-// newest first, company, title key.
+// levelRank orders fit levels best first; unscored leads come last.
+func levelRank(l Lead) int {
+	if l.FitLevel == nil {
+		return len(FitLevels)
+	}
+	return slices.Index(FitLevels, *l.FitLevel)
+}
+
+// after reports whether l sorts strictly after c: in score order the best fit level, then
+// the best score; then newest first, company, title key.
 func (c cursor) after(l Lead) bool {
+	if c.M == "score" && levelRank(l) != c.F {
+		return levelRank(l) > c.F
+	}
 	if c.M == "score" && rank(l) != c.S {
 		return rank(l) < c.S
 	}
@@ -361,9 +374,12 @@ func (a *api) split(all []Lead, f filters) (shown, hidden []Lead) {
 			hidden = append(hidden, l)
 		}
 	}
-	if f.sort == "score" { // stable: equal scores stay newest first
-		slices.SortStableFunc(shown, func(x, y Lead) int { return cmp.Compare(rank(y), rank(x)) })
-		slices.SortStableFunc(hidden, func(x, y Lead) int { return cmp.Compare(rank(y), rank(x)) })
+	if f.sort == "score" { // level, then score; stable: equal ones stay newest first
+		byScore := func(x, y Lead) int {
+			return cmp.Or(cmp.Compare(levelRank(x), levelRank(y)), cmp.Compare(rank(y), rank(x)))
+		}
+		slices.SortStableFunc(shown, byScore)
+		slices.SortStableFunc(hidden, byScore)
 	}
 	return shown, hidden
 }

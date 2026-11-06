@@ -170,6 +170,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0020 | Extractions stored per content and prompt version; the worker records its prompt version | Accepted |
 | 0021 | Store coded scores and model reasons separately; the worker queues its own reasons | Accepted |
 | 0022 | The API's first write: request a fresh reason, refused cross-site; loopback Host names only | Accepted |
+| 0023 | Reconcile stores the default preset's matched location on jobs, for the scorer | Accepted |
 
 ## Project skills
 

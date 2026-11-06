@@ -105,7 +105,7 @@ will run on a server later, and his data survives restarts and can be backed up.
 
 **Stories:** L-01 Whole stack in Docker Compose on the Mac
 
-## M3: Extraction and scoring
+## M3: Extraction and scoring ✅ done 2026-11-06
 
 **Goal:** every lead that passes the rules has structured facts, a score, a short
 reason, gaps and a CV variant.
@@ -122,18 +122,80 @@ reason, gaps and a CV variant.
 **Stories:** M3-01 Python project and worker skeleton · M3-02 Work queue claim and
 retry · M3-03 `decide()` interface and model client · M3-04 Extraction agent ·
 M3-05 Skill map and search profile · M3-06 Scoring agent · M3-07 Eval set and
-`make evals` · M3-08 Score, reason and gaps in the tracker
+`make evals` · M3-08 Score, reason and gaps in the tracker · M3-09 Location gate (added
+during the milestone)
 
 Order: M3-01 → M3-02 → M3-03 → M3-05 → M3-07 → M3-04 → M3-06 → M3-08. M3-07 samples and
 labels the eval set before the first extraction prompt; its thresholds are set after
 M3-04's first baseline run.
+
+**Wrap-up (2026-11-06).** All exit criteria are met and seen working with `make up`.
+
+- **Delivered:**
+  - **Extraction:** all 509 leads the default preset shows are extracted with prompt v2:
+    509 done, 0 needs_review.
+  - **Scoring:** all 509 are scored in code (PRD weights in `scoring.yaml`). 504 have a
+    current reason, gaps and CV variant; 5 need review (1.0%).
+  - **Tracker:** best fit first, fit filter with counts, the reason and breakdown in
+    the expanded row.
+  - **Decisions:** ADR-0017…ADR-0023.
+- **Fit levels now:** very strong 4, strong 95, good 143, stretch 107 (97 of them capped
+  by the location gate, M3-09), no 160.
+- **Cost:**
+  - $0.98 of model spend in all since 2026-11-05, evals and the re-runs of this
+    milestone included: extraction $0.52, reasons $0.22, CV variant $0.13, eval
+    pre-fill $0.03.
+  - Running cost per new lead: about $0.0007 to extract, plus $0.0002 for the reason and
+    CV variant. Logged per call in `model_calls`. The daily budget was never reached.
+- **Extraction evals (prompt v2):**
+
+  | Field | All 36 | Held-out 10 |
+  |---|---|---|
+  | Required skills, F1 (precision) | 72.3% (77.6%) | 66.2% (69.0%) |
+  | Optional skills, F1 | 73.3% | 70% |
+  | Languages, remote policy | 94.4% | 90% |
+  | Years, seniority, visa, salary | 100% | 100% |
+
+  Injection checks pass 4/4 on every run. The thresholds are regression gates
+  (all-36 score minus 0.03), and `make evals-replay` checks them in CI.
+- **Fit agreement with the owner's blind labels (all 36; held-out was used for the
+  first band fit, so it is no longer unseen):**
+  - before the location gate: exact 55.6%, within one level 88.9%;
+  - with it: exact 47.2%, within one level 91.7%.
+
+  The gate costs exact agreement on three leads the owner labelled good or strong in
+  countries they can't work from (US, Canada). It moves "no" leads such as GitLab India
+  off "strong".
+- **Reasons:** prompt v3; 1.0% need review. The rule that failed is named in the error;
+  most often it is the check that a missing or learning skill is never claimed as
+  experience. The reasons never see posting text.
+
+**What M4 needs from the owner:**
+- **The Master CV**, tagged by variant (BE, PAY, DIST, FS, AI, CONS). It is imported as
+  evidence lines (M4-01), and every tailored bullet must cite one.
+- **Evidence notes** for the 9 skills set to familiar for lack of evidence
+  (Observability, IaC, Ubuntu, Agile, Debian, Bash, Virtualization, Grafana, DevOps),
+  if any of them should be proven. Otherwise they stay familiar, and the CV never
+  presents them as experience.
+- **A CV-variant label** for each of the 36 eval postings, so the variant choice can be
+  measured before tailoring depends on it (see the follow-up below).
+- **One-page CV layout:** the template to fill, or approval of the first draft's
+  layout (M5 makes the PDFs).
+- Review and approval of the M4 stories before work starts.
+
+**Follow-ups from M3 (not scheduled yet):**
+- **Junk locations** such as "N/A" (7 shown leads) appear in the location detail and
+  the reasons as written. They should be dropped at normalisation (M2's classifier).
+- **The location factor reads the canonical posting's own facets,** not the group
+  member that matched the preset (ADR-0023 revisit). The detail names the matched
+  location, but the value comes from the canonical job.
 
 **Follow-ups from M3-06 (not scheduled yet):**
 - **"Stretch" as a flag, not a band.** The calibrated stretch band is 1 point wide
   (32–33). Make "stretch" a flag on the lead instead: the job's seniority or minimum
   years is above the profile's. Keep four fit levels.
 - **The CV-variant choice is skewed.** In the 509-lead run, `decide()` chose DIST for
-  158. Label the variant on the eval set and evaluate it in M4, before tailoring
+  158 (173 after the reasons were regenerated). Label the variant on the eval set and evaluate it in M4, before tailoring
   depends on it.
 
 ## M4: Evidence bank and tailoring
@@ -285,3 +347,4 @@ with their own filters, without seeing anything private of the owner's.
 | 2026-11-02 | **M2 complete.** M2-01…M2-07 done, plus two stories added during the milestone: M2-08 Tracker polish (matched location, labels) and M2-09 Classifier country coverage (all ISO 3166-1 countries, `latam`). Decisions: ADR-0008…ADR-0015. On the local data: 5,902 jobs in 4,486 duplicate groups; the default preset shows 508 and hides 3,978, each with its reasons; closed postings detected from full-board fetches; jobs can be added by link (`collector add`), with board links fetched only through the boards' own APIs. The tracker page (Vite + React, embedded in the API binary, same-origin CSP) passes axe and AA contrast at 375 and 1280 px in both themes. Held back: TypeScript 7 (Dependabot #26) until typescript-eslint supports it (typescript-eslint#10940). Next: **D: Deploy**. | Every M2 exit criterion is met and seen working locally. TypeScript 7 passes `tsc`, Vite and Vitest, but typescript-eslint 8.72.1 (latest) requires TypeScript < 6.1 and refuses to run, so `npm ci` and the lint step fail. |
 | 2026-11-03 | **D: Deploy to a server** moved from after M2 to the end (after M8); M0-05, M1-08 and M1-09 stay in it, and **S: Sharing** stays after D (it needs a server). New milestone **L: Whole stack on the Mac** before M3 (story L-01). Every milestone from M3 on must run with `make up` on the Mac. ADR-0002 stays Proposed; it is decided in D. | Owner's choice: the whole project runs on the Mac first and the server comes last. Nothing needs daily automatic collection until then: collection runs on demand with `make collect` (`collector run` inside the stack). Running the same images locally now means D only has to move them. |
 | 2026-11-06 | M3-06 follow-ups recorded under M3: stretch as a seniority/years flag instead of a 1-point band; CV-variant choice to be evaluated with labels in M4. | Owner's review of #42: the calibrated stretch band is 1 point wide, and `decide()` chose DIST for 158 of 509 leads. |
+| 2026-11-06 | **M3 complete.** M3-01…M3-09; M3-09 Location gate added during the milestone (owner's review of #43). 509 shown leads extracted and scored; $0.98 model spend in all; extraction gates and fit agreement in the M3 wrap-up. Next: **M4**. | Every M3 exit criterion is met and seen working locally. |

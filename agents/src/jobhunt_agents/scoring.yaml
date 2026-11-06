@@ -54,3 +54,6 @@ bands:              # lowest total for each fit level; below `stretch` is `no`.
   strong: 53
   good: 33
   stretch: 32
+  # M3-09: location/remote/visa points below this cap the level at "stretch" (the total
+  # is unchanged): a lead you can't work at never ranks as a strong fit. Of 15.
+  location_gate: 5

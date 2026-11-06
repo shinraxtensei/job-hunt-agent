@@ -158,3 +158,21 @@ func (q *Queries) RetryFailed(ctx context.Context, kind string) (int64, error) {
 	}
 	return result.RowsAffected(), nil
 }
+
+const setMatchedLocations = `-- name: SetMatchedLocations :exec
+UPDATE jobs j SET matched_location = x.loc
+FROM (SELECT unnest($1::bigint[]) AS id, unnest($2::text[]) AS loc) x
+WHERE j.posting_id = x.id AND j.matched_location <> x.loc
+`
+
+type SetMatchedLocationsParams struct {
+	PostingIds []int64
+	Locations  []string
+}
+
+// The reconcile step's second write (ADR-0023): the default preset's matched location of
+// each shown group's canonical posting, for the scorer. Unchanged rows aren't touched.
+func (q *Queries) SetMatchedLocations(ctx context.Context, arg SetMatchedLocationsParams) error {
+	_, err := q.db.Exec(ctx, setMatchedLocations, arg.PostingIds, arg.Locations)
+	return err
+}

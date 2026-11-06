@@ -20,6 +20,7 @@ from jobhunt_agents.score import (
     FitLevel,
     Job,
     band,
+    fit_level,
     freshness,
     load_config,
     location,
@@ -71,6 +72,7 @@ def job(**kw: object) -> Job:
         "countries": (),
         "locations": (),
         "published_at": NOW,
+        "matched_location": "",
     }
     return Job(**base | kw)  # pyright: ignore[reportArgumentType]
 
@@ -271,3 +273,76 @@ def test_weights_version_covers_code_and_aliases(monkeypatch: pytest.MonkeyPatch
     monkeypatch.undo()
     monkeypatch.setitem(aliases.TABLE, "Brand new tech", ("bnt",))
     assert load_config().weights_version != v
+
+
+# M3-09 AC1: location/remote/visa points below bands.location_gate cap the fit level at
+# stretch; the total is unchanged. The same table is in internal/httpapi/score_test.go.
+@pytest.mark.parametrize(
+    ("total_points", "location_points", "want"),
+    [
+        (80, 3.0, "stretch"),  # very strong, but can't work there
+        (80, 5.0, "very_strong"),  # at the gate: not capped
+        (60, 4.9, "stretch"),
+        (40, 0.0, "stretch"),  # good → stretch
+        (32.5, 3.0, "stretch"),  # already stretch
+        (10, 3.0, "no"),  # never raised
+    ],
+)
+def test_location_gate_caps_the_level(
+    cfg: Config, total_points: float, location_points: float, want: str
+) -> None:
+    assert fit_level(total_points, location_points, cfg.bands) == want
+
+
+def test_gate_is_in_the_bands_section(cfg: Config) -> None:
+    assert cfg.bands.location_gate == 5
+
+
+# M3-09 AC3: the location detail names the place and the workplace, so a capped reason
+# can say where ("elsewhere: on-site in Sao Paulo, visa unknown").
+def test_location_detail_names_the_place(cfg: Config) -> None:
+    j = job(workplace="onsite", countries=("BR",), locations=("Sao Paulo", "Rio de Janeiro"))
+    f = location(ext(), j, cfg)
+    assert f.detail == "elsewhere: on-site in Sao Paulo, visa unknown"
+    hybrid = location(
+        ext(visa_sponsorship="no"),
+        job(workplace="hybrid", countries=("DE",), locations=("Berlin",)),
+        cfg,
+    )
+    assert hybrid.detail == "relocation: hybrid in Berlin, visa no"
+    unknown_wp = location(ext(), job(countries=("US",), locations=("New York",)), cfg)
+    assert unknown_wp.detail == "elsewhere: in New York, visa unknown"
+    # a location that only names the workplace is skipped ("Hybrid", "Remote")
+    places = ("Hybrid", "Austin, TX")
+    word = location(ext(), job(workplace="hybrid", countries=("US",), locations=places), cfg)
+    assert word.detail == "elsewhere: hybrid in Austin, TX, visa unknown"
+
+
+def test_scored_says_when_capped(profile: Profile, cfg: Config) -> None:
+    far = score_lead(ext(required_skills=["PostgreSQL"]), job(countries=("US",)), profile, cfg)
+    near = score_lead(
+        ext(required_skills=["PostgreSQL"]),
+        job(workplace="remote", remote_scopes=("worldwide",)),
+        profile,
+        cfg,
+    )
+    assert far.capped
+    assert not near.capped
+
+
+# #44 review (ADR-0023): with several locations, the detail names the one that passed the
+# default preset (reconcile's matched_location), not the first.
+@pytest.mark.parametrize(
+    ("locations", "matched", "want"),
+    [
+        (("Austin, TX", "London"), "London", "elsewhere: hybrid in London, visa unknown"),
+        (("Canada", "Greece"), "Greece", "elsewhere: hybrid in Greece, visa unknown"),
+        (("Austin, TX", "London, UK"), "", "elsewhere: hybrid in Austin, TX, visa unknown"),  # none
+        (("Hybrid", "Austin, TX"), "Hybrid", "elsewhere: hybrid in Austin, TX, visa unknown"),
+    ],
+)
+def test_location_detail_uses_the_matched_location(
+    cfg: Config, locations: tuple[str, ...], matched: str, want: str
+) -> None:
+    j = job(workplace="hybrid", countries=("US",), locations=locations, matched_location=matched)
+    assert location(ext(), j, cfg).detail == want

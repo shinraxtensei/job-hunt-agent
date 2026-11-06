@@ -16,7 +16,15 @@ from jobhunt_agents.db import open_pool
 from jobhunt_agents.extraction import Extraction
 from jobhunt_agents.profile import Profile, load
 from jobhunt_agents.rescore import rescore
-from jobhunt_agents.score import JOB_SQL, Config, band, job_from_row, load_config, score, total
+from jobhunt_agents.score import (
+    JOB_SQL,
+    Config,
+    fit_level,
+    job_from_row,
+    load_config,
+    score,
+    total,
+)
 from tests.conftest import ROOT, Go
 
 EXTRACTION: dict[str, Any] = {
@@ -146,16 +154,35 @@ def test_config_change_rescores_with_no_model_call(
 
 # The view adds freshness as of now and the fit level from the stored bands, as score.py
 # does.
-def test_view_matches_the_code(app_dsn: str, go: Go, profile_dir: Path) -> None:
+# M3-09: with low bands so the total is "very strong", an on-site job abroad is capped
+# at stretch by the location gate, in the view as in the code.
+@pytest.mark.parametrize("abroad", [False, True])
+def test_view_matches_the_code(
+    app_dsn: str, go: Go, profile_dir: Path, tmp_path: Path, abroad: bool
+) -> None:
     posting = go.add_shown_job()
-    extracted(app_dsn, posting)
+    extracted(app_dsn, posting, EXTRACTION | ({"remote_policy": "onsite"} if abroad else {}))
     with psycopg.connect(app_dsn) as conn:  # part of a day: freshness counts whole days
         conn.execute(
             "UPDATE jobs SET published_at = now() - interval '26 days 20 hours'"
             " WHERE posting_id = %s",
             (posting,),
         )
-    profile, cfg = load(profile_dir), load_config()
+        if abroad:
+            conn.execute(
+                "UPDATE jobs SET workplace = 'onsite', countries = '{US}', remote_scopes = '{}',"
+                " locations = '{Austin}' WHERE posting_id = %s",
+                (posting,),
+            )
+    low = tmp_path / "scoring.yaml"
+    low.write_text(
+        SCORING.read_text()
+        .replace("very_strong: 73", "very_strong: 30")
+        .replace("strong: 53", "strong: 20")
+        .replace("good: 33", "good: 10")
+        .replace("stretch: 32", "stretch: 5")
+    )
+    profile, cfg = load(profile_dir), load_config(low)
     with open_pool(app_dsn, max_size=2) as pool:
         rescore(pool, profile, cfg)
     with psycopg.connect(app_dsn) as conn:
@@ -167,10 +194,13 @@ def test_view_matches_the_code(app_dsn: str, go: Go, profile_dir: Path) -> None:
     assert v
     assert j
     job = job_from_row(j)
-    s = score(Extraction.model_validate(EXTRACTION), job, profile, cfg)
+    e = Extraction.model_validate(EXTRACTION | ({"remote_policy": "onsite"} if abroad else {}))
+    s = score(e, job, profile, cfg)
     want = total(s, job.published_at, datetime.now(UTC), cfg)
     assert v[0] == pytest.approx(want, abs=0.01)
-    assert v[1] == band(want, cfg.bands)
+    loc = s.factors["location"].value * cfg.weights.location
+    assert v[1] == fit_level(want, loc, cfg.bands)
+    assert v[1] == ("stretch" if abroad else "very_strong")
     assert v[2] is False  # no reason yet
 
 

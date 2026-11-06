@@ -42,3 +42,10 @@ FROM model_calls WHERE agent = 'extract' AND outcome = 'ok';
 UPDATE work_items
 SET state = 'pending', attempts = 0, run_after = now(), last_error = NULL, updated_at = now()
 WHERE state = 'failed' AND kind = @kind;
+
+-- name: SetMatchedLocations :exec
+-- The reconcile step's second write (ADR-0023): the default preset's matched location of
+-- each shown group's canonical posting, for the scorer. Unchanged rows aren't touched.
+UPDATE jobs j SET matched_location = x.loc
+FROM (SELECT unnest(@posting_ids::bigint[]) AS id, unnest(@locations::text[]) AS loc) x
+WHERE j.posting_id = x.id AND j.matched_location <> x.loc;

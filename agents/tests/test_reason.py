@@ -209,3 +209,24 @@ def test_injection_cannot_change_score_or_reason(app_dsn: str, go: Go, profile_d
     after = row(app_dsn, injected)
     assert after is not None
     assert after["points"] == b["points"]
+
+
+# M3-09 AC3: a capped lead's breakdown tells the model the level is capped and why (the
+# place and workplace), so the worst sentence can say you can't work there.
+def test_capped_lead_breakdown_says_why(app_dsn: str, go: Go, profile_dir: Path) -> None:
+    posting = go.add_shown_job()
+    with psycopg.connect(app_dsn) as conn:
+        conn.execute(
+            "UPDATE jobs SET workplace = 'onsite', countries = '{US}', remote_scopes = '{}',"
+            " locations = '{New York}' WHERE posting_id = %s",
+            (posting,),
+        )
+    extracted(app_dsn, posting, EXTRACTION | {"remote_policy": "onsite"})
+    with open_pool(app_dsn, max_size=2) as pool:
+        rescore(pool, load(profile_dir), load_config())
+    provider = FakeProvider(answer(json.dumps(GOOD)), answer('{"choice": "BE"}'))
+    only(app_dsn, posting)
+    run_reason(app_dsn, provider)
+    user = provider.requests[0].user
+    assert "FIT CAPPED AT STRETCH" in user
+    assert "elsewhere: on-site in New York, visa unknown" in user

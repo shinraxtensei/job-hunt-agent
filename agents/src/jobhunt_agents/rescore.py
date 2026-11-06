@@ -23,7 +23,7 @@ from jobhunt_agents.score import Config, Scored, job_from_row, score
 _STALE = """
 SELECT p.id, p.content_hash, e.id, e.prompt_version, e.data, c.name,
        j.title, j.seniority, j.experience_min_years, j.workplace, j.remote_scopes,
-       j.countries, j.locations, j.published_at
+       j.countries, j.locations, j.published_at, j.matched_location
 FROM work_items w
 JOIN postings p ON p.id = w.posting_id
 JOIN jobs j ON j.posting_id = p.id
@@ -80,9 +80,10 @@ WHERE w.posting_id = s.posting_id AND w.kind = 'reason' AND w.state = 'done'
 
 
 def reason_inputs(s: Scored) -> str:
-    """What a reason is made from: the breakdown, the profile and the reason prompt."""
+    """What a reason is made from: the breakdown, the profile, the location cap (M3-09)
+    and the reason prompt."""
     factors = json.dumps({k: f.model_dump() for k, f in s.factors.items()}, sort_keys=True)
-    h = hashlib.sha256(f"{factors}\0{s.profile_version}".encode()).hexdigest()
+    h = hashlib.sha256(f"{factors}\0{s.profile_version}\0{s.capped}".encode()).hexdigest()
     return f"v{REASON_PROMPT_VERSION}:{h}"
 
 
