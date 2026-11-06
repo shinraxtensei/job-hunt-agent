@@ -210,8 +210,26 @@ report.
 - The coverage report lists covered skills and honest gaps.
 - All six guardrail tests from `evidence-bank-guardrails` pass.
 
-**Stories:** M4-01 Evidence bank schema and import · M4-02 Tailoring agent ·
-M4-03 Coverage report · M4-04 Guardrail tests · M4-05 Draft review page
+**Stories:** M4-01 Evidence bank · M4-02 Tailoring agent · M4-03 Coverage report ·
+M4-04 Draft validator and the guardrail tests · M4-05 Draft review page · M4-06 Measure
+the CV-variant choice (added from the M3 follow-ups)
+
+Order: M4-01 → M4-06 (in parallel) → M4-03 → M4-04 → M4-02 → M4-05.
+- The validator (M4-04) comes before the tailoring agent, so the guardrail tests exist
+  before the code they guard.
+- Coverage (M4-03) is the agent's input, so it comes before both.
+- The model claim checker stays in M5 (M5-02). M4-04 is the deterministic layer under
+  it.
+
+**Owner input** (formats in `docs/stories/M4-owner-input.md`):
+
+| # | What | File | Needed by |
+|---|---|---|---|
+| OI-1 | Master CV as checked evidence lines | `data/profile/evidence.yaml` | M4-01, blocks real drafts |
+| OI-2 | Evidence for the 9 skills set to familiar | `skill_map.yaml` | optional |
+| OI-3 | CV-variant label per eval posting | `agents/evals/variants.yaml` | M4-06 |
+| OI-4 | One-page layout | `data/profile/cv_layout.yaml` | M4-02; defaults until then |
+| OI-5 | Story review | the stories PR | all |
 
 ## M5: Documents
 
@@ -348,3 +366,4 @@ with their own filters, without seeing anything private of the owner's.
 | 2026-11-03 | **D: Deploy to a server** moved from after M2 to the end (after M8); M0-05, M1-08 and M1-09 stay in it, and **S: Sharing** stays after D (it needs a server). New milestone **L: Whole stack on the Mac** before M3 (story L-01). Every milestone from M3 on must run with `make up` on the Mac. ADR-0002 stays Proposed; it is decided in D. | Owner's choice: the whole project runs on the Mac first and the server comes last. Nothing needs daily automatic collection until then: collection runs on demand with `make collect` (`collector run` inside the stack). Running the same images locally now means D only has to move them. |
 | 2026-11-06 | M3-06 follow-ups recorded under M3: stretch as a seniority/years flag instead of a 1-point band; CV-variant choice to be evaluated with labels in M4. | Owner's review of #42: the calibrated stretch band is 1 point wide, and `decide()` chose DIST for 158 of 509 leads. |
 | 2026-11-06 | **M3 complete.** M3-01…M3-09; M3-09 Location gate added during the milestone (owner's review of #43). 509 shown leads extracted and scored; $0.98 model spend in all; extraction gates and fit agreement in the M3 wrap-up. Next: **M4**. | Every M3 exit criterion is met and seen working locally. |
+| 2026-11-06 | M4 stories written: M4-01…M4-05 renamed to match their scope (Guardrail tests → Draft validator and the guardrail tests), M4-06 added (CV-variant measurement, from the M3 follow-ups), order set, owner input listed with formats. | Owner's direction after M3; the validator comes before the agent so the guardrail tests exist first. |
