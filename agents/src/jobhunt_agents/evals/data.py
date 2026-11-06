@@ -20,10 +20,8 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from jobhunt_agents.extraction import Extraction
+from jobhunt_agents.score import FitLevel
 from jobhunt_agents.text import bound, posting_text
-
-FitLevel = Literal["very_strong", "strong", "good", "stretch", "no"]
-FIT_LEVELS: tuple[FitLevel, ...] = ("very_strong", "strong", "good", "stretch", "no")
 
 
 class Injection(BaseModel):

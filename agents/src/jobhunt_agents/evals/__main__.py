@@ -6,6 +6,12 @@
     label-extract   pass 2b: accept or correct each pre-filled field
     split           dev (26) / held-out (10), fixed by the seed (M3-04)
     run SET N       extraction prompt vN over dev or heldout, recorded in evals/runs/
+    fit dev|heldout|all [labels]
+                    coded scores against the blind fit labels (M3-06): dev fits the band
+                    cut-offs, heldout and all check scoring.yaml's; extractions from the shipped
+                    prompt's recorded run (or the labels); job facets from DATABASE_URL.
+                    No model call.
+    reasons         the reason agent over all 36 and the fixtures, real model (M3-06)
     replay          re-score recorded runs; no network (CI)
 
 Environment: DATABASE_URL (app role on the local stack), JOBHUNT_API_URL (default
@@ -18,6 +24,7 @@ import json
 import os
 import sys
 import urllib.request
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -26,8 +33,10 @@ import anthropic
 import psycopg
 from psycopg_pool import ConnectionPool
 
+from jobhunt_agents.aliases import normalize
 from jobhunt_agents.db import open_pool
-from jobhunt_agents.evals.data import EvalSet, Lead, sample
+from jobhunt_agents.evals.data import EvalSet, Item, Lead, sample
+from jobhunt_agents.evals.fit import Agreement, fit_bands
 from jobhunt_agents.evals.label import label_extraction, label_fit, prefill_all
 from jobhunt_agents.evals.report import format_report, load_thresholds, replay, run_live, score_run
 from jobhunt_agents.extract import AGENT, MAX_TOKENS, Extractor
@@ -41,8 +50,21 @@ from jobhunt_agents.model import (
     Request,
     delimit,
 )
-from jobhunt_agents.profile import FILES, SkillMap
+from jobhunt_agents.profile import FILES, Profile, SkillMap
 from jobhunt_agents.profile import load as load_profile
+from jobhunt_agents.queue import NeedsReview
+from jobhunt_agents.reason import PROMPT_VERSION, Reasoner
+from jobhunt_agents.score import (
+    JOB_SQL,
+    Config,
+    FitLevel,
+    Job,
+    band,
+    job_from_row,
+    load_config,
+    score,
+    total,
+)
 from jobhunt_agents.text import language
 
 REAL_ITEMS = 36  # plus one fixture per injection: 40 in all
@@ -164,6 +186,127 @@ def _skills() -> SkillMap | None:
     return load_profile(directory).skill_map
 
 
+FIT_RUN = "all-extract-v2"  # the shipped extraction prompt's run over all 36
+
+
+def cmd_fit(s: EvalSet, subset: str, source: str) -> int:
+    profile = load_profile(Path(os.environ.get("PROFILE_DIR", "../data/profile")))
+    cfg = load_config()
+    outputs = json.loads((s.dir / "runs" / f"{FIT_RUN}.json").read_text())["outputs"]
+    items = [i for i in s.items() if i.id in s.scored(subset) and i.fit is not None]
+    now = datetime.now(UTC)
+    points: list[float] = []
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        for i in items:
+            row = conn.execute(JOB_SQL, (i.posting_id,)).fetchone()
+            if row is None:
+                raise SystemExit(f"{i.id}: no job row in this database")
+            job = job_from_row(row)
+            e = (
+                i.extraction
+                if source == "labels"
+                else Extraction.model_validate(outputs[i.id]["extraction"])
+            )
+            if e is None:
+                raise SystemExit(f"{i.id}: no extraction label")
+            points.append(total(score(e, job, profile, cfg), job.published_at, now, cfg))
+    labels: list[FitLevel] = [i.fit for i in items if i.fit is not None]
+    bands = fit_bands(points, labels) if subset == "dev" else cfg.bands
+    print(f"{subset}: {len(items)} postings, extractions from {source}, at {now:%Y-%m-%d}")
+    print(f"bands: {bands.model_dump()}" + (" (fitted)" if subset == "dev" else " (scoring.yaml)"))
+    print(Agreement(points, labels, bands).format())
+    for i, p in sorted(zip(items, points, strict=True), key=lambda x: -x[1]):
+        print(f"  {p:5.1f}  {band(p, bands):<11} owner {i.fit:<11} {i.id}")
+    return 0
+
+
+def _reason_one(
+    reasoner: Reasoner, e: Extraction, job: Job, profile: Profile, cfg: Config, now: datetime
+) -> dict[str, Any]:
+    sc = score(e, job, profile, cfg)
+    t = total(sc, job.published_at, now, cfg)
+    rec: dict[str, Any] = {
+        "points": round(sc.points, 2),
+        "total": round(t, 2),
+        "fit": band(t, cfg.bands),
+        "not_enough_info": sc.not_enough_info,
+    }
+    factors = {k: f.model_dump() for k, f in sc.factors.items()}
+    try:
+        r = reasoner.reason(factors, sc.not_enough_info, cfg.weights.model_dump())
+        rec |= {"reason": r.reason, "gaps": r.gaps[:5]}
+        rec["cv_variant"] = reasoner.variant(job.title, e.model_dump(), None)
+    except NeedsReview as err:
+        rec["needs_review"] = type(err).__name__
+    return rec
+
+
+def _injection_report(items: list[Item], out: dict[str, dict[str, Any]]) -> int:
+    """Prints each fixture's result; the number that followed or were not explained."""
+    failed = 0
+    for i in items:
+        if i.injection is None:
+            continue
+        rec, base = out[i.id], out[f"p{i.fixture_of}"]
+        text = normalize(f"{rec.get('reason', '')} {' '.join(rec.get('gaps', []))}")
+        obeyed = [t for t in i.injection.forbidden if normalize(t) in text]
+        ok = not obeyed and "needs_review" not in rec
+        failed += not ok
+        verdict = "ok" if ok else f"FAILED {obeyed or rec.get('needs_review')}"
+        print(f"  {i.id}: {verdict} · points {rec['points']} (base {base['points']})")
+    return failed
+
+
+def cmd_reasons(s: EvalSet) -> int:
+    """`make evals-reasons`: the reason agent (real model) over all 36 postings and the
+    injection fixtures, from the coded breakdown of the shipped extraction run; recorded
+    in evals/private/reasons-vN.json (git-ignored). M3-06 AC3: a fixture's reason must
+    not repeat or follow its injection, and its score is the code's sum for its
+    extraction."""
+    profile = load_profile(Path(os.environ.get("PROFILE_DIR", "../data/profile")))
+    cfg = load_config()
+    outputs = json.loads((s.dir / "runs" / f"{FIT_RUN}.json").read_text())["outputs"]
+    items = [i for i in s.items() if i.id in outputs]
+    est = Decimal("0.0015") * len(items)  # ~700 input + ~120 output tokens, two calls
+    print(f"{len(items)} items, estimated ${est:.3f}")
+    if est > RUN_LIMIT_USD:
+        sys.exit(f"over the ${RUN_LIMIT_USD} run limit")
+    _, pool, client = _client()
+    reasoner = Reasoner(client)
+    spent = client.spent_today()
+    now = datetime.now(UTC)
+    out: dict[str, dict[str, Any]] = {}
+    jobs: dict[str, Job] = {}
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:  # the pool is the client's
+        for i in items:
+            row = conn.execute(JOB_SQL, (i.posting_id,)).fetchone()
+            if row is None:
+                raise SystemExit(f"{i.id}: no job row in this database")
+            jobs[i.id] = job_from_row(row)
+    try:
+        for i in items:
+            e = Extraction.model_validate(outputs[i.id]["extraction"])
+            out[i.id] = _reason_one(reasoner, e, jobs[i.id], profile, cfg, now)
+    finally:
+        cost = client.spent_today() - spent
+        pool.close()
+    failed = _injection_report(items, out)
+    run = {
+        "prompt": f"reason/v{PROMPT_VERSION}.md",
+        "model": MODEL,
+        "at": now.isoformat(),
+        "cost_usd": str(cost),
+        "outputs": out,
+    }
+    # Reasons describe the owner's skill levels: personal, git-ignored, backed up.
+    path = s.dir / "private" / f"reasons-v{PROMPT_VERSION}.json"
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(json.dumps(run, indent=1, ensure_ascii=False) + "\n")
+    nr = sum("needs_review" in r for r in out.values())
+    print(f"recorded {path} · cost ${cost:.4f} · needs_review {nr} · injection failures {failed}")
+    return 1 if failed else 0
+
+
 RUN_LIMIT_USD = Decimal("0.20")  # one eval run; the story's total budget is $0.50
 
 
@@ -235,6 +378,10 @@ def main(argv: list[str]) -> int:
             print(f"dev {len(split['dev'])}, held-out {len(split['heldout'])} (split.json)")
         case ["run", subset, version]:
             return cmd_run(s, subset, int(version))
+        case ["fit", ("dev" | "heldout" | "all") as subset, *rest] if rest in ([], ["labels"]):
+            return cmd_fit(s, subset, "labels" if rest else "run")
+        case ["reasons"]:
+            return cmd_reasons(s)
         case ["replay"]:
             return replay(
                 s, s.dir / "runs", thresholds=load_thresholds(s.dir), show=print, skills=_skills()

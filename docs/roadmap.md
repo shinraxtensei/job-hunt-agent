@@ -128,6 +128,14 @@ Order: M3-01 → M3-02 → M3-03 → M3-05 → M3-07 → M3-04 → M3-06 → M3-
 labels the eval set before the first extraction prompt; its thresholds are set after
 M3-04's first baseline run.
 
+**Follow-ups from M3-06 (not scheduled yet):**
+- **"Stretch" as a flag, not a band.** The calibrated stretch band is 1 point wide
+  (32–33). Make "stretch" a flag on the lead instead: the job's seniority or minimum
+  years is above the profile's. Keep four fit levels.
+- **The CV-variant choice is skewed.** In the 509-lead run, `decide()` chose DIST for
+  158. Label the variant on the eval set and evaluate it in M4, before tailoring
+  depends on it.
+
 ## M4: Evidence bank and tailoring
 
 **Goal:** the owner picks a lead and gets an honest tailored CV draft with a coverage
@@ -276,3 +284,4 @@ with their own filters, without seeing anything private of the owner's.
 | 2026-11-01 | M2-03: hard rules that drop postings replaced by classification plus filter presets; the owner's profile is the `default` preset. New milestone **S: Sharing with friends**, unscheduled, after D. | The owner wants to widen filters at will (seniority included) and to share the tracker with friends in other fields, who need the same data with different filters. Dropping would lose exactly the jobs they want. Sharing changes the trust boundary (ADR-0002), so it gets its own milestone. |
 | 2026-11-02 | **M2 complete.** M2-01…M2-07 done, plus two stories added during the milestone: M2-08 Tracker polish (matched location, labels) and M2-09 Classifier country coverage (all ISO 3166-1 countries, `latam`). Decisions: ADR-0008…ADR-0015. On the local data: 5,902 jobs in 4,486 duplicate groups; the default preset shows 508 and hides 3,978, each with its reasons; closed postings detected from full-board fetches; jobs can be added by link (`collector add`), with board links fetched only through the boards' own APIs. The tracker page (Vite + React, embedded in the API binary, same-origin CSP) passes axe and AA contrast at 375 and 1280 px in both themes. Held back: TypeScript 7 (Dependabot #26) until typescript-eslint supports it (typescript-eslint#10940). Next: **D: Deploy**. | Every M2 exit criterion is met and seen working locally. TypeScript 7 passes `tsc`, Vite and Vitest, but typescript-eslint 8.72.1 (latest) requires TypeScript < 6.1 and refuses to run, so `npm ci` and the lint step fail. |
 | 2026-11-03 | **D: Deploy to a server** moved from after M2 to the end (after M8); M0-05, M1-08 and M1-09 stay in it, and **S: Sharing** stays after D (it needs a server). New milestone **L: Whole stack on the Mac** before M3 (story L-01). Every milestone from M3 on must run with `make up` on the Mac. ADR-0002 stays Proposed; it is decided in D. | Owner's choice: the whole project runs on the Mac first and the server comes last. Nothing needs daily automatic collection until then: collection runs on demand with `make collect` (`collector run` inside the stack). Running the same images locally now means D only has to move them. |
+| 2026-11-06 | M3-06 follow-ups recorded under M3: stretch as a seniority/years flag instead of a 1-point band; CV-variant choice to be evaluated with labels in M4. | Owner's review of #42: the calibrated stretch band is 1 point wide, and `decide()` chose DIST for 158 of 509 leads. |

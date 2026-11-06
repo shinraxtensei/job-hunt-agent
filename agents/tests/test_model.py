@@ -94,6 +94,19 @@ def test_invalid_twice_raises(pool: ConnectionPool, bad: str) -> None:
     assert [r[8] for r in calls(pool)] == ["invalid", "invalid"]
 
 
+# M3-06: the error names the rule the last output broke (field and error type, or the
+# validator's own fixed message), never the output.
+@pytest.mark.parametrize(
+    ("bad", "rule"),
+    [("not json", "json_invalid"), ('{"skills": "go"}', "skills: list_type")],
+)
+def test_invalid_names_the_rule(pool: ConnectionPool, bad: str, rule: str) -> None:
+    fake = FakeProvider(answer(bad), answer(bad))
+    with pytest.raises(InvalidOutput) as err:
+        structured(client(pool, fake))
+    assert str(err.value) == f"schema-invalid output twice ({rule})"
+
+
 def test_invalid_then_valid(pool: ConnectionPool) -> None:
     fake = FakeProvider(answer("{"), answer('{"skills": ["sql"], "years": null}'))
     assert structured(client(pool, fake)).skills == ["sql"]

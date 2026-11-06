@@ -61,6 +61,7 @@ class Request:
     user: str  # the variable, delimited data
     schema: dict[str, Any]
     max_tokens: int
+    thinking: bool = True  # False for short calls: thinking can use the whole budget
 
 
 @dataclass(frozen=True)
@@ -112,6 +113,7 @@ class AnthropicProvider:
             ],
             messages=[{"role": "user", "content": request.user}],
             output_config={"format": {"type": "json_schema", "schema": request.schema}},
+            thinking=anthropic.omit if request.thinking else {"type": "disabled"},
         )
         u = m.usage
         return Response(
@@ -167,6 +169,18 @@ def delimit(data: str) -> str:
     """Untrusted text as data in a block it can't close early: every &, < and > in it is
     HTML-escaped, so no spelling of a closing tag survives (the prompts say so)."""
     return f"<data>\n{html.escape(data, quote=False)}\n</data>"
+
+
+def _rule(e: ValidationError | ValueError) -> str:
+    """The rule an output broke, safe to store: the field and error type, or the fixed
+    message of one of our validators. Never the output (pydantic's input_value)."""
+    if not isinstance(e, ValidationError):
+        return str(e)  # our own parse functions' fixed messages
+    err = e.errors(include_url=False, include_input=False)[0]
+    if err["type"] == "value_error":
+        return str(err.get("ctx", {}).get("error", "value_error"))[:120]
+    loc = ".".join(str(x) for x in err["loc"])
+    return f"{loc}: {err['type']}" if loc else err["type"]
 
 
 class Decide(Protocol):
@@ -227,9 +241,11 @@ class ModelClient:
         output: type[T],
         max_tokens: int,
         posting_id: int | None = None,
+        thinking: bool = True,
     ) -> T:
         """One structured call: prompt.text is the fixed instructions, data is untrusted."""
         return self._call(
+            thinking=thinking,
             agent=agent,
             prompt=prompt,
             user=delimit(data),
@@ -269,6 +285,7 @@ class ModelClient:
             parse=parse,
             max_tokens=50,
             posting_id=posting_id,
+            thinking=False,  # one word; thinking could use all 50 tokens
         )
 
     def _call[T](
@@ -281,12 +298,13 @@ class ModelClient:
         parse: Callable[[str], T],
         max_tokens: int,
         posting_id: int | None,
+        thinking: bool = True,
     ) -> T:
         # One retry for invalid or truncated output (truncated: with twice the room).
         for attempt in (1, 2):
             if self.budget_exhausted():
                 raise BudgetExceeded("daily model budget reached")
-            req = Request(self._model, prompt.text, user, schema, max_tokens)
+            req = Request(self._model, prompt.text, user, schema, max_tokens, thinking)
             began = time.monotonic()
             try:
                 resp = self._provider.call(req)
@@ -325,7 +343,8 @@ class ModelClient:
                 continue
             try:
                 value = parse(resp.text)
-            except ValidationError, ValueError:
+            except (ValidationError, ValueError) as e:
+                rule = _rule(e)
                 self._log(
                     agent,
                     prompt=prompt,
@@ -335,7 +354,7 @@ class ModelClient:
                     posting_id=posting_id,
                 )
                 if attempt == 2:
-                    raise InvalidOutput("schema-invalid output twice") from None
+                    raise InvalidOutput(f"schema-invalid output twice ({rule})") from None
                 continue
             self._log(
                 agent, prompt=prompt, u=resp.usage, began=began, outcome="ok", posting_id=posting_id

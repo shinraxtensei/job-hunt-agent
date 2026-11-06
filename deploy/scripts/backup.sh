@@ -1,7 +1,7 @@
 #!/bin/sh
 # make backup (L-01, M3-05): a timestamped pg_dump in custom format and, with the same
 # timestamp, an archive of the git-ignored personal files (data/profile and the eval
-# set's posting texts, agents/evals/postings), outside the repository, readable only by the owner; keeps the
+# set's posting texts and model runs about the owner, agents/evals/postings and private), outside the repository, readable only by the owner; keeps the
 # newest 14 of each. Needs the stack running (make up). Prints the dump's path.
 #   JOBHUNT_BACKUP_DIR  where backups go (default ~/job-hunter-backups)
 set -eu
@@ -22,7 +22,7 @@ $compose exec -T postgres pg_dump -U postgres -d jobhunt --format=custom >"$file
 mv "$file.partial" "$file"
 
 set --
-for p in data/profile agents/evals/postings; do
+for p in data/profile agents/evals/postings agents/evals/private; do
 	if [ -e "$root/$p" ]; then set -- "$@" "$p"; fi
 done
 if [ $# -gt 0 ]; then

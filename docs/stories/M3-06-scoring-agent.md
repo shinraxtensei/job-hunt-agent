@@ -1,6 +1,6 @@
 # M3-06: Scoring agent
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M3 — Extraction and scoring
 - **Linear:** [HAM-45](https://linear.app/hamid-corp/issue/HAM-45/m3-06-scoring-agent)
 - **Estimate:** 1 day

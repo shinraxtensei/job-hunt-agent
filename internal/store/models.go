@@ -92,6 +92,18 @@ type JobGroup struct {
 	Closed             bool
 }
 
+type LeadScore struct {
+	PostingID     int64
+	Total         int32
+	FitLevel      string
+	NotEnoughInfo bool
+	Factors       []byte
+	Reason        pgtype.Text
+	Gaps          []byte
+	CvVariant     pgtype.Text
+	ReasonCurrent pgtype.Bool
+}
+
 type ModelCall struct {
 	ID                       int64
 	CreatedAt                pgtype.Timestamptz
@@ -124,6 +136,36 @@ type Posting struct {
 	ClosedAt        pgtype.Timestamptz
 	Origin          string
 	LastRecheckedAt pgtype.Timestamptz
+}
+
+type Score struct {
+	PostingID               int64
+	ContentHash             []byte
+	ExtractionID            int64
+	ExtractionPromptVersion int32
+	Points                  float64
+	Factors                 []byte
+	NotEnoughInfo           bool
+	Freshness               []byte
+	Bands                   []byte
+	WeightsVersion          string
+	BandsVersion            string
+	ProfileVersion          string
+	ReasonInputs            string
+	ReasonRequestedAt       pgtype.Timestamptz
+	ScoredAt                pgtype.Timestamptz
+}
+
+type ScoreReason struct {
+	PostingID     int64
+	ContentHash   []byte
+	Inputs        string
+	PromptVersion int32
+	Model         string
+	Reason        string
+	Gaps          []byte
+	CvVariant     string
+	CreatedAt     pgtype.Timestamptz
 }
 
 type WorkItem struct {

@@ -21,7 +21,7 @@ echo "restored $file"
 personal="${file%.dump}.personal.tar.gz"
 if [ -f "$personal" ]; then
 	echo
-	echo "The personal files saved with this backup (data/profile, agents/evals/postings) were NOT restored;"
+	echo "The personal files saved with this backup (data/profile, agents/evals/postings and private) were NOT restored;"
 	echo "your current ones are untouched. To put them back (this overwrites those files):"
 	echo "  tar -xzf '$personal' -C '$root'"
 else

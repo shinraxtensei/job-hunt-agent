@@ -1,6 +1,8 @@
 """M3-04 review: the committed tech-alias table (not personal), used by the eval metric
 and the M3-05 skill matcher, with the skill map's own aliases on top."""
 
+import pytest
+
 from jobhunt_agents.aliases import TABLE, canon
 from jobhunt_agents.profile import _Problems, _skill_map  # pyright: ignore[reportPrivateUsage]
 
@@ -37,3 +39,19 @@ def test_two_skills_that_are_one_tech_collide() -> None:
         problems,
     )
     assert problems.items
+
+
+# M3-06 review: near-misses seen in the 509-lead scoring run.
+@pytest.mark.parametrize(
+    ("name", "same_as"),
+    [
+        ("Full-stack engineering", "Full stack"),
+        ("Fullstack development", "Full stack"),
+        ("Backend engineering", "Backend"),
+        ("Back-end services", "Backend"),
+        ("Frontend engineering", "Frontend"),
+        ("LLM APIs", "LLMs"),
+    ],
+)
+def test_review_near_misses(name: str, same_as: str) -> None:
+    assert canon(name) == canon(same_as)

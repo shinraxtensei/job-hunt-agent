@@ -2,6 +2,7 @@
 the real one): the request it sends, the response it reads, and that the key never
 leaks."""
 
+import dataclasses
 import json
 import threading
 from collections.abc import Iterator
@@ -101,6 +102,16 @@ def test_request_and_response(api: Server) -> None:
     assert body["messages"] == [{"role": "user", "content": "<data>posting</data>"}]
     assert body["output_config"] == {"format": {"type": "json_schema", "schema": REQ.schema}}
     assert api.headers[0]["authorization"] == f"Bearer {KEY}"  # SDK 2.x sends the key this way
+    assert "thinking" not in body  # the model's default
+
+
+# M3-06: short structured calls turn thinking off, or it can use the whole token budget
+# and return no text (seen with the reason agent at 600 tokens).
+def test_thinking_off(api: Server) -> None:
+    AnthropicProvider(KEY, base_url=api.url, max_retries=0).call(
+        dataclasses.replace(REQ, thinking=False)
+    )
+    assert api.bodies[0]["thinking"] == {"type": "disabled"}
 
 
 # AC5: the key never appears in reprs or errors.

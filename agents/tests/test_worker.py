@@ -1,13 +1,17 @@
 """M3-01 AC3: the loop finishes the iteration in progress, then stops; the heartbeat
 backs Compose's healthcheck."""
 
+import json
+import logging
 import os
 import threading
 import time
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
+from jobhunt_agents.__main__ import JSONFormatter
 from jobhunt_agents.worker import Worker, healthy
 
 
@@ -136,3 +140,11 @@ def test_other_errors_are_not_swallowed(tmp_path: Path) -> None:
     w = Worker(iterate=iterate, poll_seconds=0.01, heartbeat=tmp_path / "hb", transient=(Down,))
     with pytest.raises(KeyError):
         w.run(threading.Event())
+
+
+# M3-06: the model client logs its cost as a Decimal. The JSON formatter must write it:
+# when formatting fails, logging prints the active exception, which can hold model output.
+def test_json_log_formats_decimal() -> None:
+    rec = logging.LogRecord("x", logging.INFO, __file__, 1, "model call", None, None)
+    rec.cost = Decimal("0.000123")
+    assert json.loads(JSONFormatter().format(rec))["cost"] == "0.000123"

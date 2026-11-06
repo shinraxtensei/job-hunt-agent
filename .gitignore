@@ -55,3 +55,5 @@ node_modules/
 !/data/profile/*.example.yaml
 # The eval set's posting texts (M3-07); its labels and recorded runs are committed.
 /agents/evals/postings/
+# eval runs that reveal the profile (M3-06 reasons)
+/agents/evals/private/

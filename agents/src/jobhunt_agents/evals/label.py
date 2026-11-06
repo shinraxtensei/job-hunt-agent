@@ -13,8 +13,9 @@ from collections.abc import Callable
 from decimal import Decimal
 
 from jobhunt_agents.aliases import normalize
-from jobhunt_agents.evals.data import FIT_LEVELS, EvalSet, Item
+from jobhunt_agents.evals.data import EvalSet, Item
 from jobhunt_agents.extraction import FIELDS, LIST_FIELDS, Extraction, Salary
+from jobhunt_agents.score import FIT_LEVELS
 from jobhunt_agents.text import terminal_safe
 
 Ask = Callable[[str], str]

@@ -10,7 +10,6 @@ import pytest
 
 from jobhunt_agents.aliases import normalize
 from jobhunt_agents.evals.data import (
-    FIT_LEVELS,
     INJECTIONS,
     EvalSet,
     Lead,
@@ -20,6 +19,7 @@ from jobhunt_agents.evals.label import label_extraction, label_fit, parse_field,
 from jobhunt_agents.evals.report import Thresholds, replay, run_live, score_run
 from jobhunt_agents.extraction import Extraction
 from jobhunt_agents.profile import Skill, SkillMap
+from jobhunt_agents.score import FIT_LEVELS
 from jobhunt_agents.text import clean_html, language, posting_text, terminal_safe
 
 EXTRACTION = {

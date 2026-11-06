@@ -9,7 +9,7 @@ from typing import Any
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
-from jobhunt_agents.extraction import Extraction
+from jobhunt_agents.extraction import Extraction, drop_company
 from jobhunt_agents.model import MODEL, ModelClient, Prompt
 from jobhunt_agents.queue import Handler, Item, ItemError
 from jobhunt_agents.text import bound, posting_text
@@ -42,8 +42,8 @@ class Extractor:
 
 
 _POSTING = """
-SELECT p.source, p.raw_payload, p.content_hash, j.title, j.locations
-FROM postings p JOIN jobs j ON j.posting_id = p.id
+SELECT p.source, p.raw_payload, p.content_hash, j.title, j.locations, c.name
+FROM postings p JOIN jobs j ON j.posting_id = p.id JOIN companies c ON c.id = j.company_id
 WHERE p.id = %s
 """
 
@@ -80,11 +80,11 @@ def handler(pool: ConnectionPool, extract: Extractor) -> Handler:
             row = conn.execute(_POSTING, (item.posting_id,)).fetchone()
             if row is None:
                 raise ItemError("posting or job not found")
-            source, payload, content_hash, title, locations = row
+            source, payload, content_hash, title, locations, company = row
             if conn.execute(_DONE, (item.posting_id, content_hash, version)).fetchone():
                 return
         text = prepare(source, payload, title=title, location=", ".join(locations) or "unknown")
-        got = extract(text, item.posting_id)
+        got = drop_company(extract(text, item.posting_id), company)  # after validation
         with pool.connection() as conn:
             conn.execute(
                 _STORE,

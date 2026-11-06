@@ -19,7 +19,7 @@ SQLC_IMAGE := sqlc/sqlc:1.31.1@sha256:70f53171d27b2424e9358869975455a6e955a5aa8e
 
 .PHONY: help check fmt fmt-check vet lint test-go test-integration test-py evals \
 	sqlc sqlc-check migration vuln up down collect backup restore smoke fuzz \
-	web-install web-check web-build web-dev evals-replay evals-sample evals-label
+	web-install web-check web-build web-dev evals-replay evals-sample evals-label evals-fit evals-reasons
 
 help: ## List every target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -61,6 +61,12 @@ WITH_ENV := set -a && . ./.env && set +a &&
 
 evals: ## Extraction over the eval set, real model, recorded and reported: make evals SET=dev|heldout|all PROMPT=N
 	@$(WITH_ENV) $(EVALS) run $(or $(SET),dev) $(or $(PROMPT),1)
+
+evals-fit: ## Coded scores vs the blind fit labels (M3-06), no model call: make evals-fit SET=dev|heldout|all
+	@$(WITH_ENV) $(EVALS) fit $(or $(SET),dev)
+
+evals-reasons: ## The reason agent over the eval set, real model, recorded (M3-06 AC3)
+	@$(WITH_ENV) $(EVALS) reasons
 
 evals-replay: ## Re-score recorded eval runs against the labels; no network (CI)
 	$(EVALS) replay

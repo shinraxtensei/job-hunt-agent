@@ -18,7 +18,7 @@
 //	                           re-queue the shown postings extracted with an older prompt,
 //	                           after printing how many and the estimated cost (M3-04)
 //	collector queue            work items by state
-//	collector queue retry --failed [--kind extract]
+//	collector queue retry --failed [--kind extract|reason]
 //	                           failed items back to pending with 0 attempts (M3-04)
 //
 // Environment: DATABASE_URL (app role, required); COLLECTOR_CONCURRENCY (default 8);
@@ -56,7 +56,7 @@ import (
 )
 
 const (
-	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify [--report-unknown] | collector preview <preset> | collector add <url> [--title T --company C --location L] | collector enqueue [--reextract [--dry-run]] | collector queue [retry --failed [--kind extract]]"
+	usage = "usage: collector run | collector once | collector companies sync | collector normalise | collector classify [--report-unknown] | collector preview <preset> | collector add <url> [--title T --company C --location L] | collector enqueue [--reextract [--dry-run]] | collector queue [retry --failed [--kind extract|reason]]"
 
 	// normaliseBatch is how many postings `collector normalise` writes per transaction.
 	normaliseBatch = 500
@@ -155,17 +155,21 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 		defer pool.Close()
 		return reextract(ctx, pool, strings.HasSuffix(strings.Join(args, " "), "--dry-run"))
 
-	case "queue retry --failed", "queue retry --failed --kind extract":
+	case "queue retry --failed", "queue retry --failed --kind extract", "queue retry --failed --kind reason":
+		kind := "extract"
+		if strings.HasSuffix(strings.Join(args, " "), "reason") {
+			kind = "reason" // M3-06: queued by the worker itself (ADR-0021)
+		}
 		pool, err := pgxpool.New(ctx, dsn)
 		if err != nil {
 			return 1, fmt.Errorf("connecting to database: %w", err)
 		}
 		defer pool.Close()
-		n, err := queue.RetryFailed(ctx, pool, "extract") // the only kind so far
+		n, err := queue.RetryFailed(ctx, pool, kind)
 		if err != nil {
 			return 1, err
 		}
-		fmt.Printf("retrying %d failed extract items\n", n)
+		fmt.Printf("retrying %d failed %s items\n", n, kind)
 		return 0, nil
 
 	case "queue":

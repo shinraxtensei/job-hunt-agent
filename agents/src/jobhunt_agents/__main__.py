@@ -10,11 +10,13 @@ from types import FrameType
 
 import psycopg
 
-from jobhunt_agents import extract
+from jobhunt_agents import extract, reason
 from jobhunt_agents.db import open_pool
 from jobhunt_agents.model import AnthropicProvider, ModelClient
 from jobhunt_agents.profile import FILES, ProfileError, ProfileWatcher
 from jobhunt_agents.queue import Handler, process_one
+from jobhunt_agents.rescore import rescore
+from jobhunt_agents.score import load_config
 from jobhunt_agents.settings import ConfigError, Settings, load
 from jobhunt_agents.worker import Worker, healthy
 
@@ -36,6 +38,7 @@ class JSONFormatter(logging.Formatter):
         "cost",
         "budget_usd",
         "version",
+        "count",
     )
 
     def format(self, record: logging.LogRecord) -> str:
@@ -45,7 +48,7 @@ class JSONFormatter(logging.Formatter):
             "msg": record.getMessage(),
         }
         out.update({k: getattr(record, k) for k in self.FIELDS if hasattr(record, k)})
-        return json.dumps(out)
+        return json.dumps(out, default=str)  # Decimal costs; never fail: see the test
 
 
 def setup_logging(level: str) -> None:
@@ -71,6 +74,7 @@ def run(s: Settings) -> None:
         log.info("worker started", extra={"user": user, "poll_seconds": s.worker_poll_seconds})
 
         lease = timedelta(seconds=s.worker_lease_seconds)
+        scoring = load_config()  # scoring.yaml ships in the image: a change means a restart
         client = None
         # What the worker does, by work item kind; with no handler, a kind's items wait.
         handlers: dict[str, Handler] = {}
@@ -81,9 +85,10 @@ def run(s: Settings) -> None:
                 daily_budget_usd=s.model_daily_budget_usd,
             )
             handlers["extract"] = extract.handler(pool, extract.Extractor(client))
+            handlers["reason"] = reason.handler(pool, reason.Reasoner(client), scoring)
             extract.register_prompt(pool)
         else:
-            log.info("no ANTHROPIC_API_KEY; extract items wait")
+            log.info("no ANTHROPIC_API_KEY; extract and reason items wait")
         # M3-05: reloaded when the files change; M3-06 scores against profile.current().
         profile = None
         if all((s.profile_dir / f).is_file() for f in FILES):
@@ -95,7 +100,11 @@ def run(s: Settings) -> None:
 
         def iterate() -> bool:
             if profile is not None:
-                profile.current()  # picks up edits without a restart
+                # Coded scores, no model call (M3-06 AC4): only leads whose inputs changed;
+                # a profile edit (picked up without a restart) re-scores every one.
+                n = rescore(pool, profile.current(), scoring)
+                if n:
+                    log.info("scored", extra={"count": n})
             # The daily budget (ADR-0018): stop claiming until the next UTC day.
             if client is not None and client.budget_exhausted():
                 today = datetime.now(UTC).date()

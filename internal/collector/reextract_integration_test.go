@@ -126,3 +126,35 @@ func TestRetryFailed(t *testing.T) {
 		t.Errorf("last_error = %v (%v), want NULL", lastErr, err)
 	}
 }
+
+// M3-06 (ADR-0021): the worker's own reason items retry by kind too, and nothing else moves.
+func TestRetryFailedReason(t *testing.T) {
+	e := newEnv(t)
+	defer e.pool.Close()
+	slug := e.add("lever", "RetryReason", true, false)
+	a := slug + "-a"
+	e.collect(collectorRegistry(rawsSource{leverPosting(a, "Backend Engineer", "Remote", "remote")}))
+	e.reconcile(backendOnly(t))
+	e.exec(`UPDATE work_items SET state = 'failed', last_error = 'InvalidOutput: x'
+		WHERE posting_id = (SELECT id FROM postings WHERE source_posting_id = $1)`, a)
+	e.exec(`INSERT INTO work_items (posting_id, kind, content_hash, state, last_error)
+		SELECT id, 'reason', content_hash, 'failed', 'InvalidOutput: x' FROM postings WHERE source_posting_id = $1`, a)
+
+	n, err := queue.RetryFailed(t.Context(), e.pool, "reason")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Errorf("retried %d, want 1", n)
+	}
+	var extractState, reasonState string
+	if err := e.pool.QueryRow(t.Context(), `SELECT
+		max(state) FILTER (WHERE kind = 'extract'), max(state) FILTER (WHERE kind = 'reason')
+		FROM work_items w JOIN postings p ON p.id = w.posting_id WHERE p.source_posting_id = $1`, a).
+		Scan(&extractState, &reasonState); err != nil {
+		t.Fatal(err)
+	}
+	if extractState != "failed" || reasonState != "pending" {
+		t.Errorf("extract %s, reason %s; want failed, pending", extractState, reasonState)
+	}
+}

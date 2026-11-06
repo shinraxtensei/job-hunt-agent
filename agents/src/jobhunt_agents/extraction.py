@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from jobhunt_agents.aliases import normalize
+
 Seniority = Literal["junior", "mid", "senior", "lead", "unknown"]
 YesNo = Literal["yes", "no", "unknown"]
 RemotePolicy = Literal["remote", "hybrid", "onsite", "unknown"]
@@ -35,3 +37,15 @@ class Extraction(BaseModel):
 
 FIELDS: tuple[str, ...] = tuple(Extraction.model_fields)
 LIST_FIELDS = ("required_skills", "optional_skills", "languages")
+
+
+def drop_company(e: Extraction, company: str) -> Extraction:
+    """The extraction without skills named exactly like the posting's company ("Stripe"
+    at Stripe): the model sometimes lists the employer. Folded like skill names."""
+    c = normalize(company)
+    return e.model_copy(
+        update={
+            k: [s for s in getattr(e, k) if normalize(s) != c]
+            for k in ("required_skills", "optional_skills")
+        }
+    )

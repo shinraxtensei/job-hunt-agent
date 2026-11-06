@@ -55,7 +55,9 @@ agents/              Python 3.15 (uv, ADR-0017): src/jobhunt_agents/ (worker, qu
                      extract.py: the extraction agent and handler (M3-04); tech_aliases.yaml
                      (committed, not personal): canonical tech names for the eval metric and the
                      skill matcher, under the skill map's own aliases;
-                     score/, tailor/ come in M3+; agents/Dockerfile is the worker image
+                     score.py (coded factors, scoring.yaml: weights, credits, bands), rescore.py (stores
+                     scores, queues reasons), reason.py (reason, gaps, CV variant from the breakdown,
+                     M3-06); tailor/ comes in M4; agents/Dockerfile is the worker image
 web/                 TypeScript UI (Vite + React, ADR-0013); built into web/dist/app, embedded in cmd/api
 db/migrations/       plain SQL migrations (goose), forward-only
 db/contract/         work_items.columns: the Go <-> Python queue contract, checked by both sides
@@ -77,6 +79,8 @@ testdata/            golden files (recorded board responses, sample postings)
 | Python tests (integration tests need Docker and Go: they build cmd/migrate and cmd/collector) | `make test-py` → `cd agents && uv run pytest` |
 | Agent evals: extraction prompt vN over dev or held-out, real model, recorded and reported (judge prompts on dev; held-out once at the end) | `make evals SET=dev\|heldout PROMPT=N` |
 | Re-score recorded eval runs, no network (part of `make check`) | `make evals-replay` |
+| Coded scores vs the blind fit labels, confusion matrix; dev fits the band cut-offs (no model call) | `make evals-fit SET=dev\|heldout\|all` |
+| Reason agent over the eval set, real model; injection fixtures checked (output in git-ignored `evals/private/`) | `make evals-reasons` |
 | Eval set: sample / label (blind fit pass, model pre-fill, extraction pass) | `make evals-sample` / `make evals-label PASS=fit\|prefill\|extract` |
 | Lint | `make lint` → golangci-lint; ruff check, ruff format --check, pyright strict |
 | Format Go / check formatting | `make fmt` / `make fmt-check` |
@@ -93,7 +97,7 @@ testdata/            golden files (recorded board responses, sample postings)
 | Location strings the classifier can't place (to grow its tables) | `go run ./cmd/collector classify --report-unknown` |
 | Queue extraction for what the default preset shows (after a preset change; run/add do it too) | `go run ./cmd/collector enqueue` |
 | Re-queue shown postings extracted with an older prompt (prints count and cost first) | `go run ./cmd/collector enqueue --reextract [--dry-run]` |
-| Failed (needs review) items back to pending, e.g. after a fix | `go run ./cmd/collector queue retry --failed [--kind extract]` |
+| Failed (needs review) items back to pending, e.g. after a fix | `go run ./cmd/collector queue retry --failed [--kind extract\|reason]` |
 | Work queue counts by state (also `GET /api/queue`) | `go run ./cmd/collector queue` |
 | Web checks: audit, types, lint, unit, build, Playwright + axe (Node 26, `web/.nvmrc`) | `make web-check` |
 | Build the tracker page into the API binary | `make web-build` |
@@ -164,6 +168,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0018 | Use Claude Haiku 5.5 through the Anthropic API, sync calls with prompt caching | Accepted |
 | 0019 | The worker reads the profile files itself, with ruamel.yaml | Accepted |
 | 0020 | Extractions stored per content and prompt version; the worker records its prompt version | Accepted |
+| 0021 | Store coded scores and model reasons separately; the worker queues its own reasons | Accepted |
 
 ## Project skills
 

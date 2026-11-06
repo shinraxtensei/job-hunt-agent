@@ -15,9 +15,10 @@ from typing import Any, cast
 from pydantic import BaseModel
 
 from jobhunt_agents.aliases import canon, normalize
-from jobhunt_agents.evals.data import FIT_LEVELS, EvalSet
+from jobhunt_agents.evals.data import EvalSet
 from jobhunt_agents.extraction import FIELDS, LIST_FIELDS, Extraction
 from jobhunt_agents.profile import SkillMap
+from jobhunt_agents.score import FIT_LEVELS
 from jobhunt_agents.text import terminal_safe
 
 Show = Callable[[str], None]
