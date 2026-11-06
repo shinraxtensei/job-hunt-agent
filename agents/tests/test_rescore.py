@@ -94,6 +94,10 @@ def test_shown_lead_is_scored(app_dsn: str, go: Go, profile_dir: Path) -> None:
     assert got["points"] == pytest.approx(expected(app_dsn, posting, profile, cfg))
     factors: dict[str, Any] = got["factors"]
     assert set(factors) == {"required", "title", "seniority", "location", "optional"}
+    # M3-08: each factor carries its weight, so the API shows points without the config
+    assert {k: f["weight"] for k, f in factors.items()} == {
+        k: getattr(cfg.weights, k) for k in factors
+    }
     assert [m["level"] for m in factors["required"]["matches"]] == ["proven", "familiar", "missing"]
     assert (got["weights_version"], got["bands_version"], got["profile_version"]) == (
         cfg.weights_version,
@@ -145,6 +149,12 @@ def test_config_change_rescores_with_no_model_call(
 def test_view_matches_the_code(app_dsn: str, go: Go, profile_dir: Path) -> None:
     posting = go.add_shown_job()
     extracted(app_dsn, posting)
+    with psycopg.connect(app_dsn) as conn:  # part of a day: freshness counts whole days
+        conn.execute(
+            "UPDATE jobs SET published_at = now() - interval '26 days 20 hours'"
+            " WHERE posting_id = %s",
+            (posting,),
+        )
     profile, cfg = load(profile_dir), load_config()
     with open_pool(app_dsn, max_size=2) as pool:
         rescore(pool, profile, cfg)

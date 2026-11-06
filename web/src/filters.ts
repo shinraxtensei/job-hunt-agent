@@ -3,6 +3,7 @@ import { label } from "./labels";
 
 // The facets the filter sheet offers, in the API's order.
 export const FACETS: [key: string, label: string][] = [
+  ["fit", "Fit"],
   ["role_family", "Role"],
   ["seniority", "Seniority"],
   ["workplace", "Workplace"],
@@ -24,11 +25,13 @@ export function applied(params: URLSearchParams, preset: Preset | undefined): Ap
   const out: Applied[] = [];
   const presetName = params.get("preset");
   if (presetName) out.push({ key: "preset", label: "Preset", value: presetName === "none" ? "No filters" : presetName, fromURL: true });
+  if (params.get("sort") === "date") out.push({ key: "sort", label: "Sort", value: "newest first", fromURL: true });
   const facet = (key: string, name: string, fallback: string[] | undefined) => {
     const v = list(params.get(key));
     const values = v ?? fallback;
     if (values?.length) out.push({ key, label: name, value: values.map((x) => label(key, x)).join(", "), fromURL: v !== null });
   };
+  facet("fit", "Fit", undefined);
   facet("role_family", "Role", preset?.role_family);
   facet("seniority", "Seniority", preset?.seniority);
   const exp = params.get("max_experience") ?? preset?.experience_max_years?.toString();

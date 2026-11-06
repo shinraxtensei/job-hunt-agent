@@ -9,6 +9,9 @@
     "country": {
       "MA": 1
     },
+    "fit": {
+      "strong": 1
+    },
     "remote_scope": {
       "country:MA": 1,
       "emea": 1

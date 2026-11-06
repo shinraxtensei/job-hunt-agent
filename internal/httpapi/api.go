@@ -1,5 +1,6 @@
-// Package httpapi is the read-only leads API (M2-05, ADR-0012): net/http routing, JSON
-// only. Posting text in responses is untrusted: it is only ever JSON-encoded.
+// Package httpapi is the leads API (M2-05, ADR-0012): net/http routing, JSON only.
+// Posting text and model output in responses are untrusted: only ever JSON-encoded. Its
+// one write asks for a fresh reason (ADR-0022).
 package httpapi
 
 import (
@@ -36,6 +37,8 @@ func New(db DB, presetsDir, commit string, now func() time.Time, log *slog.Logge
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/leads", a.leads)
 	mux.HandleFunc("GET /api/leads/hidden", a.hidden)
+	mux.HandleFunc("GET /api/leads/{id}", a.lead)
+	mux.HandleFunc("POST /api/leads/{id}/reason", a.requestReason)
 	mux.HandleFunc("GET /api/leads/{id}/members", a.members)
 	mux.HandleFunc("GET /api/facets", a.facets)
 	mux.HandleFunc("GET /api/presets", a.presets)

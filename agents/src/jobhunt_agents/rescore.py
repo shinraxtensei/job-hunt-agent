@@ -97,6 +97,7 @@ def rescore(pool: ConnectionPool, profile: Profile, cfg: Config) -> int:
     }
     freshness = Jsonb({"weight": cfg.weights.freshness, **cfg.freshness.model_dump()})
     bands = Jsonb(cfg.bands.model_dump())
+    w = cfg.weights.model_dump()
     n = 0
     with pool.connection() as conn:
         for posting, content_hash, ext_id, prompt, data, company, *job in conn.execute(
@@ -113,7 +114,9 @@ def rescore(pool: ConnectionPool, profile: Profile, cfg: Config) -> int:
                     "extraction": ext_id,
                     "prompt": prompt,
                     "points": s.points,
-                    "factors": Jsonb({k: f.model_dump() for k, f in s.factors.items()}),
+                    "factors": Jsonb(
+                        {k: f.model_dump() | {"weight": w[k]} for k, f in s.factors.items()}
+                    ),
                     "nei": s.not_enough_info,
                     "freshness": freshness,
                     "bands_json": bands,

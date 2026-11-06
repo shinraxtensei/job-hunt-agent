@@ -14,6 +14,11 @@
       "NL": 1,
       "US": 1
     },
+    "fit": {
+      "no": 1,
+      "strong": 1,
+      "unscored": 3
+    },
     "remote_scope": {
       "country:MA": 1,
       "emea": 1,

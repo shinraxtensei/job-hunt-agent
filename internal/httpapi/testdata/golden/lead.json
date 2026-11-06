@@ -1,0 +1,89 @@
+{
+  "id": 9001,
+  "company": {
+    "name": "Acme",
+    "track": "remote"
+  },
+  "title": "Senior Backend Engineer",
+  "role_family": "backend",
+  "seniority": "senior",
+  "workplaces": [
+    "remote"
+  ],
+  "remote_scopes": [
+    "country:MA",
+    "emea"
+  ],
+  "countries": [
+    "MA"
+  ],
+  "locations": [
+    "Remote - EMEA",
+    "Remote – Morocco"
+  ],
+  "matched_location": "",
+  "experience_min_years": 5,
+  "closed": false,
+  "team": "Engineering",
+  "url": "https://jobs.lever.co/x/9001",
+  "published_at": "2025-10-31T08:40:00Z",
+  "first_seen_at": "2026-10-30T10:00:00Z",
+  "origin": "collected",
+  "members": 2,
+  "members_url": "/api/leads/9001/members",
+  "score": 60,
+  "fit_level": "strong",
+  "not_enough_info": false,
+  "breakdown": [
+    {
+      "factor": "required",
+      "weight": 35,
+      "value": 0.63,
+      "points": 22.1,
+      "detail": ""
+    },
+    {
+      "factor": "title",
+      "weight": 20,
+      "value": 0.63,
+      "points": 12.6,
+      "detail": "target title rank 1"
+    },
+    {
+      "factor": "seniority",
+      "weight": 15,
+      "value": 0.63,
+      "points": 9.5,
+      "detail": "level senior, minimum none years"
+    },
+    {
+      "factor": "location",
+      "weight": 15,
+      "value": 0.63,
+      "points": 9.5,
+      "detail": "remote, open to Morocco"
+    },
+    {
+      "factor": "optional",
+      "weight": 10,
+      "value": 0.63,
+      "points": 6.3,
+      "detail": "none stated"
+    },
+    {
+      "factor": "freshness",
+      "weight": 5,
+      "value": 0,
+      "points": 0,
+      "detail": ""
+    }
+  ],
+  "reason": "Your backend stack fits. Go is missing.",
+  "gaps": [
+    "Go"
+  ],
+  "cv_variant": "BE",
+  "reason_current": true,
+  "score_status": "scored"
+}
+

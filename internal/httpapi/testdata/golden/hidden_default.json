@@ -32,7 +32,16 @@
       "members_url": "/api/leads/9005/members",
       "hidden_by": [
         "closed"
-      ]
+      ],
+      "score": null,
+      "fit_level": null,
+      "not_enough_info": false,
+      "breakdown": null,
+      "reason": null,
+      "gaps": null,
+      "cv_variant": null,
+      "reason_current": false,
+      "score_status": "needs_review"
     },
     {
       "id": 9004,
@@ -69,7 +78,16 @@
         "seniority=staff_plus",
         "experience_min_years=8",
         "location"
-      ]
+      ],
+      "score": null,
+      "fit_level": null,
+      "not_enough_info": false,
+      "breakdown": null,
+      "reason": null,
+      "gaps": null,
+      "cv_variant": null,
+      "reason_current": false,
+      "score_status": "pending"
     },
     {
       "id": 9003,
@@ -103,7 +121,16 @@
       "hidden_by": [
         "role_family=sales",
         "location"
-      ]
+      ],
+      "score": null,
+      "fit_level": null,
+      "not_enough_info": false,
+      "breakdown": null,
+      "reason": null,
+      "gaps": null,
+      "cv_variant": null,
+      "reason_current": false,
+      "score_status": "not_queued"
     }
   ]
 }

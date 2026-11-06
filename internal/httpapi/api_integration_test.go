@@ -86,11 +86,60 @@ func world(t *testing.T) *pgxpool.Pool {
 		if _, err := collector.NormaliseStored(t.Context(), pool, 100, quiet()); err != nil {
 			t.Fatalf("normalising: %v", err)
 		}
+		// M3-08: scores as the worker stores them (ADR-0021). 9001 scored with a current
+		// reason; 9006 scored, not enough info, a reason from older inputs carrying an
+		// HTML/javascript: payload (inert: only JSON-encoded); 9005's extraction failed;
+		// 9004 is queued; 9003 was never queued.
+		exec(`INSERT INTO work_items (posting_id, kind, content_hash, state)
+			SELECT id, 'extract', content_hash, CASE id WHEN 9005 THEN 'failed' WHEN 9004 THEN 'pending' ELSE 'done' END
+			FROM postings WHERE id IN (9001, 9004, 9005, 9006)`)
+		for _, sc := range []struct {
+			id                    int64
+			points                float64
+			nei                   bool
+			reason, gaps, variant string
+			current               bool
+		}{
+			{9001, 60, false, "Your backend stack fits. Go is missing.", `["Go"]`, "BE", true},
+			{9006, 20, true, `<script>alert(1)</script> <a href="javascript:alert(1)">x</a>.`, `["javascript:alert(1)"]`, "FS", false},
+		} {
+			seedScore(t, exec, sc.id, sc.points, sc.nei)
+			inputs := "v2:current"
+			if !sc.current {
+				inputs = "v1:older"
+			}
+			exec(`INSERT INTO score_reasons (posting_id, content_hash, inputs, prompt_version, model, reason, gaps, cv_variant)
+				SELECT id, content_hash, $2, 2, 'claude-haiku-5-5', $3, $4::jsonb, $5 FROM postings WHERE id = $1`,
+				sc.id, inputs, sc.reason, sc.gaps, sc.variant)
+			exec(`INSERT INTO work_items (posting_id, kind, content_hash, state) SELECT id, 'reason', content_hash, 'done'
+				FROM postings WHERE id = $1`, sc.id)
+		}
 	})
 	if pool == nil {
 		t.Fatal("seeding failed earlier")
 	}
 	return pool
+}
+
+// seedScore stores an extraction and a coded score for posting id, as the worker does:
+// factors with their weights, the freshness and bands it was scored with, and
+// reason_inputs "v2:current".
+func seedScore(t *testing.T, exec func(string, ...any), id int64, points float64, nei bool) {
+	t.Helper()
+	exec(`INSERT INTO extractions (posting_id, content_hash, prompt_version, model, data)
+		SELECT id, content_hash, 2, 'claude-haiku-5-5', '{}' FROM postings WHERE id = $1`, id)
+	v := points / 95 // every factor at the same value: points without freshness
+	factors := fmt.Sprintf(`{"required": {"value": %[1]g, "weight": 35, "detail": "", "matches": []},
+		"title": {"value": %[1]g, "weight": 20, "detail": "target title rank 1"},
+		"seniority": {"value": %[1]g, "weight": 15, "detail": "level senior, minimum none years"},
+		"location": {"value": %[1]g, "weight": 15, "detail": "remote, open to Morocco"},
+		"optional": {"value": %[1]g, "weight": 10, "detail": "none stated"}}`, v)
+	exec(`INSERT INTO scores (posting_id, content_hash, extraction_id, extraction_prompt_version, points, factors,
+			not_enough_info, freshness, bands, weights_version, bands_version, profile_version, reason_inputs)
+		SELECT p.id, p.content_hash, e.id, 2, $2, $3::jsonb, $4,
+			'{"weight": 5, "fresh_days": 7, "stale_days": 45, "unknown": 0.5}',
+			'{"very_strong": 73, "strong": 53, "good": 33, "stretch": 32}', 'w', 'b', 'p', 'v2:current'
+		FROM postings p JOIN extractions e ON e.posting_id = p.id WHERE p.id = $1`, id, points, factors, nei)
 }
 
 func server(t *testing.T) http.Handler {
@@ -107,6 +156,14 @@ func TestGolden(t *testing.T) {
 		status    int
 	}{
 		{"leads_default", "/api/leads", 200},
+		{"leads_none_by_score", "/api/leads?preset=none&sort=score", 200},
+		{"leads_none_by_date", "/api/leads?preset=none&sort=date", 200},
+		{"leads_fit", "/api/leads?preset=none&fit=strong,unscored", 200},
+		{"lead", "/api/leads/9001", 200},
+		{"lead_stale_reason", "/api/leads/9006", 200},
+		{"lead_unknown", "/api/leads/424242", 404},
+		{"bad_sort", "/api/leads?sort=salary", 400},
+		{"bad_fit", "/api/leads?fit=great", 400},
 		{"leads_none", "/api/leads?preset=none", 200},
 		{"leads_override", "/api/leads?role_family=sales&workplace=onsite", 200},
 		{"leads_new", "/api/leads?preset=none&new=true", 200},
@@ -309,5 +366,161 @@ func TestManualLeadIsShown(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil || len(body.Leads) != 1 ||
 		body.Leads[0].ID != postingID || body.Leads[0].Origin != "manual" {
 		t.Errorf("leads = %s (err %v), want the manual posting with origin manual", rec.Body, err)
+	}
+}
+
+// M3-08 AC2: in score order, paging returns every lead exactly once and best first;
+// equal scores keep the date order; unscored leads come last.
+func TestScoreCursorPagination(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	exec := func(sql string, args ...any) {
+		t.Helper()
+		if _, err := db.Exec(t.Context(), sql, args...); err != nil {
+			t.Fatalf("%v\n%s", err, sql)
+		}
+	}
+	exec(`INSERT INTO companies (id, name, board_type, board_slug, track, active)
+		OVERRIDING SYSTEM VALUE VALUES (951, 'ScoreCo', 'lever', 'scoreco', 'remote', true)`)
+	t.Cleanup(func() {
+		ctx := context.Background()
+		for _, q := range []string{`DELETE FROM work_items WHERE posting_id IN (SELECT id FROM postings WHERE company_id = 951)`,
+			`DELETE FROM scores WHERE posting_id IN (SELECT id FROM postings WHERE company_id = 951)`,
+			`DELETE FROM extractions WHERE posting_id IN (SELECT id FROM postings WHERE company_id = 951)`,
+			`DELETE FROM jobs WHERE company_id = 951`, `DELETE FROM postings WHERE company_id = 951`,
+			`DELETE FROM companies WHERE id = 951`} {
+			if _, err := db.Exec(ctx, q); err != nil {
+				t.Errorf("cleaning up: %v", err)
+			}
+		}
+	})
+	scores := []float64{50, 50, 40, -1, 60, -1, 40} // -1: unscored
+	for i, sc := range scores {
+		id := int64(9510 + i)
+		payload := fmt.Sprintf(`{"text":"Role %c","workplaceType":"remote","categories":{"location":"Remote"}}`, 'A'+i)
+		exec(`INSERT INTO postings (id, company_id, source, source_posting_id, url, title, raw_payload,
+				first_seen_at, last_checked_at, last_changed_at, content_hash) OVERRIDING SYSTEM VALUE
+			VALUES ($1, 951, 'lever', $4, 'https://example.test', 'Role', $2, $3, $3, $3,
+				sha256(convert_to($2::jsonb::text, 'UTF8')))`, id, payload, fmt.Sprintf("2026-10-0%dT00:00:00Z", 1+i%3), strconv.FormatInt(id, 10))
+		if sc >= 0 {
+			if _, err := collector.NormaliseStored(t.Context(), db, 100, quiet()); err != nil {
+				t.Fatal(err)
+			}
+			exec(`INSERT INTO work_items (posting_id, kind, content_hash, state) SELECT id, 'extract', content_hash, 'done'
+				FROM postings WHERE id = $1`, id)
+			seedScore(t, exec, id, sc, false)
+		}
+	}
+	if _, err := collector.NormaliseStored(t.Context(), db, 100, quiet()); err != nil {
+		t.Fatal(err)
+	}
+	var got []float64
+	cursor := ""
+	for page := 0; page < 10; page++ {
+		url := "/api/leads?preset=none&company=ScoreCo&limit=2"
+		if cursor != "" {
+			url += "&cursor=" + cursor
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
+		var body struct {
+			Leads []struct {
+				Score *float64 `json:"score"`
+			} `json:"leads"`
+			NextCursor string `json:"next_cursor"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil || rec.Code != 200 {
+			t.Fatalf("page %d: %d %s", page, rec.Code, rec.Body)
+		}
+		for _, l := range body.Leads {
+			v := -1.0
+			if l.Score != nil {
+				v = *l.Score
+			}
+			got = append(got, v)
+		}
+		if body.NextCursor == "" {
+			break
+		}
+		cursor = body.NextCursor
+	}
+	// no publication date: freshness counts half (+2.5 of 5)
+	want := []float64{62.5, 52.5, 52.5, 42.5, 42.5, -1, -1}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Errorf("scores in page order = %v, want %v", got, want)
+	}
+	// a date-order cursor is refused in score order
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/leads?preset=none&sort=date&company=ScoreCo&limit=2", nil))
+	var first struct {
+		NextCursor string `json:"next_cursor"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &first)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/leads?preset=none&company=ScoreCo&cursor="+first.NextCursor, nil))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("date cursor in score order: %d, want 400", rec.Code)
+	}
+}
+
+// M3-08 AC5, ADR-0022: opening a lead with a reason from older inputs asks for a fresh
+// one (only scores.reason_requested_at changes); a current reason isn't asked again;
+// cross-site or non-JSON requests are refused.
+func TestRequestReason(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	t.Cleanup(func() {
+		if _, err := db.Exec(context.Background(), `UPDATE scores SET reason_requested_at = NULL`); err != nil {
+			t.Error(err)
+		}
+	})
+	post := func(id, site, ctype string) (int, string) {
+		req := httptest.NewRequest(http.MethodPost, "/api/leads/"+id+"/reason", nil)
+		if site != "" {
+			req.Header.Set("Sec-Fetch-Site", site)
+		}
+		if ctype != "" {
+			req.Header.Set("Content-Type", ctype)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code, rec.Body.String()
+	}
+	requested := func(id int64) bool {
+		var at *time.Time
+		if err := db.QueryRow(t.Context(), `SELECT reason_requested_at FROM scores WHERE posting_id = $1`, id).Scan(&at); err != nil {
+			t.Fatal(err)
+		}
+		return at != nil
+	}
+	for _, c := range []struct{ site, ctype string }{{"cross-site", "application/json"}, {"same-site", "application/json"},
+		{"same-origin", ""}, {"same-origin", "text/plain"}, {"", "application/x-www-form-urlencoded"}} {
+		if code, body := post("9006", c.site, c.ctype); code != http.StatusForbidden {
+			t.Errorf("site %q type %q: %d %s, want 403", c.site, c.ctype, code, body)
+		}
+	}
+	// No Sec-Fetch-Site, but an Origin that isn't this host: a cross-origin browser request.
+	req := httptest.NewRequest(http.MethodPost, "/api/leads/9006/reason", nil)
+	req.Header.Set("Origin", "https://evil.example")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("foreign Origin: %d %s, want 403", rec.Code, rec.Body)
+	}
+	if requested(9006) {
+		t.Fatal("a refused request changed the score")
+	}
+	if code, body := post("9006", "same-origin", "application/json"); code != http.StatusAccepted || body != "{\"requested\":true}\n" {
+		t.Errorf("stale reason: %d %s", code, body)
+	}
+	if !requested(9006) {
+		t.Error("reason_requested_at not set")
+	}
+	if code, body := post("9001", "", "application/json; charset=utf-8"); code != http.StatusAccepted || body != "{\"requested\":false}\n" {
+		t.Errorf("current reason: %d %s", code, body)
+	}
+	if requested(9001) {
+		t.Error("a current reason was requested again")
 	}
 }

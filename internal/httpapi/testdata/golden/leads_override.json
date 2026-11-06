@@ -29,7 +29,16 @@
       "first_seen_at": "2026-11-01T09:00:00Z",
       "origin": "collected",
       "members": 1,
-      "members_url": "/api/leads/9003/members"
+      "members_url": "/api/leads/9003/members",
+      "score": null,
+      "fit_level": null,
+      "not_enough_info": false,
+      "breakdown": null,
+      "reason": null,
+      "gaps": null,
+      "cv_variant": null,
+      "reason_current": false,
+      "score_status": "not_queued"
     }
   ]
 }

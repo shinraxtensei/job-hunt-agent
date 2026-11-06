@@ -159,8 +159,13 @@ export function App() {
     if (!q) return leads;
     return leads.filter((l) => [l.title, l.company.name, ...l.locations].some((s) => s.toLowerCase().includes(q)));
   }, [data, q]);
-  // Rows render new first, then earlier: keyboard order follows the screen.
-  const ordered = useMemo(() => [...visible.filter((l) => isNew(l, now)), ...visible.filter((l) => !isNew(l, now))], [visible, now]);
+  // Rows render best first (the API's order), or new then earlier when sorted by date:
+  // keyboard order follows the screen.
+  const byScore = params.get("sort") !== "date";
+  const ordered = useMemo(
+    () => (byScore ? visible : [...visible.filter((l) => isNew(l, now)), ...visible.filter((l) => !isNew(l, now))]),
+    [visible, now, byScore],
+  );
 
   const moveFocus = useCallback(
     (i: number) => {
@@ -387,6 +392,7 @@ export function App() {
           hidden={hidden}
           query={query}
           visible={ordered}
+          byScore={byScore}
           now={now}
           focus={focus}
           setFocus={setFocus}
@@ -422,7 +428,7 @@ export function App() {
           <dt><kbd>o</kbd> <kbd>Enter</kbd></dt>
           <dd>Open the posting in a new tab</dd>
           <dt><kbd>e</kbd></dt>
-          <dd>Show or hide the lead's details and postings</dd>
+          <dd>Show or hide the lead's fit, reason, details and postings</dd>
           <dt><kbd>/</kbd></dt>
           <dd>Search</dd>
           <dt><kbd>Esc</kbd></dt>
@@ -448,6 +454,7 @@ function Body(props: {
   hidden: boolean;
   query: string;
   visible: Lead[];
+  byScore: boolean;
   now: number;
   focus: number;
   setFocus: (i: number) => void;
@@ -545,6 +552,7 @@ function Body(props: {
         <LeadTable
           leads={visible}
           hidden={hidden}
+          byScore={props.byScore}
           now={props.now}
           focus={props.focus}
           onFocus={props.setFocus}

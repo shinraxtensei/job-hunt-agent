@@ -1,0 +1,85 @@
+{
+  "id": 9006,
+  "company": {
+    "name": "Brick",
+    "track": "relocation"
+  },
+  "title": "Mobile Engineer (Flutter)",
+  "role_family": "mobile",
+  "seniority": "unknown",
+  "workplaces": [
+    "onsite"
+  ],
+  "remote_scopes": [],
+  "countries": [
+    "NL"
+  ],
+  "locations": [
+    "Amsterdam"
+  ],
+  "matched_location": "",
+  "experience_min_years": null,
+  "closed": false,
+  "team": "Engineering",
+  "url": "https://jobs.lever.co/x/9006",
+  "published_at": "2025-10-31T08:40:00Z",
+  "first_seen_at": "2026-11-01T12:30:00Z",
+  "origin": "collected",
+  "members": 1,
+  "members_url": "/api/leads/9006/members",
+  "score": 20,
+  "fit_level": "no",
+  "not_enough_info": true,
+  "breakdown": [
+    {
+      "factor": "required",
+      "weight": 35,
+      "value": 0.21,
+      "points": 7.4,
+      "detail": ""
+    },
+    {
+      "factor": "title",
+      "weight": 20,
+      "value": 0.21,
+      "points": 4.2,
+      "detail": "target title rank 1"
+    },
+    {
+      "factor": "seniority",
+      "weight": 15,
+      "value": 0.21,
+      "points": 3.2,
+      "detail": "level senior, minimum none years"
+    },
+    {
+      "factor": "location",
+      "weight": 15,
+      "value": 0.21,
+      "points": 3.2,
+      "detail": "remote, open to Morocco"
+    },
+    {
+      "factor": "optional",
+      "weight": 10,
+      "value": 0.21,
+      "points": 2.1,
+      "detail": "none stated"
+    },
+    {
+      "factor": "freshness",
+      "weight": 5,
+      "value": 0,
+      "points": 0,
+      "detail": ""
+    }
+  ],
+  "reason": "\u003cscript\u003ealert(1)\u003c/script\u003e \u003ca href=\"javascript:alert(1)\"\u003ex\u003c/a\u003e.",
+  "gaps": [
+    "javascript:alert(1)"
+  ],
+  "cv_variant": "FS",
+  "reason_current": false,
+  "score_status": "scored"
+}
+

@@ -6,6 +6,6 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   plugins: [react()],
   build: { outDir: "../internal/webui/dist/app", emptyOutDir: true },
-  server: { proxy: { "/api": "http://127.0.0.1:8080" } },
+  server: { proxy: { "/api": { target: "http://127.0.0.1:8080", changeOrigin: true } } }, // Host: the API's, which it allows (ADR-0022)
   test: { environment: "jsdom", include: ["src/**/*.test.{ts,tsx}"] },
 });

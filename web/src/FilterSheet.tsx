@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
-import type { Facets, Preset, Presets } from "./api";
+import { FIT_LEVELS, type Facets, type Preset, type Presets } from "./api";
+
+const FIT_ORDER: string[] = [...FIT_LEVELS, "unscored"];
 import { applied, FACETS, selected } from "./filters";
 import { label as display } from "./labels";
 import { Icon } from "./icons";
@@ -78,6 +80,13 @@ export function FilterSheet(props: Props) {
             </select>
           </div>
           <div className="field">
+            <label htmlFor="f-sort">Sort</label>
+            <select id="f-sort" name="sort" value={params.get("sort") ?? "score"} onChange={(e) => set("sort", e.target.value === "score" ? null : e.target.value)}>
+              <option value="score">Best fit first</option>
+              <option value="date">Newest first</option>
+            </select>
+          </div>
+          <div className="field">
             <label htmlFor="f-exp">Max years required</label>
             <input
               id="f-exp"
@@ -108,7 +117,9 @@ export function FilterSheet(props: Props) {
         {FACETS.map(([k, label]) => {
           const sel = selected(params, preset, k);
           const counts = facets?.facets[k] ?? {};
-          const values = [...new Set([...Object.keys(counts), ...sel])].sort((a, b) => display(k, a).localeCompare(display(k, b)));
+          const values = [...new Set([...Object.keys(counts), ...sel])].sort(
+            k === "fit" ? (a, b) => FIT_ORDER.indexOf(a) - FIT_ORDER.indexOf(b) : (a, b) => display(k, a).localeCompare(display(k, b)),
+          );
           return (
             <fieldset key={k}>
               <legend>{label}</legend>

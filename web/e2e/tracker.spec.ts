@@ -10,8 +10,13 @@ const golden = (name: string) =>
 async function mockAPI(page: Page, leads = golden("leads_default")) {
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
+    if (route.request().method() === "POST" && /^\/api\/leads\/\d+\/reason$/.test(path)) {
+      return route.fulfill({ status: 202, contentType: "application/json", body: '{"requested":true}' });
+    }
     const body =
       path === "/api/leads" ? leads
+      : path === "/api/leads/9001" ? golden("lead")
+      : path === "/api/leads/9006" ? golden("lead_stale_reason")
       : path === "/api/leads/hidden" ? golden("hidden_default")
       : path === "/api/facets" ? golden("facets_default")
       : path === "/api/presets" ? golden("presets")
@@ -80,10 +85,47 @@ for (const width of [375, 1280]) {
       test("a lead with several postings expands to its members", async ({ page }) => {
         await mockAPI(page);
         await page.goto("/");
-        const button = page.getByRole("button", { name: "Show 2 postings" });
+        const button = page.getByRole("button", { name: "Show details and 2 postings" });
         await button.click();
         await expect(button).toHaveAttribute("aria-expanded", "true");
         await expect(page.getByRole("list", { name: "2 postings of this role" }).getByText(/Remote - EMEA/)).toBeVisible();
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+      });
+
+      // M3-08 AC4: best fit first; the row's fit in words and numbers; the expanded row
+      // shows the reason, the gaps and the breakdown with numbers.
+      test("a scored lead shows its fit, reason, gaps and breakdown", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/");
+        const rows = page.locator("tr.row");
+        await expect(rows.first()).toContainText("Senior Backend Engineer"); // 60.0 before 20.0
+        await expect(rows.first().locator("td.fit-cell")).toHaveText("Strong fit, score 60.0");
+        await rows.first().getByRole("button", { name: /Show details/ }).click();
+        const fit = page.getByRole("region", { name: "Fit" });
+        await expect(fit.getByText("Strong fit · 60.0 of 100 · CV: Backend")).toBeVisible();
+        await expect(fit.getByText("Your backend stack fits. Go is missing.")).toBeVisible();
+        await expect(fit.getByRole("list", { name: "Gaps" }).getByRole("listitem")).toHaveText(["Go"]);
+        await expect(fit.getByRole("table", { name: /Score breakdown/ }).getByRole("row")).toHaveCount(6);
+        await expect(fit.getByRole("row", { name: /Required skills/ })).toContainText("22.1 of 35");
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+      });
+
+      // M3-08 AC4, AC5, AC6: not enough info and an older reason are said plainly; opening
+      // the lead asks for a fresh reason; an HTML payload in the reason stays text.
+      test("an older reason is marked and a fresh one requested", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/");
+        const posted = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/reason"));
+        await page.locator("tr.row", { hasText: "Mobile Engineer" }).getByRole("button", { name: /Show details/ }).click();
+        const request = await posted;
+        expect(request.headers()["content-type"]).toBe("application/json");
+        const fit = page.getByRole("region", { name: "Fit" });
+        await expect(fit.getByText(/^Not enough info/)).toBeVisible();
+        await expect(fit.getByText("This reason is from older inputs. Updating…")).toBeVisible();
+        await expect(fit.locator(".reason")).toHaveText('<script>alert(1)</script> <a href="javascript:alert(1)">x</a>.');
+        await expect(fit.locator("script, a")).toHaveCount(0);
         await noHorizontalScroll(page);
         await noAxeViolations(page);
       });

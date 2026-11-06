@@ -47,6 +47,16 @@ const words: Record<string, Record<string, string>> = {
   },
   track: { remote: "Remote", relocation: "Relocation", morocco: "Morocco", consulting: "Consulting" },
   closed: { true: "Closed", false: "Open" },
+  fit: { very_strong: "Very strong", strong: "Strong", good: "Good", stretch: "Stretch", no: "No fit", unscored: "Not scored" },
+  factor: {
+    required: "Required skills",
+    title: "Title",
+    seniority: "Seniority and years",
+    location: "Location, remote, visa",
+    optional: "Optional skills",
+    freshness: "Freshness",
+  },
+  cv_variant: { BE: "Backend", PAY: "Payments", DIST: "Distributed systems", FS: "Full-stack", AI: "AI", CONS: "Consulting" },
 };
 
 const regions = new Intl.DisplayNames(["en"], { type: "region" });

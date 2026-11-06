@@ -62,3 +62,53 @@ rules.md "deep-link all stateful UI" → filters, view and search are in the URL
   computes the ratios of `--text`, `--muted` and `--faint` on `--bg`, `--panel`,
   `--hover` and `--row-focus` (≥ 4.5:1) and of `--accent` on `--bg` and `--row-focus`
   (≥ 3:1, non-text) in both themes. axe's `color-contrast` rule checks the rendered page.
+
+# Review loop: scores in the tracker (M3-08)
+
+Run on 2026-11-06 against the M3-08 changes (`web/src/Score.tsx`, `LeadTable.tsx`,
+`FilterSheet.tsx`, `styles/app.css`), with the same vendored skills (ADR-0014).
+Screenshots: `docs/design/screens/m3-08/` (live stack, 509 scored leads).
+
+## 1. frontend-design self-check
+
+| Finding | Response |
+|---|---|
+| A fit level needs a glance-readable mark without a new hue | Four segments in `--text` on `--line`, filled by level (very strong 4 … no 0): shape, not colour. The accent stays reserved for focus and the new-dot. |
+| The expanded row could turn into a dashboard | One short head line, the two-sentence reason, gap pills, then a six-line breakdown with thin bars and right-aligned numbers. No cards, no charts. |
+| Copy | Sentence case; states say what happened and what to do ("This reason is from older inputs. Updating…", "Not enough info: the posting names no required skills, so they count as none."). |
+| Motion | None added; the detail reveal is unchanged (0 ms under reduced motion). |
+
+## 2. web-design-guidelines (`file:line`)
+
+Fixed:
+
+```text
+web/src/Score.tsx (stale-reason note) - async "Updating…" not announced → role="status"
+web/src/Score.tsx (gaps) - tech names auto-translated → translate="no" on each gap
+web/src/styles/app.css (.detail .gaps li) - very long model-written gap could overflow → overflow-wrap:anywhere, max-width:100%
+web/src/styles/app.css (.detail td) - breakdown cells inherited the detail cell's padding/border → scoped to .detail > td
+web/src/styles/app.css (narrow .leads tbody) - breakdown tbody became display:block at 375 px → scoped to .leads > tbody
+```
+
+Justified, not changed:
+
+```text
+web/src/Score.tsx (FitCell title=) - level on hover only for mouse users → the level is in words for screen readers and in the expanded row; the segments carry it visually
+rules.md "deep-link expanded panels" → expanded rows stay transient (as in M2-06b); sort and fit filter are in the URL
+```
+
+## 3. fixing-accessibility
+
+| Rule | Finding | Response |
+|---|---|---|
+| colour alone | fit level | segments (count) + score + visually hidden level text ("Strong fit, score 60.0") |
+| tables | breakdown | a real `<table>` with a caption and row headers; the bars are `aria-hidden`, the numbers are text ("22.1 of 35") |
+| names | expanded section, gaps list | `section aria-label="Fit"`; gaps `ul` labelled by its visible label |
+| announcements | regeneration in progress | `role="status"` on the note |
+| untrusted text | reason, gaps | React text only; unit and Playwright tests render HTML/`javascript:` payloads inert |
+
+## 4. Automated checks
+
+Playwright with axe at 375 and 1280 px, light and dark, now also on an expanded scored
+lead and on a lead whose reason is from older inputs: **0 violations**, no horizontal
+scroll at 375 px.

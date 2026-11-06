@@ -12,6 +12,10 @@
       "MA": 1,
       "NL": 1
     },
+    "fit": {
+      "no": 1,
+      "strong": 1
+    },
     "remote_scope": {
       "country:MA": 1,
       "emea": 1

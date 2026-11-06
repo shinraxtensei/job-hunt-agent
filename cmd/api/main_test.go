@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,13 +28,35 @@ func TestLoopback(t *testing.T) {
 func TestRoutes(t *testing.T) {
 	api := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.Header().Set("X-Who", "api") })
 	page := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.Header().Set("X-Who", "page") })
-	h := routes(api, page)
+	h := routes(api, page, []string{"8080"})
 	for p, want := range map[string]string{"/api/leads": "api", "/api/nothing": "api", "/healthz": "api",
 		"/": "page", "/?view=hidden": "page", "/assets/app.js": "page"} {
+		req := httptest.NewRequest(http.MethodGet, p, nil)
+		req.Host = "127.0.0.1:8080"
 		rec := httptest.NewRecorder()
-		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, p, nil))
+		h.ServeHTTP(rec, req)
 		if got := rec.Header().Get("X-Who"); got != want {
 			t.Errorf("%s went to %q, want %q", p, got, want)
+		}
+		// #43 review: a rebound domain reaches neither the API nor the page.
+		req.Host = "evil.example:8080"
+		rec = httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		if rec.Code != http.StatusMisdirectedRequest || rec.Header().Get("X-Who") != "" {
+			t.Errorf("%s with a forged Host: %d via %q, want 421 and no handler", p, rec.Code, rec.Header().Get("X-Who"))
+		}
+	}
+}
+
+func TestAllowedPorts(t *testing.T) {
+	for _, c := range []struct{ addr, public, want string }{
+		{"127.0.0.1:8080", "", "[8080]"},
+		{"0.0.0.0:8080", "8088", "[8080 8088]"},
+		{"0.0.0.0:8080", "8080", "[8080]"},
+		{":9000", "", "[9000]"},
+	} {
+		if got := fmt.Sprint(allowedPorts(c.addr, c.public)); got != c.want {
+			t.Errorf("allowedPorts(%q, %q) = %s, want %s", c.addr, c.public, got, c.want)
 		}
 	}
 }

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"mime"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/shinraxtensei/job-hunter/internal/job"
 	"github.com/shinraxtensei/job-hunter/internal/preset"
+	"github.com/shinraxtensei/job-hunter/internal/store"
 )
 
 // Lead is one duplicate group as the API returns it: the canonical job's record and the
@@ -45,6 +47,18 @@ type Lead struct {
 	MembersURL         string     `json:"members_url"`
 	HiddenBy           []string   `json:"hidden_by,omitempty"` // /api/leads/hidden only
 
+	// The score (M3-08, ADR-0021): null when not scored. Reason and gaps are model output
+	// derived from the posting: untrusted, only ever JSON-encoded.
+	Score         *float64 `json:"score"` // with freshness as of now
+	FitLevel      *string  `json:"fit_level"`
+	NotEnoughInfo bool     `json:"not_enough_info"`
+	Breakdown     []Factor `json:"breakdown"`
+	Reason        *string  `json:"reason"`
+	Gaps          []string `json:"gaps"`
+	CVVariant     *string  `json:"cv_variant"`
+	ReasonCurrent bool     `json:"reason_current"` // false: from older inputs, shown marked
+	ScoreStatus   string   `json:"score_status"`   // scored | pending | needs_review | not_queued
+
 	companyID int64
 	titleKey  string
 	group     preset.Group
@@ -70,6 +84,15 @@ func (a *api) load(ctx context.Context) ([]Lead, error) {
 		company int64
 		title   string
 	}
+	scores, err := a.q.ListLeadScores(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("listing scores: %w", err)
+	}
+	byPosting := make(map[int64]store.ListLeadScoresRow, len(scores))
+	for _, s := range scores {
+		byPosting[s.PostingID] = s
+	}
+	now := a.now()
 	members := map[key][]preset.Place{}
 	for _, p := range places {
 		k := key{p.CompanyID, p.TitleKey}
@@ -100,12 +123,15 @@ func (a *api) load(ctx context.Context) ([]Lead, error) {
 		}
 		l.group = preset.Group{RoleFamily: r.RoleFamily, Seniority: r.Seniority,
 			ExperienceMinYears: int(r.ExperienceMinYears.Int32), Track: r.Track, Closed: r.Closed, Members: ms}
+		l.ScoreStatus = "not_queued" // no extract item: the default preset never showed it
+		if s, ok := byPosting[l.ID]; ok {
+			if err := applyScore(&l, s, now); err != nil {
+				return nil, err
+			}
+		}
 		out = append(out, l)
 	}
-	slices.SortFunc(out, func(x, y Lead) int {
-		return cmp.Or(y.FirstSeenAt.Compare(x.FirstSeenAt), cmp.Compare(x.companyID, y.companyID),
-			cmp.Compare(x.titleKey, y.titleKey))
-	})
+	slices.SortFunc(out, byDate)
 	return out, nil
 }
 
@@ -118,22 +144,48 @@ func union(have, more []string) []string {
 	return have
 }
 
-// cursor is the position after the last lead of a page: the sort key of that lead.
+// cursor is the position after the last lead of a page: the sort key of that lead. In
+// score order the key starts with the shown score (unscored: -1, last).
 type cursor struct {
-	T int64  `json:"t"` // first seen, Unix microseconds
-	C int64  `json:"c"`
-	K string `json:"k"`
+	M string  `json:"m,omitempty"` // "score" or "" (date)
+	S float64 `json:"s,omitempty"`
+	T int64   `json:"t"` // first seen, Unix microseconds
+	C int64   `json:"c"`
+	K string  `json:"k"`
 }
 
-func cursorOf(l Lead) string {
-	b, _ := json.Marshal(cursor{l.FirstSeenAt.UnixMicro(), l.companyID, l.titleKey}) // plain struct: can't fail
+func cursorOf(l Lead, sort string) string {
+	c := cursor{T: l.FirstSeenAt.UnixMicro(), C: l.companyID, K: l.titleKey}
+	if sort == "score" {
+		c.M, c.S = sort, rank(l)
+	}
+	b, _ := json.Marshal(c) // plain struct: can't fail
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-// after reports whether l sorts strictly after c (newest first, then company, title key).
+// rank is a lead's score as shown (rounded), -1 when unscored: what score order sorts by,
+// so the order and the cursor agree with the page.
+func rank(l Lead) float64 {
+	if l.Score == nil {
+		return -1
+	}
+	return *l.Score
+}
+
+// after reports whether l sorts strictly after c: best score first in score order, then
+// newest first, company, title key.
 func (c cursor) after(l Lead) bool {
+	if c.M == "score" && rank(l) != c.S {
+		return rank(l) < c.S
+	}
 	t := l.FirstSeenAt.UnixMicro()
 	return t < c.T || t == c.T && (l.companyID > c.C || l.companyID == c.C && l.titleKey > c.K)
+}
+
+// byDate is load's order: newest first, then company, title key.
+func byDate(x, y Lead) int {
+	return cmp.Or(y.FirstSeenAt.Compare(x.FirstSeenAt), cmp.Compare(x.companyID, y.companyID),
+		cmp.Compare(x.titleKey, y.titleKey))
 }
 
 // filters is a request's effective preset plus the filters presets don't have.
@@ -142,13 +194,15 @@ type filters struct {
 	companies []string // lower case
 	newOnly   bool
 	since     time.Time
+	fits      []string // fit levels, or "unscored"
+	sort      string   // score (default) | date
 	limit     int
 	cursor    *cursor
 }
 
 var (
 	params = []string{"preset", "role_family", "seniority", "max_experience", "closed", "workplace",
-		"remote_scope", "country", "city", "track", "company", "new", "since", "limit", "cursor"}
+		"remote_scope", "country", "city", "track", "company", "new", "since", "limit", "cursor", "sort", "fit"}
 	// location parameters and the preset rule keys they set
 	locationParams = [][2]string{{"workplace", "workplace"}, {"remote_scope", "remote_scopes"},
 		{"country", "countries"}, {"city", "cities"}, {"track", "track"}}
@@ -176,7 +230,16 @@ func (a *api) parse(q url.Values) (filters, error) {
 			return filters{}, &paramError{k, "unknown parameter"}
 		}
 	}
-	f := filters{limit: 50}
+	f := filters{limit: 50, sort: cmp.Or(q.Get("sort"), "score")}
+	if f.sort != "score" && f.sort != "date" {
+		return filters{}, &paramError{"sort", "want score or date"}
+	}
+	for _, v := range values(q, "fit") {
+		if !slices.Contains(FitLevels, v) && v != "unscored" {
+			return filters{}, &paramError{"fit", fmt.Sprintf("unknown value %q", v)}
+		}
+		f.fits = append(f.fits, v)
+	}
 	var err error
 	if f.preset, err = a.loadPreset(cmp.Or(q.Get("preset"), "default")); err != nil {
 		return filters{}, err
@@ -259,7 +322,7 @@ func (a *api) parse(q url.Values) (filters, error) {
 	if v := q.Get("cursor"); v != "" {
 		var c cursor
 		b, err := base64.RawURLEncoding.DecodeString(v)
-		if err != nil || json.Unmarshal(b, &c) != nil {
+		if err != nil || json.Unmarshal(b, &c) != nil || (c.M == "score") != (f.sort == "score") {
 			return filters{}, &paramError{"cursor", "not a cursor this API returned"}
 		}
 		f.cursor = &c
@@ -287,7 +350,8 @@ func (a *api) split(all []Lead, f filters) (shown, hidden []Lead) {
 	for _, l := range all {
 		if len(f.companies) > 0 && !slices.Contains(f.companies, strings.ToLower(l.Company.Name)) ||
 			f.newOnly && !l.FirstSeenAt.After(a.now().Add(-24*time.Hour)) ||
-			!f.since.IsZero() && l.FirstSeenAt.Before(f.since) {
+			!f.since.IsZero() && l.FirstSeenAt.Before(f.since) ||
+			len(f.fits) > 0 && !slices.Contains(f.fits, fitOf(l)) {
 			continue
 		}
 		if l.HiddenBy = f.preset.Evaluate(l.group); l.HiddenBy == nil {
@@ -297,7 +361,19 @@ func (a *api) split(all []Lead, f filters) (shown, hidden []Lead) {
 			hidden = append(hidden, l)
 		}
 	}
+	if f.sort == "score" { // stable: equal scores stay newest first
+		slices.SortStableFunc(shown, func(x, y Lead) int { return cmp.Compare(rank(y), rank(x)) })
+		slices.SortStableFunc(hidden, func(x, y Lead) int { return cmp.Compare(rank(y), rank(x)) })
+	}
 	return shown, hidden
+}
+
+// fitOf is a lead's value for the fit filter and facet.
+func fitOf(l Lead) string {
+	if l.FitLevel == nil {
+		return "unscored"
+	}
+	return *l.FitLevel
 }
 
 type page struct {
@@ -321,7 +397,7 @@ func paginate(ls []Lead, f filters) page {
 	end := min(i+f.limit, len(ls))
 	p.Leads = append(p.Leads, ls[i:end]...)
 	if end < len(ls) {
-		p.NextCursor = cursorOf(ls[end-1])
+		p.NextCursor = cursorOf(ls[end-1], f.sort)
 	}
 	return p
 }
@@ -371,6 +447,7 @@ func (a *api) facets(w http.ResponseWriter, r *http.Request) {
 		{[]string{"workplace", "remote_scope", "country", "track"}, func(f *filters) { f.preset.Location = nil }},
 		{[]string{"company"}, func(f *filters) { f.companies = nil }},
 		{[]string{"closed"}, func(f *filters) { f.preset.Closed = "" }},
+		{[]string{"fit"}, func(f *filters) { f.fits = nil }},
 	} {
 		without := f
 		c.drop(&without)
@@ -407,6 +484,8 @@ func facetValues(facet string, l Lead) []string {
 		return []string{l.Company.Name}
 	case "closed":
 		return []string{strconv.FormatBool(l.Closed)}
+	case "fit":
+		return []string{fitOf(l)}
 	}
 	return nil
 }
@@ -513,4 +592,54 @@ func (a *api) members(w http.ResponseWriter, r *http.Request) {
 			m.FirstSeenAt.Time.UTC(), m.Closed})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"lead_id": rows[0].PostingID, "members": out})
+}
+
+// lead answers one lead by its canonical posting id, with its score (M3-08), whatever
+// the presets say.
+func (a *api) lead(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id", "want a lead id")
+		return
+	}
+	all, err := a.load(r.Context())
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	for _, l := range all {
+		if l.ID == id {
+			writeJSON(w, http.StatusOK, l)
+			return
+		}
+	}
+	writeError(w, http.StatusNotFound, "id", "no such lead")
+}
+
+// crossOrigin is Go's CSRF protection (fetch metadata, then Origin): it lets same-origin
+// and non-browser requests through and refuses cross-origin ones (ADR-0022).
+var crossOrigin = http.NewCrossOriginProtection()
+
+// requestReason marks a lead opened so the worker regenerates a reason made from older
+// inputs (ADR-0021). The API's only write; cross-site requests are refused (ADR-0022).
+func (a *api) requestReason(w http.ResponseWriter, r *http.Request) {
+	if err := crossOrigin.Check(r); err != nil { // Sec-Fetch-Site, else Origin vs Host
+		writeError(w, http.StatusForbidden, "", "cross-site requests are refused")
+		return
+	}
+	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
+		writeError(w, http.StatusForbidden, "", "want Content-Type: application/json")
+		return
+	}
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id", "want a lead id")
+		return
+	}
+	n, err := a.q.RequestReason(r.Context(), id)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]bool{"requested": n > 0})
 }

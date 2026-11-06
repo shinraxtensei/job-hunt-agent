@@ -8,6 +8,9 @@
 //	PRESETS_DIR    filter presets (default data/presets)
 //	API_PUBLISHED_ON_LOOPBACK  "true" when a container listens on all interfaces but its
 //	               port is published on 127.0.0.1 only (deploy/compose.yaml)
+//	API_PUBLIC_PORT  the port the browser uses when it differs from API_ADDR's (Compose
+//	               publishes the container's 8080 on JOBHUNT_HTTP_PORT). Only Host
+//	               127.0.0.1, localhost or [::1] on these ports is served (ADR-0022).
 //
 // `api healthcheck` exits 0 when the running API answers /healthz (Compose's healthcheck:
 // the image has no shell or curl).
@@ -24,6 +27,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"slices"
 	"strconv"
 	"syscall"
 	"time"
@@ -85,7 +89,7 @@ func run(ctx context.Context, log *slog.Logger, getenv func(string) string) erro
 		return fmt.Errorf("listening on %s: %w", addr, err)
 	}
 	api := httpapi.New(pool, cmp.Or(getenv("PRESETS_DIR"), "data/presets"), commit(), time.Now, log)
-	srv := newServer(routes(api, webui.Handler(webui.Dist())))
+	srv := newServer(routes(api, webui.Handler(webui.Dist()), allowedPorts(ln.Addr().String(), getenv("API_PUBLIC_PORT"))))
 	errc := make(chan error, 1)
 	go func() { errc <- srv.Serve(ln) }()
 	log.Info("listening", "addr", ln.Addr().String(), "commit", commit())
@@ -104,13 +108,27 @@ func run(ctx context.Context, log *slog.Logger, getenv func(string) string) erro
 	return nil
 }
 
-// routes sends the API's paths to the API and everything else to the tracker page.
-func routes(api, page http.Handler) http.Handler {
+// routes sends the API's paths to the API and everything else to the tracker page, for
+// loopback Host names on ports only (DNS rebinding, ADR-0022).
+func routes(api, page http.Handler, ports []string) http.Handler {
 	mux := http.NewServeMux()
 	mux.Handle("/api/", api)
 	mux.Handle("/healthz", api)
 	mux.Handle("/", page)
-	return mux
+	return httpapi.HostAllowlist(ports, mux)
+}
+
+// allowedPorts are the listen address's port and, when set and different, the port the
+// browser uses.
+func allowedPorts(addr, public string) []string {
+	var out []string
+	if _, p, err := net.SplitHostPort(addr); err == nil {
+		out = append(out, p)
+	}
+	if public != "" && !slices.Contains(out, public) {
+		out = append(out, public)
+	}
+	return out
 }
 
 func newServer(h http.Handler) *http.Server {

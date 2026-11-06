@@ -117,8 +117,9 @@ class Config(_Strict):
     bands_version: str
 
 
-SCORE_CODE = 2  # bump when scoring code changes what a score is: every lead re-scores
+SCORE_CODE = 3  # bump when scoring code changes what a score is: every lead re-scores
 # 2: skills named like the posting's company are dropped (M3-06 review)
+# 3: freshness in whole days; stored factors carry their weight (M3-08)
 
 
 def _hash(v: object) -> str:
@@ -244,7 +245,7 @@ def freshness(published_at: datetime | None, now: datetime, cfg: Config) -> floa
     c = cfg.freshness
     if published_at is None:
         return c.unknown
-    age = (now - published_at).total_seconds() / 86400
+    age = (now - published_at).days  # whole days: stable order within a day (M3-08)
     if age <= c.fresh_days:
         return 1.0
     return max(0.0, (c.stale_days - age) / (c.stale_days - c.fresh_days))

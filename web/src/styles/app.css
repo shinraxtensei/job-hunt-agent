@@ -322,6 +322,9 @@ main {
 .leads col.c-num {
   width: 72px;
 }
+.leads col.c-fit {
+  width: 84px;
+}
 .leads col.c-age {
   width: 52px;
 }
@@ -406,7 +409,8 @@ main {
   color: var(--muted);
 }
 .row .num,
-.row .age {
+.row .age,
+.row .fit-cell {
   text-align: right;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
@@ -434,10 +438,7 @@ main {
 .more button[aria-expanded="true"] .icon {
   transform: rotate(90deg);
 }
-.row.single .more button {
-  visibility: hidden;
-}
-.detail td {
+.detail > td {
   padding: var(--space-1) var(--space-4) var(--space-3) calc(28px + 148px);
   border-bottom: 1px solid var(--line);
   color: var(--muted);
@@ -471,6 +472,106 @@ main {
 }
 .detail li a {
   color: var(--text);
+}
+/* Fit (M3-08): four segments filled by level, in the text colour: a shape, not a hue.
+   The score sits beside it in tabular numbers; the level is in words for screen
+   readers, on hover, and in the expanded row. */
+.fit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+.fit-mark {
+  display: inline-flex;
+  gap: 2px;
+}
+.fit-mark i {
+  display: block;
+  width: 3px;
+  height: 10px;
+  border-radius: 1px;
+  background: var(--line);
+}
+.fit-mark i.on {
+  background: var(--text);
+}
+.fit-status {
+  color: var(--muted);
+}
+.detail .score {
+  margin: 0 0 var(--space-3);
+  max-width: 64ch;
+}
+.detail .score-head {
+  margin: 0 0 var(--space-1);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.detail .score-head b {
+  color: var(--text);
+  font-weight: 500;
+}
+.detail .reason {
+  margin: 0 0 var(--space-1);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.detail .score-note {
+  margin: 0 0 var(--space-1);
+  color: var(--muted);
+}
+.detail .gaps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin: var(--space-1) 0 var(--space-2);
+}
+.detail .gaps-label {
+  color: var(--faint);
+}
+.detail .gaps ul {
+  display: contents;
+}
+.detail .gaps li {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--text);
+}
+.breakdown {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.breakdown th {
+  padding: 1px var(--space-3) 1px 0;
+  text-align: left;
+  font-weight: 400;
+  color: var(--muted);
+  white-space: nowrap;
+}
+/* The bar's track is a background on the cell; the fill is the span. */
+.breakdown td.bar {
+  width: 120px;
+  padding: 0;
+  background: linear-gradient(var(--line), var(--line)) left center / calc(100% - var(--space-2)) 6px no-repeat;
+}
+.breakdown td.bar span {
+  display: block;
+  max-width: calc(100% - var(--space-2));
+  height: 6px;
+  border-radius: 1px;
+  background: var(--muted);
+}
+.breakdown td.pts {
+  text-align: right;
+  color: var(--text);
+  white-space: nowrap;
+}
+.breakdown .of {
+  color: var(--faint);
 }
 @keyframes reveal {
   from {
@@ -641,11 +742,11 @@ dialog[open] {
     display: none;
   }
   .leads,
-  .leads tbody {
+  .leads > tbody {
     display: block;
   }
-  .leads thead,
-  .leads colgroup {
+  .leads > thead,
+  .leads > colgroup {
     display: none;
   }
   .leads th.group {
@@ -656,9 +757,9 @@ dialog[open] {
     display: grid;
     grid-template-columns: 14px minmax(0, 1fr) auto 32px;
     grid-template-areas:
-      "dot company age more"
+      "dot company fit more"
       ". title title more"
-      ". place place more";
+      ". place age more";
     padding: var(--space-2) var(--space-1) var(--space-2) var(--space-3);
     border-bottom: 1px solid var(--line);
   }
@@ -698,6 +799,12 @@ dialog[open] {
   .row .age {
     grid-area: age;
   }
+  .row .fit-cell {
+    grid-area: fit;
+  }
+  .breakdown td.bar {
+    width: 64px;
+  }
   .row td.num {
     display: none;
   }
@@ -706,13 +813,10 @@ dialog[open] {
     align-self: center;
     padding: 0;
   }
-  .row.single .more button {
-    visibility: visible;
-  }
   .detail {
     display: block;
   }
-  .detail td {
+  .detail > td {
     display: block;
     padding: var(--space-1) var(--space-3) var(--space-3) calc(var(--space-3) + 14px);
   }

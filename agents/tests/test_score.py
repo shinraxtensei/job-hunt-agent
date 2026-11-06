@@ -154,9 +154,10 @@ def test_location_remote_visa(cfg: Config, e: Extraction, j: Job, want: float) -
 
 @pytest.mark.parametrize(
     ("age_days", "want"),
-    [(0, 1.0), (7, 1.0), (26, 0.5), (45, 0.0), (400, 0.0), (None, 0.5)],
+    # whole days (M3-08): the order is stable within a day, for the API's cursor
+    [(0, 1.0), (7, 1.0), (7.9, 1.0), (26, 0.5), (26.9, 0.5), (45, 0.0), (400, 0.0), (None, 0.5)],
 )
-def test_freshness_computed_when_read(cfg: Config, age_days: int | None, want: float) -> None:
+def test_freshness_computed_when_read(cfg: Config, age_days: float | None, want: float) -> None:
     published = None if age_days is None else NOW - timedelta(days=age_days)
     assert freshness(published, NOW, cfg) == pytest.approx(want)
 

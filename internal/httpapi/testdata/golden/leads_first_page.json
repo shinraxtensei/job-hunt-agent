@@ -2,68 +2,178 @@
   "total": 5,
   "leads": [
     {
-      "id": 9005,
+      "id": 9001,
       "company": {
         "name": "Acme",
         "track": "remote"
       },
-      "title": "Frontend Engineer",
-      "role_family": "frontend",
-      "seniority": "unknown",
-      "workplaces": [
-        "hybrid"
-      ],
-      "remote_scopes": [],
-      "countries": [
-        "MA"
-      ],
-      "locations": [
-        "Casablanca"
-      ],
-      "matched_location": "",
-      "experience_min_years": null,
-      "closed": true,
-      "team": "Engineering",
-      "url": "https://jobs.lever.co/x/9005",
-      "published_at": "2025-10-31T08:40:00Z",
-      "first_seen_at": "2026-11-02T09:00:00Z",
-      "origin": "collected",
-      "members": 1,
-      "members_url": "/api/leads/9005/members"
-    },
-    {
-      "id": 9004,
-      "company": {
-        "name": "Acme",
-        "track": "remote"
-      },
-      "title": "Staff Data Engineer",
-      "role_family": "data",
-      "seniority": "staff_plus",
+      "title": "Senior Backend Engineer",
+      "role_family": "backend",
+      "seniority": "senior",
       "workplaces": [
         "remote"
       ],
       "remote_scopes": [
-        "us_only"
+        "country:MA",
+        "emea"
       ],
       "countries": [
-        "US"
+        "MA"
       ],
       "locations": [
-        "Remote - US"
+        "Remote - EMEA",
+        "Remote – Morocco"
       ],
       "matched_location": "",
-      "experience_min_years": 8,
+      "experience_min_years": 5,
       "closed": false,
       "team": "Engineering",
-      "url": "https://jobs.lever.co/x/9004",
+      "url": "https://jobs.lever.co/x/9001",
       "published_at": "2025-10-31T08:40:00Z",
-      "first_seen_at": "2026-11-02T08:00:00Z",
+      "first_seen_at": "2026-10-30T10:00:00Z",
+      "origin": "collected",
+      "members": 2,
+      "members_url": "/api/leads/9001/members",
+      "score": 60,
+      "fit_level": "strong",
+      "not_enough_info": false,
+      "breakdown": [
+        {
+          "factor": "required",
+          "weight": 35,
+          "value": 0.63,
+          "points": 22.1,
+          "detail": ""
+        },
+        {
+          "factor": "title",
+          "weight": 20,
+          "value": 0.63,
+          "points": 12.6,
+          "detail": "target title rank 1"
+        },
+        {
+          "factor": "seniority",
+          "weight": 15,
+          "value": 0.63,
+          "points": 9.5,
+          "detail": "level senior, minimum none years"
+        },
+        {
+          "factor": "location",
+          "weight": 15,
+          "value": 0.63,
+          "points": 9.5,
+          "detail": "remote, open to Morocco"
+        },
+        {
+          "factor": "optional",
+          "weight": 10,
+          "value": 0.63,
+          "points": 6.3,
+          "detail": "none stated"
+        },
+        {
+          "factor": "freshness",
+          "weight": 5,
+          "value": 0,
+          "points": 0,
+          "detail": ""
+        }
+      ],
+      "reason": "Your backend stack fits. Go is missing.",
+      "gaps": [
+        "Go"
+      ],
+      "cv_variant": "BE",
+      "reason_current": true,
+      "score_status": "scored"
+    },
+    {
+      "id": 9006,
+      "company": {
+        "name": "Brick",
+        "track": "relocation"
+      },
+      "title": "Mobile Engineer (Flutter)",
+      "role_family": "mobile",
+      "seniority": "unknown",
+      "workplaces": [
+        "onsite"
+      ],
+      "remote_scopes": [],
+      "countries": [
+        "NL"
+      ],
+      "locations": [
+        "Amsterdam"
+      ],
+      "matched_location": "",
+      "experience_min_years": null,
+      "closed": false,
+      "team": "Engineering",
+      "url": "https://jobs.lever.co/x/9006",
+      "published_at": "2025-10-31T08:40:00Z",
+      "first_seen_at": "2026-11-01T12:30:00Z",
       "origin": "collected",
       "members": 1,
-      "members_url": "/api/leads/9004/members"
+      "members_url": "/api/leads/9006/members",
+      "score": 20,
+      "fit_level": "no",
+      "not_enough_info": true,
+      "breakdown": [
+        {
+          "factor": "required",
+          "weight": 35,
+          "value": 0.21,
+          "points": 7.4,
+          "detail": ""
+        },
+        {
+          "factor": "title",
+          "weight": 20,
+          "value": 0.21,
+          "points": 4.2,
+          "detail": "target title rank 1"
+        },
+        {
+          "factor": "seniority",
+          "weight": 15,
+          "value": 0.21,
+          "points": 3.2,
+          "detail": "level senior, minimum none years"
+        },
+        {
+          "factor": "location",
+          "weight": 15,
+          "value": 0.21,
+          "points": 3.2,
+          "detail": "remote, open to Morocco"
+        },
+        {
+          "factor": "optional",
+          "weight": 10,
+          "value": 0.21,
+          "points": 2.1,
+          "detail": "none stated"
+        },
+        {
+          "factor": "freshness",
+          "weight": 5,
+          "value": 0,
+          "points": 0,
+          "detail": ""
+        }
+      ],
+      "reason": "\u003cscript\u003ealert(1)\u003c/script\u003e \u003ca href=\"javascript:alert(1)\"\u003ex\u003c/a\u003e.",
+      "gaps": [
+        "javascript:alert(1)"
+      ],
+      "cv_variant": "FS",
+      "reason_current": false,
+      "score_status": "scored"
     }
   ],
-  "next_cursor": "eyJ0IjoxNzkzNjA2NDAwMDAwMDAwLCJjIjo5MDEsImsiOiJzdGFmZiBkYXRhIGVuZ2luZWVyIn0"
+  "next_cursor": "eyJtIjoic2NvcmUiLCJzIjoyMCwidCI6MTc5MzUzNjIwMDAwMDAwMCwiYyI6OTAyLCJrIjoibW9iaWxlIGVuZ2luZWVyIGZsdXR0ZXIifQ"
 }
 

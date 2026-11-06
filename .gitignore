@@ -57,3 +57,6 @@ node_modules/
 /agents/evals/postings/
 # eval runs that reveal the profile (M3-06 reasons)
 /agents/evals/private/
+
+# TypeScript build info (tsc -b); type checking never emits (web/tsconfig.json noEmit)
+/web/*.tsbuildinfo

@@ -58,3 +58,7 @@ images, not rebuilding the setup. The API has no auth (ADR-0002).
   postgres psql` or a debug image).
 - **Revisit when:** D (the server, TLS behind Caddy, Tailscale), or when the M3 worker
   (Python) needs its own image.
+- **Note (2026-11-06, ADR-0022):** the API serves only loopback `Host` names on its
+  listen port and `API_PUBLIC_PORT` (Compose sets it to `JOBHUNT_HTTP_PORT`), against
+  DNS rebinding. At D, behind Caddy and Tailscale, the served name changes. Add it to
+  the allowlist through configuration, and decide whether Caddy or the API checks it.

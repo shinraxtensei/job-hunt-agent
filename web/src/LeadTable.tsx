@@ -3,6 +3,7 @@ import { get, type Lead, type Members } from "./api";
 import { Icon } from "./icons";
 import { label, reason } from "./labels";
 import { ExternalLink } from "./safe";
+import { FitCell, ScoreDetail, useFreshReason } from "./Score";
 
 const DAY = 24 * 3600e3;
 const dateFmt = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
@@ -46,12 +47,14 @@ type Props = {
   expanded?: Set<number>;
   onToggle?: (id: number) => void;
   rowRef?: (i: number) => Ref<HTMLTableRowElement>;
+  byScore?: boolean; // best fit first in one group; otherwise new, then earlier
 };
 
-// LeadTable is a real table: one row per lead, grouped into new and earlier. Posting text
-// is rendered only as React text.
+// LeadTable is a real table: one row per lead, best fit first (or grouped into new and
+// earlier when sorted by date). Posting text and model output are rendered only as React
+// text.
 export function LeadTable(props: Props) {
-  const { leads, hidden, now = Date.now(), focus = -1, onFocus, onToggle, rowRef } = props;
+  const { leads, hidden, now = Date.now(), focus = -1, onFocus, onToggle, rowRef, byScore = false } = props;
   const [ownExpanded, setOwnExpanded] = useState<Set<number>>(new Set());
   const expanded = props.expanded ?? ownExpanded;
   const toggle =
@@ -64,10 +67,12 @@ export function LeadTable(props: Props) {
         return n;
       }));
   const fresh = leads.filter((l) => isNew(l, now));
-  const groups: [string, Lead[]][] = [
-    [`New · last 24 h · ${fresh.length}`, fresh],
-    ["Earlier", leads.filter((l) => !isNew(l, now))],
-  ];
+  const groups: [string, Lead[]][] = byScore
+    ? [["Best fit first", leads]]
+    : [
+        [`New · last 24 h · ${fresh.length}`, fresh],
+        ["Earlier", leads.filter((l) => !isNew(l, now))],
+      ];
   let index = -1;
   return (
     <table className="leads">
@@ -77,6 +82,7 @@ export function LeadTable(props: Props) {
         <col className="c-company" />
         <col />
         <col className="c-place" />
+        <col className="c-fit" />
         <col className="c-num" />
         <col className="c-num" />
         <col className="c-age" />
@@ -90,6 +96,9 @@ export function LeadTable(props: Props) {
           <th scope="col">Company</th>
           <th scope="col">Title</th>
           <th scope="col">Location</th>
+          <th scope="col" className="num">
+            Fit
+          </th>
           <th scope="col" className="num">
             Postings
           </th>
@@ -108,7 +117,7 @@ export function LeadTable(props: Props) {
         rows.length === 0 ? null : (
           <tbody key={label}>
             <tr>
-              <th scope="rowgroup" colSpan={8} className="group">
+              <th scope="rowgroup" colSpan={9} className="group">
                 {label}
               </th>
             </tr>
@@ -146,7 +155,8 @@ function LeadRow(props: {
   onToggle: () => void;
   rowRef?: Ref<HTMLTableRowElement>;
 }) {
-  const { lead: l, hidden, now, focused, open, onFocus, onToggle, rowRef } = props;
+  const { hidden, now, focused, open, onFocus, onToggle, rowRef } = props;
+  const [l, updating] = useFreshReason(props.lead, open);
   const [members, setMembers] = useState<Members | null>(null);
   const [failed, setFailed] = useState(false);
   const detail = `detail-${l.id}`;
@@ -161,7 +171,7 @@ function LeadRow(props: {
     <>
       <tr
         ref={rowRef}
-        className={`row${focused ? " focused" : ""}${l.members > 1 ? "" : " single"}`}
+        className={`row${focused ? " focused" : ""}`}
         tabIndex={focused ? 0 : -1}
         onClick={onFocus}
         data-lead={l.id}
@@ -182,6 +192,9 @@ function LeadRow(props: {
           {hidden && l.hidden_by && <span className="reasons">hidden by {l.hidden_by.map(reason).join(", ")}</span>}
         </td>
         <td className="place">{place(l)}</td>
+        <td className="fit-cell">
+          <FitCell lead={l} />
+        </td>
         <td className="num">{l.members > 1 ? num.format(l.members) : ""}</td>
         <td className="num">{l.experience_min_years ?? "—"}</td>
         <td className="age">
@@ -194,7 +207,7 @@ function LeadRow(props: {
             type="button"
             aria-expanded={open}
             aria-controls={detail}
-            aria-label={l.members > 1 ? `Show ${l.members} postings` : "Show details"}
+            aria-label={l.members > 1 ? `Show details and ${l.members} postings` : "Show details"}
             onClick={(e) => {
               e.stopPropagation();
               onFocus();
@@ -207,7 +220,8 @@ function LeadRow(props: {
       </tr>
       {open && (
         <tr className="detail" id={detail}>
-          <td colSpan={8}>
+          <td colSpan={9}>
+            <ScoreDetail lead={l} updating={updating} />
             <dl>
               <div className="pair">
                 <dt>Postings</dt>

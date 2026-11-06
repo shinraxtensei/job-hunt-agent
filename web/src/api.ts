@@ -1,5 +1,5 @@
 // Types and fetchers for the M2-05 leads API. Every string in a Lead or Member is
-// untrusted posting text: render it only as React text.
+// untrusted posting text or model output: render it only as React text.
 
 export type Lead = {
   id: number;
@@ -22,7 +22,22 @@ export type Lead = {
   members: number;
   members_url: string;
   hidden_by?: string[];
+  // The score (M3-08): null when not scored. reason and gaps are model output.
+  score: number | null;
+  fit_level: FitLevel | null;
+  not_enough_info: boolean;
+  breakdown: Factor[] | null;
+  reason: string | null;
+  gaps: string[] | null;
+  cv_variant: string | null;
+  reason_current: boolean; // false: from older inputs, shown marked until regenerated
+  score_status: "scored" | "pending" | "needs_review" | "not_queued";
 };
+
+export const FIT_LEVELS = ["very_strong", "strong", "good", "stretch", "no"] as const;
+export type FitLevel = (typeof FIT_LEVELS)[number];
+
+export type Factor = { factor: string; weight: number; value: number; points: number; detail: string };
 
 export type Page = { total: number; leads: Lead[]; next_cursor?: string };
 
@@ -74,4 +89,11 @@ export function apiQuery(page: URLSearchParams, extra: Record<string, string> = 
   for (const [k, v] of Object.entries(extra)) q.set(k, v);
   const s = q.toString();
   return s ? `?${s}` : "";
+}
+
+// requestReason asks the API for a fresh reason (ADR-0022): a same-origin JSON POST.
+export async function requestReason(id: number): Promise<boolean> {
+  const res = await fetch(`/api/leads/${id}/reason`, { method: "POST", headers: { "Content-Type": "application/json" } });
+  if (!res.ok) throw new ApiError(`HTTP ${res.status}`);
+  return ((await res.json()) as { requested: boolean }).requested;
 }
