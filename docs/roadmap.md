@@ -198,7 +198,7 @@ M3-04's first baseline run.
   158 (173 after the reasons were regenerated). Label the variant on the eval set and evaluate it in M4, before tailoring
   depends on it.
 
-## M4: Evidence bank and tailoring
+## M4: Evidence bank and tailoring ✅ done 2026-11-08
 
 **Goal:** the owner picks a lead and gets an honest tailored CV draft with a coverage
 report.
@@ -231,6 +231,28 @@ Order: M4-01 → M4-06 (in parallel) → M4-03 → M4-04 → M4-02 → M4-05.
 | OI-4 | One-page layout | `data/profile/cv_layout.yaml` | M4-02; defaults until then |
 | OI-5 | Story review | the stories PR | all |
 
+**Wrap-up (2026-11-08).** All exit criteria are met and seen working with `make up`.
+
+- **Delivered:**
+  - **Evidence bank:** the owner's Master CV as 29 checked lines (`evidence.yaml`),
+    validated and synced into versioned tables; removed lines are retired, never
+    deleted. Edits go through the file (ADR-0024); the UI shows lines, not edits.
+  - **Coverage:** covered, listed (familiar) and gaps per lead, in code; instruction-like
+    skill names flagged as suspicious.
+  - **Validator:** the six guardrail tests pass, plus scope-inflation and
+    familiar-in-bullet checks. Any violation blocks the draft.
+  - **Tailoring:** selection in code, the model sees only selected lines and skill
+    names, facts come from the bank. `make evals-tailor`: 21/21 good-fit drafts
+    ready_for_review, 0 injection failures, ~3.9 s and ~$0.0007 per draft.
+  - **Review page:** draft with evidence per bullet, findings under their sentence,
+    coverage, approve/discard (nothing sent).
+  - **CV variant:** a code rule from the score; 75% agreement with the role-family proxy
+    (was 52.8% for `decide()`); DIST 173 → 122 leads.
+- **Spend:** $1.01 model spend in all so far (tailoring $0.03).
+- **Skipped / open:** OI-3 variant labels (proxy used), OI-2 evidence for the 9
+  familiar skills, OI-4 layout (defaults). Editing bullets by hand stays out (M5 if
+  needed).
+
 ## M5: Documents
 
 **Goal:** a draft becomes a ready-to-send pair of one-page PDFs, checked for unsupported
@@ -243,7 +265,9 @@ claims.
 - One-page PDF export for CV and cover letter; every sent version is kept.
 
 **Stories:** M5-01 Cover letter agent · M5-02 Claim checker · M5-03 PDF export ·
-M5-04 Document versions linked to applications
+M5-04 Document versions (the link to applications moved to M6, which creates them)
+
+Order: M5-01 → M5-02 → M5-04 → M5-03. Owner input: `docs/stories/M5-owner-input.md`.
 
 ## M6: Full tracker
 
@@ -255,6 +279,7 @@ M5-04 Document versions linked to applications
 - Each application stores a snapshot of the posting as applied to (title, URL, raw payload
   and `content_hash` at that moment). `postings` keeps only the latest payload (ADR-0007),
   so a later edit on the board would otherwise overwrite what was applied to.
+- Each application links the document versions sent with it (M5-04's `documents`).
 - Board view by status; notes and contacts per application.
 - Follow-up reminder 7 days after applying with no reply, with a drafted message.
 - Skip and skip-with-reason actions stored as feedback.
@@ -290,6 +315,10 @@ The Workable accounts in the backlog below are its candidates.
 on Lever, Greenhouse or Ashby; Moroccan employers mostly post elsewhere. Before building,
 evaluate Welcome to the Jungle, SmartRecruiters and ReKrute, and pick by how many backlog
 companies each covers and whether its terms allow automated reads (source-adapter step 0).
+
+**French letters (M7-04 note, owner 2026-11-08).** Letters are English-only (M5 OI-7).
+French postings from a Moroccan board will need French evidence lines, written and
+checked by the owner. Evidence is never machine-translated.
 
 **Backlog: companies not on a supported board** (from M1-01, checked 2026-11-01):
 - Morocco: Inyad, Yakeey, YoLa Fresh, YouCan, Freterium, DabaDoc, HPS; Chari and Glovo
@@ -367,3 +396,5 @@ with their own filters, without seeing anything private of the owner's.
 | 2026-11-06 | M3-06 follow-ups recorded under M3: stretch as a seniority/years flag instead of a 1-point band; CV-variant choice to be evaluated with labels in M4. | Owner's review of #42: the calibrated stretch band is 1 point wide, and `decide()` chose DIST for 158 of 509 leads. |
 | 2026-11-06 | **M3 complete.** M3-01…M3-09; M3-09 Location gate added during the milestone (owner's review of #43). 509 shown leads extracted and scored; $0.98 model spend in all; extraction gates and fit agreement in the M3 wrap-up. Next: **M4**. | Every M3 exit criterion is met and seen working locally. |
 | 2026-11-06 | M4 stories written: M4-01…M4-05 renamed to match their scope (Guardrail tests → Draft validator and the guardrail tests), M4-06 added (CV-variant measurement, from the M3 follow-ups), order set, owner input listed with formats. | Owner's direction after M3; the validator comes before the agent so the guardrail tests exist first. |
+| 2026-11-08 | **M4 complete.** M4-01…M4-06 (#47…#51). ADR-0024, ADR-0025. Owner's evidence bank loaded; drafts validated before shown; review page in the tracker. OI-3 skipped (role-family proxy), OI-2/OI-4 optional. Next: **M5**. | Every M4 exit criterion is met and seen working locally. |
+| 2026-11-08 | M5 stories written; linking documents to applications moved from M5-04 to M6. | Applications are created in M6. |
