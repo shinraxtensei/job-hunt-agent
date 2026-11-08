@@ -3,12 +3,15 @@ package httpapi
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"mime"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/shinraxtensei/job-hunter/internal/store"
 )
 
 // guardWrite refuses a write that isn't same-origin JSON (ADR-0022): cross-origin
@@ -121,5 +124,82 @@ func (a *api) drafts(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, x)
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"drafts": out})
+	evidence, err := a.citedEvidence(r, rows)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"drafts": out, "evidence": evidence})
+}
+
+// EvidenceLine is a cited line's text (M4-05 shows it next to the sentence).
+type EvidenceLine struct {
+	Text    string `json:"text"`
+	Retired bool   `json:"retired"`
+}
+
+// citedEvidence is the text of every evidence line the drafts cite, by id.
+func (a *api) citedEvidence(r *http.Request, rows []store.ListDraftsRow) (map[string]EvidenceLine, error) {
+	var ids []string
+	for _, d := range rows {
+		var c struct {
+			Summary []struct {
+				EvidenceIDs []string `json:"evidence_ids"`
+			} `json:"summary"`
+			Roles, Projects []struct {
+				Bullets []struct {
+					EvidenceIDs []string `json:"evidence_ids"`
+				} `json:"bullets"`
+			}
+		}
+		if len(d.Content) == 0 {
+			continue
+		}
+		if err := json.Unmarshal(d.Content, &c); err != nil {
+			return nil, fmt.Errorf("decoding draft %d: %w", d.ID, err)
+		}
+		for _, b := range c.Summary {
+			ids = append(ids, b.EvidenceIDs...)
+		}
+		for _, sec := range append(c.Roles, c.Projects...) {
+			for _, b := range sec.Bullets {
+				ids = append(ids, b.EvidenceIDs...)
+			}
+		}
+	}
+	out := map[string]EvidenceLine{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	lines, err := a.q.EvidenceLines(r.Context(), ids)
+	if err != nil {
+		return nil, fmt.Errorf("loading evidence lines: %w", err)
+	}
+	for _, l := range lines {
+		out[l.ID] = EvidenceLine{l.Text, l.Retired}
+	}
+	return out, nil
+}
+
+// decide approves or discards a draft (M4-05). Approve needs `ready_for_review`; a
+// blocked draft can only be discarded. Nothing is sent or exported (rule 6).
+func (a *api) decide(status string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !guardWrite(w, r) {
+			return
+		}
+		id, ok := pathID(w, r)
+		if !ok {
+			return
+		}
+		_, err := a.q.DecideDraft(r.Context(), store.DecideDraftParams{ID: id, Status: status})
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			writeError(w, http.StatusConflict, "", "this draft can't be "+status+" in its current state")
+		case err != nil:
+			a.fail(w, r, err)
+		default:
+			writeJSON(w, http.StatusOK, map[string]string{"status": status})
+		}
+	}
 }

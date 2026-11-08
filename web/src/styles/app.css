@@ -836,3 +836,150 @@ dialog[open] {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* CV draft (M4-05): a wide sheet; text only, monochrome like the rest. A violation is
+   marked by a solid bar and its words, a warning by a dashed one: not by colour. */
+.draft-sheet {
+  width: min(760px, 100vw);
+  max-width: 100vw; /* the UA's dialog max-width would leave a gap at 375px */
+}
+.draft-for,
+.draft-lead,
+.draft-note,
+.draft-versions,
+.cv-dates,
+.closest {
+  color: var(--muted);
+}
+.draft-for {
+  font-weight: 400;
+}
+.draft-lead {
+  margin: 0 0 var(--space-2);
+}
+.draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.draft-note {
+  margin: var(--space-2) 0;
+  font-size: var(--text-sm);
+}
+.draft-error {
+  color: var(--text);
+  font-weight: 500;
+}
+.draft-status {
+  margin: var(--space-3) 0 var(--space-2);
+  font-weight: 500;
+}
+.draft section {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line);
+}
+.draft h3 {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin: var(--space-1) 0;
+  color: var(--muted);
+}
+.cv-head {
+  padding-bottom: var(--space-2);
+}
+.cv-name {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin: 0;
+}
+.cv-meta {
+  margin: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.cv-role {
+  margin: var(--space-2) 0 var(--space-1);
+}
+.cv-dates {
+  margin-left: var(--space-2);
+  white-space: nowrap;
+}
+.bullets,
+.plain,
+.findings,
+.evidence {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.bullets > li {
+  padding: var(--space-1) 0 var(--space-1) var(--space-3);
+  border-left: 2px solid transparent;
+  overflow-wrap: anywhere;
+}
+.bullets > li.has-violation {
+  border-left-color: var(--text);
+}
+.evidence-toggle {
+  font-size: var(--text-sm);
+}
+.evidence {
+  margin: var(--space-1) 0 0;
+  padding: var(--space-1) var(--space-2);
+  background: var(--panel);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+.evidence code {
+  color: var(--muted);
+}
+.finding {
+  margin-top: var(--space-1);
+  padding-left: var(--space-2);
+  font-size: var(--text-sm);
+  border-left: 2px solid var(--text);
+}
+.finding.warning {
+  border-left-style: dashed;
+  border-left-color: var(--muted);
+}
+.coverage dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+.coverage dt {
+  color: var(--faint);
+}
+.coverage dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.suspicious {
+  font-weight: 600;
+}
+.draft-versions {
+  font-size: var(--text-xs);
+  margin-top: var(--space-3);
+}
+.draft-open {
+  float: right;
+}
+@media (max-width: 640px) {
+  .draft-sheet {
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .coverage dl {
+    grid-template-columns: 1fr;
+  }
+  .draft-open {
+    float: none;
+    margin-bottom: var(--space-2);
+  }
+}

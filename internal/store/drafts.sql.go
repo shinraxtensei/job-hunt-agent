@@ -11,10 +11,64 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const decideDraft = `-- name: DecideDraft :one
+UPDATE drafts SET status = $1::text, decided_at = now()
+WHERE id = $2::bigint AND (
+	($1::text = 'approved' AND status = 'ready_for_review') OR
+	($1::text = 'discarded' AND status IN ('ready_for_review', 'blocked', 'failed')))
+RETURNING posting_id
+`
+
+type DecideDraftParams struct {
+	Status string
+	ID     int64
+}
+
+// The owner's decision (M4-05): approve a draft that is ready for review, or discard one
+// that isn't decided yet. Nothing is sent either way (guardrail rule 6).
+func (q *Queries) DecideDraft(ctx context.Context, arg DecideDraftParams) (int64, error) {
+	row := q.db.QueryRow(ctx, decideDraft, arg.Status, arg.ID)
+	var posting_id int64
+	err := row.Scan(&posting_id)
+	return posting_id, err
+}
+
+const evidenceLines = `-- name: EvidenceLines :many
+SELECT id, text, retired FROM evidence_lines WHERE id = ANY($1::text[])
+`
+
+type EvidenceLinesRow struct {
+	ID      string
+	Text    string
+	Retired bool
+}
+
+// The text of evidence lines a draft cites, retired ones included (ADR-0024), so the page
+// shows what each sentence was built from.
+func (q *Queries) EvidenceLines(ctx context.Context, ids []string) ([]EvidenceLinesRow, error) {
+	rows, err := q.db.Query(ctx, evidenceLines, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []EvidenceLinesRow
+	for rows.Next() {
+		var i EvidenceLinesRow
+		if err := rows.Scan(&i.ID, &i.Text, &i.Retired); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listDrafts = `-- name: ListDrafts :many
 SELECT id, status, variant, content, coverage, findings, evidence_version, prompt_version,
 	model, error, requested_at, made_at, decided_at
-FROM drafts WHERE posting_id = $1 ORDER BY id DESC LIMIT 10
+FROM drafts WHERE posting_id = $1 ORDER BY requested_at DESC, id DESC LIMIT 10
 `
 
 type ListDraftsRow struct {

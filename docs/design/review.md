@@ -112,3 +112,34 @@ rules.md "deep-link expanded panels" → expanded rows stay transient (as in M2-
 Playwright with axe at 375 and 1280 px, light and dark, now also on an expanded scored
 lead and on a lead whose reason is from older inputs: **0 violations**, no horizontal
 scroll at 375 px.
+
+
+# Review loop: the CV draft dialog (M4-05)
+
+Run on 2026-11-08 against `web/src/DraftDialog.tsx` and its styles, with the vendored
+skills. Screenshots: `docs/design/screens/m4-05/` (the live stack, a real draft).
+
+- **frontend-design:**
+  - one wide sheet, monochrome like the tracker;
+  - the CV reads top to bottom (header, summary, experience, projects, skills,
+    education, languages), with the evidence one tap away;
+  - copy says what happens: "Nothing is sent from here. Approving records your
+    decision; the PDF comes later."
+- **web-design-guidelines:**
+  - Fixed: the dialog's UA `max-width` left a gap at 375 px, so it is now `max-width:
+    100vw`.
+  - Fixed: long ids and URLs wrap (`overflow-wrap: anywhere`).
+  - Kept: the version select has a visible label; evidence ids are `translate="no"`.
+- **fixing-accessibility:**
+  - a native `<dialog>` (focus trapped, Esc closes, focus returns);
+  - the evidence toggles use `aria-expanded` and `aria-controls`;
+  - the status is `role="status"` and errors `role="alert"`;
+  - a violation versus a warning is told by words and bar style, not colour.
+- **Automated:** Playwright and axe at 375 and 1280 px, light and dark, on a ready draft
+  and a blocked one: 0 violations, no horizontal scroll.
+
+**Privacy fix (2026-11-08).** The M3-08 expanded-row screenshots showed real reasons about
+the owner's skill levels, so they were removed from the tree. The list screenshots show
+only public postings. From now on, screenshots of personal content are taken with the
+test fixtures ("Sam Example"), never the live data. They are still in git history; a
+history rewrite needs the owner's go-ahead (force-push).

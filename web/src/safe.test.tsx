@@ -145,3 +145,42 @@ describe("scores (M3-08)", () => {
     expect(el.querySelector(".breakdown td.bar")?.getAttribute("aria-hidden")).toBe("true");
   });
 });
+
+describe("CV drafts (M4-05)", () => {
+  // AC6: draft sentences, evidence and findings render as text only.
+  it("renders an HTML payload in a draft bullet as text", async () => {
+    const { DraftView } = await import("./DraftDialog");
+    const payload = `Led <img src=x onerror="window.pwned=4"> the move`;
+    const el = document.createElement("div");
+    document.body.append(el);
+    const draft = {
+      id: 1,
+      status: "blocked" as const,
+      variant: "BE",
+      content: {
+        person: { name: "Sam", headline: "", email: "", phone: "", location: "", links: [] },
+        summary: [],
+        roles: [{ id: "r", title: "Engineer", employer: "Acme", start: "2023-05", end: "present", bullets: [{ text: payload, evidence_ids: ["l1"] }] }],
+        projects: [],
+        skills: [],
+        education: [],
+        languages: [],
+      },
+      coverage: null,
+      findings: { violations: [{ rule: "inflated_number", where: "roles[r].bullets[0]", sentence: payload, closest: "l1", detail: "5 isn't in the cited evidence" }], warnings: [] },
+      evidence_version: null,
+      prompt_version: 1,
+      model: "m",
+      error: null,
+      requested_at: "2026-11-08T00:00:00Z",
+      made_at: null,
+      decided_at: null,
+    };
+    act(() => createRoot(el).render(<DraftView draft={draft} evidence={{ l1: { text: "<b>evidence</b>", retired: false } }} waiting={false} />));
+    expect(el.querySelector("img, b.x")).toBeNull();
+    expect(el.textContent).toContain(payload);
+    expect(el.textContent).toContain("Blocks the draft");
+    expect(el.textContent).toContain("“<b>evidence</b>”");
+    expect((window as { pwned?: number }).pwned).toBeUndefined();
+  });
+});

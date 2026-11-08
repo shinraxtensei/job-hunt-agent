@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { get, requestReason, type Lead } from "./api";
+import { DraftDialog } from "./DraftDialog";
 import { label } from "./labels";
 
 const one = new Intl.NumberFormat(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -91,6 +92,7 @@ export function ScoreDetail({ lead: l, updating }: { lead: Lead; updating: "idle
   }
   return (
     <section className="score" aria-label="Fit">
+      <DraftButton lead={l} />
       <p className="score-head">
         <b>{label("fit", l.fit_level)} fit</b> · {one.format(l.score)} of 100
         {l.cv_variant && <> · CV: {label("cv_variant", l.cv_variant)}</>}
@@ -140,5 +142,18 @@ export function ScoreDetail({ lead: l, updating }: { lead: Lead; updating: "idle
         </tbody>
       </table>
     </section>
+  );
+}
+
+// DraftButton opens the CV draft dialog for a scored lead (M4-05).
+function DraftButton({ lead }: { lead: Lead }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" className="button draft-open" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+        CV draft
+      </button>
+      {open && <DraftDialog lead={lead} open={open} onClose={() => setOpen(false)} />}
+    </>
   );
 }

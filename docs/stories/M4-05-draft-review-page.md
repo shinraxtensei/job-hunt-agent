@@ -1,6 +1,6 @@
 # M4-05: Draft review page
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M4 — Evidence bank and tailoring
 - **Linear:** [HAM-53](https://linear.app/hamid-corp/issue/HAM-53/m4-05-draft-review-page)
 - **Estimate:** 1 day
@@ -56,6 +56,18 @@ keeps it or edits `cv_layout.yaml`.
    **When** they are rendered
    **Then** they are text only (the M2-06 AC4 tests: an HTML or `javascript:` payload is
    inert). Playwright at 375 and 1280 px, light and dark: axe 0, no horizontal scroll.
+
+## Decisions (2026-11-08)
+
+- **The draft opens in a wide sheet dialog** from the lead's expanded row ("CV draft").
+  It is full screen at 375 px.
+- **The API returns the text of every cited evidence line with the drafts,** retired
+  lines included. A bullet's "Evidence" button shows them in place.
+- **Violations and warnings sit under their sentence.** A violation has a solid bar and
+  "Blocks the draft"; a warning has a dashed bar and "Warning". Words and shape mark
+  them, not colour. A blocked draft's Approve is disabled. Discard works for blocked,
+  ready and failed drafts.
+- **OI-4:** the default layout stays until the owner writes `cv_layout.yaml`.
 
 ## Out of scope
 

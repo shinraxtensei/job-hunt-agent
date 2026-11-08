@@ -13,10 +13,15 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
     if (route.request().method() === "POST" && /^\/api\/leads\/\d+\/reason$/.test(path)) {
       return route.fulfill({ status: 202, contentType: "application/json", body: '{"requested":true}' });
     }
+    if (route.request().method() === "POST" && /^\/api\/(leads\/\d+\/draft|drafts\/\d+\/(approve|discard))$/.test(path)) {
+      return route.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' });
+    }
     const body =
       path === "/api/leads" ? leads
       : path === "/api/leads/9001" ? golden("lead")
       : path === "/api/leads/9006" ? golden("lead_stale_reason")
+      : path === "/api/leads/9001/drafts" ? golden("drafts")
+      : path === "/api/leads/9006/drafts" ? golden("drafts_blocked")
       : path === "/api/leads/hidden" ? golden("hidden_default")
       : path === "/api/facets" ? golden("facets_default")
       : path === "/api/presets" ? golden("presets")
@@ -108,6 +113,44 @@ for (const width of [375, 1280]) {
         await expect(fit.getByRole("list", { name: "Gaps" }).getByRole("listitem")).toHaveText(["Go"]);
         await expect(fit.getByRole("table", { name: /Score breakdown/ }).getByRole("row")).toHaveCount(6);
         await expect(fit.getByRole("row", { name: /Required skills/ })).toContainText("22.1 of 35");
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+      });
+
+      // M4-05: a lead's CV draft opens in a dialog: status, sentences with their evidence,
+      // findings in place, coverage with the possible injection flagged; approve records
+      // the decision (a same-origin JSON POST); nothing is sent.
+      test("a CV draft is reviewed next to its evidence", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/");
+        await page.locator("tr.row", { hasText: "Senior Backend Engineer" }).getByRole("button", { name: /Show details/ }).click();
+        await page.getByRole("button", { name: "CV draft" }).click();
+        const dialog = page.getByRole("dialog", { name: /CV draft/ });
+        await expect(dialog.getByRole("status").filter({ hasText: "Ready for review" })).toBeVisible();
+        await expect(dialog.getByText("Cut the invoice job from 40 to 6 minutes.")).toBeVisible();
+        await expect(dialog.getByText("Led <img src=x onerror=alert(1)> the move to Docker images.")).toBeVisible();
+        await expect(dialog.locator("img")).toHaveCount(0);
+        await dialog.locator("li", { hasText: "Cut the invoice job" }).getByRole("button", { name: "Evidence (1)" }).click();
+        await expect(dialog.getByText(/cutting its run time from 40 to 6 minutes/)).toBeVisible();
+        await expect(dialog.getByText(/A stronger verb than the evidence uses/)).toBeVisible();
+        await expect(dialog.getByText(/possible injection, ignored/)).toBeVisible();
+        await expect(dialog.getByLabel("Version")).toBeVisible(); // two versions
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+        const approve = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/drafts/9102/approve"));
+        await dialog.getByRole("button", { name: "Approve" }).click();
+        expect((await approve).headers()["content-type"]).toBe("application/json");
+      });
+
+      test("a blocked draft can't be approved", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/");
+        await page.locator("tr.row", { hasText: "Mobile Engineer" }).getByRole("button", { name: /Show details/ }).click();
+        await page.getByRole("button", { name: "CV draft" }).click();
+        const dialog = page.getByRole("dialog", { name: /CV draft/ });
+        await expect(dialog.getByText("Blocked: a sentence breaks the evidence rules")).toBeVisible();
+        await expect(dialog.getByText(/Blocks the draft:.*A number that isn’t in the cited evidence/)).toBeVisible();
+        await expect(dialog.getByRole("button", { name: "Approve" })).toBeDisabled();
         await noHorizontalScroll(page);
         await noAxeViolations(page);
       });

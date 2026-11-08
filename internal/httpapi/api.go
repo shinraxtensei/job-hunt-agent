@@ -41,6 +41,8 @@ func New(db DB, presetsDir, commit string, now func() time.Time, log *slog.Logge
 	mux.HandleFunc("POST /api/leads/{id}/reason", a.requestReason)
 	mux.HandleFunc("POST /api/leads/{id}/draft", a.requestDraft)
 	mux.HandleFunc("GET /api/leads/{id}/drafts", a.drafts)
+	mux.HandleFunc("POST /api/drafts/{id}/approve", a.decide("approved"))
+	mux.HandleFunc("POST /api/drafts/{id}/discard", a.decide("discarded"))
 	mux.HandleFunc("GET /api/leads/{id}/members", a.members)
 	mux.HandleFunc("GET /api/facets", a.facets)
 	mux.HandleFunc("GET /api/presets", a.presets)

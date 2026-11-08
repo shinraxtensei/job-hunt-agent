@@ -97,3 +97,65 @@ export async function requestReason(id: number): Promise<boolean> {
   if (!res.ok) throw new ApiError(`HTTP ${res.status}`);
   return ((await res.json()) as { requested: boolean }).requested;
 }
+
+// M4-05: tailored CV drafts (M4-02). Every string is the owner's evidence, bank facts or
+// model output derived from a posting: render it only as React text.
+export type DraftBullet = { text: string; evidence_ids: string[] };
+export type DraftSection = {
+  id: string;
+  title?: string;
+  employer?: string;
+  name?: string;
+  stack?: string;
+  location?: string;
+  start: string | null;
+  end: string | null;
+  bullets: DraftBullet[];
+};
+export type DraftContent = {
+  person: { name: string; headline: string; email: string; phone: string; location: string; links: string[] };
+  summary: DraftBullet[];
+  roles: DraftSection[];
+  projects: DraftSection[];
+  skills: string[];
+  education: { id: string; school: string; degree: string; location: string; start: string; end: string }[];
+  languages: { name: string; level: string }[];
+};
+export type Finding = { rule: string; where: string; sentence: string; closest: string | null; detail: string };
+export type SkillCoverage = {
+  name: string;
+  kind: "required" | "optional";
+  skill: string | null;
+  level: string | null;
+  status: "covered" | "listed" | "gap";
+  why: "learning" | "missing" | "no_evidence" | null;
+  lines: string[];
+  suspicious: boolean;
+};
+export type Draft = {
+  id: number;
+  status: "requested" | "blocked" | "ready_for_review" | "approved" | "discarded" | "failed";
+  variant: string | null;
+  content: DraftContent | null;
+  coverage: { variant: string; skills: SkillCoverage[] } | null;
+  findings: { violations: Finding[]; warnings: Finding[] } | null;
+  evidence_version: string | null;
+  prompt_version: number | null;
+  model: string | null;
+  error: string | null;
+  requested_at: string;
+  made_at: string | null;
+  decided_at: string | null;
+};
+export type Drafts = { drafts: Draft[]; evidence: Record<string, { text: string; retired: boolean }> };
+
+// post is a same-origin JSON write (ADR-0022: the API refuses anything else).
+export async function post<T>(path: string): Promise<T> {
+  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" } });
+  const body: unknown = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = (body as { error?: { message?: string } } | null)?.error;
+    throw new ApiError(err?.message ?? `HTTP ${res.status}`);
+  }
+  return body as T;
+}
