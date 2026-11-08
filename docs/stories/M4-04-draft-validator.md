@@ -1,6 +1,6 @@
 # M4-04: Draft validator and the guardrail tests
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M4 — Evidence bank and tailoring
 - **Linear:** [HAM-52](https://linear.app/hamid-corp/issue/HAM-52/m4-04-draft-validator-and-the-guardrail-tests)
 - **Estimate:** 1 day
@@ -84,6 +84,16 @@ It defines the draft schema M4-02 produces:
    **When** `make check` runs
    **Then** all of the above are table tests with fixed drafts and evidence (no model),
    and they are the gate on any change to tailoring code or prompts.
+
+## Notes (2026-11-08)
+
+- **Altered facts are caught in code when they name a title, a year, or an employer,
+  school or project from the bank.** An unknown company name can't be told from
+  ordinary words in code; M5-02's model claim checker covers it.
+- **Words of the role's own title or the headline count as supported.** For example,
+  "Backend" in "As Backend Engineer…".
+- **The planted-skill test uses a skill the posting requires and the bank lacks.** The
+  validator gets the lead's coverage, so it knows the posting's skill names.
 
 ## Out of scope
 
