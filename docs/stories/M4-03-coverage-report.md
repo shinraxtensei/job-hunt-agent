@@ -1,6 +1,6 @@
 # M4-03: Coverage report
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M4 — Evidence bank and tailoring
 - **Linear:** [HAM-51](https://linear.app/hamid-corp/issue/HAM-51/m4-03-coverage-report)
 - **Estimate:** ½ day
@@ -45,6 +45,13 @@ call. M4-02 gives it to the tailoring agent as its constraints, and M4-05 shows 
    **Then** it is a gap like any unknown name, never covered. It is marked
    `suspicious` when it looks like an instruction (imperatives, "you", "must"), so
    M4-05 can flag it (guardrail rule 5). Tested with the M3 injection texts.
+
+## Decision (2026-11-08)
+
+Coverage is a pure function (`coverage.py`) that records its versions. AC3's storage
+moves to the draft: M4-02 stores the coverage with each draft and recomputes it when the
+versions change. No separate table for coverage, because nothing reads it without a
+draft.
 
 ## Out of scope
 

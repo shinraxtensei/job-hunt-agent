@@ -14,6 +14,8 @@
 *.out
 coverage.*
 !coverage.go
+# a Python module (M4-03), not a coverage report
+!agents/src/jobhunt_agents/coverage.py
 *.coverprofile
 profile.cov
 
