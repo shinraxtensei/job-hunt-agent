@@ -534,3 +534,60 @@ func TestRequestReason(t *testing.T) {
 		t.Error("a current reason was requested again")
 	}
 }
+
+// M4-02 (ADR-0025): a draft request inserts one `requested` row for a scored lead, only
+// through the write guards; a second request while one waits adds nothing; an unscored
+// lead gets none. The list shows the lead's drafts, newest first.
+func TestRequestDraft(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	t.Cleanup(func() {
+		if _, err := db.Exec(context.Background(), `DELETE FROM drafts`); err != nil {
+			t.Error(err)
+		}
+	})
+	post := func(id, ctype, site string) (int, string) {
+		req := httptest.NewRequest(http.MethodPost, "/api/leads/"+id+"/draft", nil)
+		if ctype != "" {
+			req.Header.Set("Content-Type", ctype)
+		}
+		if site != "" {
+			req.Header.Set("Sec-Fetch-Site", site)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code, rec.Body.String()
+	}
+	if code, _ := post("9001", "application/json", "cross-site"); code != http.StatusForbidden {
+		t.Errorf("cross-site: %d, want 403", code)
+	}
+	if code, _ := post("9001", "text/plain", ""); code != http.StatusForbidden {
+		t.Errorf("text/plain: %d, want 403", code)
+	}
+	code, body := post("9001", "application/json", "same-origin")
+	var got struct {
+		DraftID *int64 `json:"draft_id"`
+	}
+	if err := json.Unmarshal([]byte(body), &got); err != nil || code != http.StatusAccepted || got.DraftID == nil {
+		t.Fatalf("first request: %d %s", code, body)
+	}
+	if _, body := post("9001", "application/json", ""); body != "{\"draft_id\":null}\n" {
+		t.Errorf("second request while one waits: %s", body)
+	}
+	if _, body := post("9003", "application/json", ""); body != "{\"draft_id\":null}\n" {
+		t.Errorf("unscored lead: %s", body)
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/leads/9001/drafts", nil))
+	var list struct {
+		Drafts []struct {
+			ID      int64           `json:"id"`
+			Status  string          `json:"status"`
+			Content json.RawMessage `json:"content"`
+		} `json:"drafts"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &list); err != nil || len(list.Drafts) != 1 ||
+		list.Drafts[0].ID != *got.DraftID || list.Drafts[0].Status != "requested" || string(list.Drafts[0].Content) != "null" {
+		t.Errorf("drafts = %s", rec.Body)
+	}
+}

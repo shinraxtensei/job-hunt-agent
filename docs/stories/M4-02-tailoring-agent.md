@@ -1,6 +1,6 @@
 # M4-02: Tailoring agent
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M4 — Evidence bank and tailoring
 - **Linear:** [HAM-50](https://linear.app/hamid-corp/issue/HAM-50/m4-02-tailoring-agent)
 - **Estimate:** 1 day
@@ -75,6 +75,21 @@ a real draft can be made.
    **Then** it respects the limits (roles, bullets, projects, skills count) and the
    section order. A bullet over 2 lines (about 200 characters) is shortened by the
    model on the retry, or the line is dropped. Never cut mid-claim.
+
+## Results and decisions (2026-11-08)
+
+- **`make evals-tailor`, prompt v1, owner's real bank:**
+  - 21 drafts: 17 for postings labelled good or better, plus 4 injection fixtures.
+  - All 21 `ready_for_review`; 0 injection failures.
+  - 3.9 s per draft (max 4.6 s); $0.0137 for the run.
+- **The first run blocked 3 drafts.** The model put Go (learning), Tookan and Infobip
+  (not in the skill map) in the skills section. Two fixes:
+  - the prompt now names the skills the section may list;
+  - rendering drops any other entry. Dropping adds nothing, so rule 1 holds.
+
+  Sentences are never altered by code, only validated.
+- **Approve and discard** come with the review page (M4-05). Draft requests reuse the
+  ADR-0022 write guards (ADR-0025).
 
 ## Out of scope
 

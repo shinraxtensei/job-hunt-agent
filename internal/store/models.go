@@ -48,6 +48,25 @@ type Company struct {
 	Active    bool
 }
 
+type Draft struct {
+	ID              int64
+	PostingID       int64
+	Status          string
+	ContentHash     []byte
+	Variant         pgtype.Text
+	Content         []byte
+	Coverage        []byte
+	Findings        []byte
+	EvidenceVersion pgtype.Text
+	ProfileVersion  pgtype.Text
+	PromptVersion   pgtype.Int4
+	Model           pgtype.Text
+	Error           pgtype.Text
+	RequestedAt     pgtype.Timestamptz
+	MadeAt          pgtype.Timestamptz
+	DecidedAt       pgtype.Timestamptz
+}
+
 type EvidenceBank struct {
 	ID       bool
 	Version  string

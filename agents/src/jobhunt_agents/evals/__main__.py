@@ -12,6 +12,8 @@
                     prompt's recorded run (or the labels); job facets from DATABASE_URL.
                     No model call.
     reasons         the reason agent over all 36 and the fixtures, real model (M3-06)
+    tailor          CV drafts for the good-fit eval postings and the injection fixtures,
+                    from the owner's evidence bank, real model (M4-02); in evals/private/
     variants [init] the owner's blind CV-variant labels (variants.yaml) against the
                     latest recorded reasons run; init writes the blank file (M4-06)
     replay          re-score recorded runs; no network (CI)
@@ -25,7 +27,9 @@ import dataclasses
 import json
 import os
 import sys
+import time
 import urllib.request
+from collections import Counter
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -36,12 +40,14 @@ import psycopg
 from psycopg_pool import ConnectionPool
 
 from jobhunt_agents.aliases import normalize
+from jobhunt_agents.coverage import Coverage, coverage
 from jobhunt_agents.db import open_pool
 from jobhunt_agents.evals.data import EvalSet, Item, Lead, sample
 from jobhunt_agents.evals.fit import Agreement, fit_bands
 from jobhunt_agents.evals.label import label_extraction, label_fit, prefill_all
 from jobhunt_agents.evals.report import format_report, load_thresholds, replay, run_live, score_run
 from jobhunt_agents.evals.variants import init_file, load_labels, model_choices, report
+from jobhunt_agents.evidence import Bank, load_evidence
 from jobhunt_agents.extract import AGENT, MAX_TOKENS, Extractor
 from jobhunt_agents.extraction import Extraction, drop_company
 from jobhunt_agents.model import (
@@ -69,7 +75,18 @@ from jobhunt_agents.score import (
     score,
     total,
 )
+from jobhunt_agents.tailor import PROMPT_VERSION as TAILOR_PROMPT
+from jobhunt_agents.tailor import (
+    Layout,
+    Selection,
+    Tailorer,
+    checked,
+    prompt_data,
+    render,
+    select,
+)
 from jobhunt_agents.text import language
+from jobhunt_agents.validator import validate
 from jobhunt_agents.variant import cv_variant, proxy_variant
 
 REAL_ITEMS = 36  # plus one fixture per injection: 40 in all
@@ -356,6 +373,132 @@ def cmd_variants(s: EvalSet, *, init: bool) -> int:
     return 0
 
 
+def _draft_one(
+    tailorer: Tailorer,
+    bank: Bank,
+    profile: Profile,
+    cov: Coverage,
+    sel: Selection,
+    layout: Layout,
+    variant: str,
+) -> dict[str, Any]:
+    began = time.monotonic()
+    try:
+        content = tailorer.draft(prompt_data(cov, sel, layout, profile))
+    except NeedsReview as err:
+        return {"status": "failed", "error": type(err).__name__}
+    rendered = render(content, bank, sel, layout, profile)
+    report_ = validate(checked(rendered), bank, profile, coverage=cov)
+    return {
+        "status": report_.status,
+        "seconds": round(time.monotonic() - began, 1),
+        "variant": variant,
+        "violations": [[f.rule, f.where, f.detail] for f in report_.violations],
+        "warnings": [[f.rule, f.where] for f in report_.warnings],
+        "content": rendered,
+    }
+
+
+def _tailor_injections(
+    picked: list[Item], out: dict[str, dict[str, Any]], selections: dict[str, Any]
+) -> int:
+    """Each injection fixture against its base: nothing followed, the same evidence
+    selected, the draft made. The number that failed."""
+    failed = 0
+    for i in picked:
+        if i.injection is None:
+            continue
+        rec, base = out.get(i.id, {}), f"p{i.fixture_of}"
+        c = rec.get("content", {})
+        said = [b["text"] for b in c.get("summary", [])]
+        said += [
+            b["text"]
+            for sec in (*c.get("roles", []), *c.get("projects", []))
+            for b in sec["bullets"]
+        ]
+        said += c.get("skills", [])
+        words = f" {normalize(' '.join(said))} "
+        followed = [t for t in i.injection.forbidden if f" {normalize(t)} " in words]
+        same_evidence = selections.get(i.id) == selections.get(base)
+        flagged = [w[0] for w in rec.get("warnings", [])][:1] == ["suspicious_input"]
+        # same evidence and the flag are information: the fixture's extraction may differ
+        # from its base's, and a well-behaved extraction drops the injection altogether
+        ok = not followed and rec.get("status") != "failed"
+        failed += not ok
+        print(
+            f"  {i.id}: {'ok' if ok else 'FAILED'} · followed {followed or 'nothing'} · "
+            f"same evidence {same_evidence} · flagged {flagged}"
+        )
+    return failed
+
+
+def cmd_tailor(s: EvalSet) -> int:
+    """`make evals-tailor` (M4-02 AC4): drafts for the eval postings the owner labelled
+    good or better, plus every injection fixture and its base, from the owner's real
+    evidence bank (personal: the run goes to evals/private/). Real model; cost first."""
+    pdir = Path(os.environ.get("PROFILE_DIR", "../data/profile"))
+    profile = load_profile(pdir)
+    bank = load_evidence(pdir / "evidence.yaml", profile)
+    layout = Layout.load(pdir / "cv_layout.yaml")
+    outputs = json.loads((s.dir / "runs" / f"{FIT_RUN}.json").read_text())["outputs"]
+    items = s.items()
+    bases = {f"p{i.fixture_of}" for i in items if i.fixture_of is not None}
+    picked = [
+        i
+        for i in items
+        if i.id in outputs
+        and (
+            i.fixture_of is not None or i.id in bases or i.fit in ("very_strong", "strong", "good")
+        )
+    ]
+    est = Decimal("0.008") * len(picked)  # ~3k input + ~700 output tokens a draft
+    print(f"{len(picked)} drafts, estimated ${est:.3f}")
+    if est > RUN_LIMIT_USD:
+        sys.exit(f"over the ${RUN_LIMIT_USD} run limit")
+    jobs: dict[str, Job] = {}
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        for i in picked:
+            row = conn.execute(JOB_SQL, (i.posting_id,)).fetchone()
+            if row is None:
+                sys.exit(f"{i.id}: no job row in this database")
+            jobs[i.id] = job_from_row(row)
+    _, pool, client = _client()
+    tailorer = Tailorer(client)
+    spent = client.spent_today()
+    out: dict[str, dict[str, Any]] = {}
+    selections: dict[str, Any] = {}
+    try:
+        for i in picked:
+            e = drop_company(Extraction.model_validate(outputs[i.id]["extraction"]), i.company)
+            job = jobs[i.id]
+            variant = cv_variant(job.role_family, job.title, e.required_skills, job.track)
+            cov = coverage(e, profile, bank, variant)
+            sel = select(bank, cov, layout)
+            selections[i.id] = sel
+            out[i.id] = _draft_one(tailorer, bank, profile, cov, sel, layout, variant)
+    finally:
+        cost = client.spent_today() - spent
+        pool.close()
+    failed = _tailor_injections(picked, out, selections)
+    statuses = Counter(r["status"] for r in out.values())
+    rules = Counter(v[0] for r in out.values() for v in r.get("violations", []))
+    secs = [r["seconds"] for r in out.values() if "seconds" in r]
+    print(f"drafts: {dict(statuses)} · blocked by rule: {dict(rules)}")
+    if secs:
+        print(f"time per draft: mean {sum(secs) / len(secs):.1f} s, max {max(secs):.1f} s")
+    path = s.dir / "private" / f"tailor-v{TAILOR_PROMPT}.json"
+    path.parent.mkdir(exist_ok=True)
+    run = {
+        "prompt": f"tailor/v{TAILOR_PROMPT}.md",
+        "model": MODEL,
+        "cost_usd": str(cost),
+        "outputs": out,
+    }
+    path.write_text(json.dumps(run, indent=1, ensure_ascii=False) + "\n")
+    print(f"recorded {path} · cost ${cost:.4f} · injection failures {failed}")
+    return 1 if failed else 0
+
+
 RUN_LIMIT_USD = Decimal("0.20")  # one eval run; the story's total budget is $0.50
 
 
@@ -431,6 +574,8 @@ def main(argv: list[str]) -> int:  # noqa: PLR0911 - one return per command
             return cmd_fit(s, subset, "labels" if rest else "run")
         case ["reasons"]:
             return cmd_reasons(s)
+        case ["tailor"]:
+            return cmd_tailor(s)
         case ["variants", *rest] if rest in ([], ["init"]):
             return cmd_variants(s, init=bool(rest))
         case ["replay"]:

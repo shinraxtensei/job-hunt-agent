@@ -58,7 +58,9 @@ agents/              Python 3.15 (uv, ADR-0017): src/jobhunt_agents/ (worker, qu
                      score.py (coded factors, scoring.yaml: weights, credits, bands), rescore.py (stores
                      scores, queues reasons), reason.py (reason, gaps, CV variant from the breakdown,
                      M3-06); evidence.py + evidence_sync.py (the evidence bank, M4-01), numbers.py
-                     (normalised numbers, also M4-04's check); agents/Dockerfile is the worker image
+                     (normalised numbers, also M4-04's check), variant.py (CV variant, M4-06),
+                     coverage.py (M4-03), drafts.py + validator.py (draft schema and guardrail
+                     checks, M4-04), tailor.py (the tailoring agent, M4-02); agents/Dockerfile is the worker image
 web/                 TypeScript UI (Vite + React, ADR-0013); built into web/dist/app, embedded in cmd/api
 db/migrations/       plain SQL migrations (goose), forward-only
 db/contract/         work_items.columns: the Go <-> Python queue contract, checked by both sides
@@ -82,6 +84,8 @@ testdata/            golden files (recorded board responses, sample postings)
 | Re-score recorded eval runs, no network (part of `make check`) | `make evals-replay` |
 | Coded scores vs the blind fit labels, confusion matrix; dev fits the band cut-offs (no model call) | `make evals-fit SET=dev\|heldout\|all` |
 | Reason agent over the eval set, real model; injection fixtures checked (output in git-ignored `evals/private/`) | `make evals-reasons` |
+| CV drafts for the good-fit eval postings + injection fixtures, from the owner's bank, real model (`evals/private/`) | `make evals-tailor` |
+| CV variant: owner labels (or the role-family proxy) vs decide() and the code rule | `make evals-variants [SET=init]` |
 | Eval set: sample / label (blind fit pass, model pre-fill, extraction pass) | `make evals-sample` / `make evals-label PASS=fit\|prefill\|extract` |
 | Lint | `make lint` → golangci-lint; ruff check, ruff format --check, pyright strict |
 | Format Go / check formatting | `make fmt` / `make fmt-check` |
@@ -173,6 +177,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0022 | The API's first write: request a fresh reason, refused cross-site; loopback Host names only | Accepted |
 | 0023 | Reconcile stores the default preset's matched location on jobs, for the scorer | Accepted |
 | 0024 | The evidence bank: a checked YAML file, synced by the worker into versioned tables | Accepted |
+| 0025 | Drafts: requested through the API, made by a `tailor` work item, validated before shown | Accepted |
 
 ## Project skills
 

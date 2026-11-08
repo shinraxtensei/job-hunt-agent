@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"mime"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -637,19 +636,13 @@ func (a *api) lead(w http.ResponseWriter, r *http.Request) {
 var crossOrigin = http.NewCrossOriginProtection()
 
 // requestReason marks a lead opened so the worker regenerates a reason made from older
-// inputs (ADR-0021). The API's only write; cross-site requests are refused (ADR-0022).
+// inputs (ADR-0021), behind the write guards (ADR-0022).
 func (a *api) requestReason(w http.ResponseWriter, r *http.Request) {
-	if err := crossOrigin.Check(r); err != nil { // Sec-Fetch-Site, else Origin vs Host
-		writeError(w, http.StatusForbidden, "", "cross-site requests are refused")
+	if !guardWrite(w, r) {
 		return
 	}
-	if mt, _, err := mime.ParseMediaType(r.Header.Get("Content-Type")); err != nil || mt != "application/json" {
-		writeError(w, http.StatusForbidden, "", "want Content-Type: application/json")
-		return
-	}
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "id", "want a lead id")
+	id, ok := pathID(w, r)
+	if !ok {
 		return
 	}
 	n, err := a.q.RequestReason(r.Context(), id)

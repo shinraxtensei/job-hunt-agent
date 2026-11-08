@@ -10,7 +10,7 @@ from types import FrameType
 
 import psycopg
 
-from jobhunt_agents import extract, reason
+from jobhunt_agents import extract, reason, tailor
 from jobhunt_agents.db import open_pool
 from jobhunt_agents.evidence import EvidenceWatcher
 from jobhunt_agents.evidence_sync import sync as sync_evidence
@@ -90,7 +90,7 @@ def run(s: Settings) -> None:
             handlers["reason"] = reason.handler(pool, reason.Reasoner(client), scoring)
             extract.register_prompt(pool)
         else:
-            log.info("no ANTHROPIC_API_KEY; extract and reason items wait")
+            log.info("no ANTHROPIC_API_KEY; extract, reason and tailor items wait")
         # M3-05: reloaded when the files change; M3-06 scores against profile.current().
         profile = None
         if all((s.profile_dir / f).is_file() for f in FILES):
@@ -99,6 +99,10 @@ def run(s: Settings) -> None:
         else:
             log.info("no profile in PROFILE_DIR; scoring stays off")
         evidence = EvidenceWatcher(s.profile_dir / "evidence.yaml")
+        if client is not None and profile is not None:  # M4-02: drafts need both
+            handlers["tailor"] = tailor.handler(
+                pool, tailor.Tailorer(client), profile, evidence, s.profile_dir / "cv_layout.yaml"
+            )
         paused_on: list[date] = []
 
         def iterate() -> bool:
@@ -112,6 +116,7 @@ def run(s: Settings) -> None:
                 bank = evidence.current(profile.current())
                 if bank is not None and sync_evidence(pool, bank):
                     log.info("evidence synced", extra={"version": bank.version[:12]})
+                tailor.queue_drafts(pool)  # M4-02: requested drafts get a tailor item
             # The daily budget (ADR-0018): stop claiming until the next UTC day.
             if client is not None and client.budget_exhausted():
                 today = datetime.now(UTC).date()
