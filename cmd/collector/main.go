@@ -110,6 +110,9 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 	if len(args) == 2 && args[0] == "preview" {
 		return preview(ctx, dsn, args[1])
 	}
+	if len(args) >= 3 && args[0] == "merge-company" {
+		return mergeCompany(ctx, dsn, args[1:])
+	}
 	if len(args) >= 1 && args[0] == "add" {
 		return add(ctx, log, dsn, leverURL, args[1:], getenv)
 	}
@@ -426,5 +429,33 @@ func reconcile(ctx context.Context, log *slog.Logger, pool *pgxpool.Pool) (int, 
 		return 1, err
 	}
 	log.Info("queue reconciled", "preset", p.Name, "enqueued", n)
+	return 0, nil
+}
+
+// mergeCompany: collector merge-company <from> <into> [--dry-run] (M6-06). Prints the plan;
+// without --dry-run it moves everything in one transaction.
+func mergeCompany(ctx context.Context, dsn string, args []string) (int, error) {
+	dry := len(args) == 3 && args[2] == "--dry-run"
+	if len(args) != 2 && !dry {
+		return 2, errors.New("usage: collector merge-company <from> <into> [--dry-run]")
+	}
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return 1, fmt.Errorf("connecting to database: %w", err)
+	}
+	defer pool.Close()
+	plan, err := collector.MergeCompany(ctx, pool, args[0], args[1], dry)
+	if errors.Is(err, collector.ErrMerge) {
+		fmt.Fprintln(os.Stderr, err)
+		return 2, nil
+	}
+	if err != nil {
+		return 1, err
+	}
+	if dry {
+		fmt.Println("would merge " + plan.String())
+	} else {
+		fmt.Println("merged " + plan.String())
+	}
 	return 0, nil
 }

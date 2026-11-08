@@ -105,6 +105,7 @@ testdata/            golden files (recorded board responses, sample postings)
 | Re-queue shown postings extracted with an older prompt (prints count and cost first) | `go run ./cmd/collector enqueue --reextract [--dry-run]` |
 | Failed (needs review) items back to pending, e.g. after a fix | `go run ./cmd/collector queue retry --failed [--kind extract\|reason]` |
 | Work queue counts by state (also `GET /api/queue`) | `go run ./cmd/collector queue` |
+| Merge a company added by hand into its watch-list twin (postings, jobs, applications; ids or names) | `go run ./cmd/collector merge-company <from> <into> [--dry-run]` |
 | Web checks: audit, types, lint, unit, build, Playwright + axe (Node 26, `web/.nvmrc`) | `make web-check` |
 | Build the tracker page into the API binary | `make web-build` |
 | Tracker page dev server (proxies `/api` to 127.0.0.1:8080) | `make web-dev` |

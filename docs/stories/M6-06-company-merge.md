@@ -1,6 +1,6 @@
 # M6-06: Company merge
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M6 — Full tracker
 - **Linear:** [HAM-64](https://linear.app/hamid-corp/issue/HAM-64/m6-06-company-merge)
 - **Estimate:** ½ day
@@ -29,6 +29,21 @@ puts the merge in M6. A CLI command, like the other collector maintenance comman
 3. **Given** an application on a lead of `<from>`
    **When** the merge runs
    **Then** the application, its history and its documents stay attached.
+
+## Results (2026-11-08)
+
+- **Command:** `collector merge-company <from> <into> [--dry-run]` takes ids or names. A
+  name prefers the hand-added company for `<from>` and the watch-list one for `<into>`;
+  when a name is ambiguous, the command asks for the id. It prints the plan, then moves
+  postings, jobs and applications in one transaction. Groups follow, since `job_groups`
+  is a view.
+- **Refusals (exit 2, nothing changed):** a watch-list company as `<from>`, a merge into
+  itself, an unknown company, or both companies holding an application for the same role.
+- **AC1 change:** the step that marked `<from>` inactive was removed. Hand-added
+  companies are always inactive (ADR-0015), so it did nothing; the mutation check showed
+  it. The company is kept, never deleted.
+- **Tests:** `TestMergeCompany`. Each check was broken on purpose and its test seen to
+  fail.
 
 ## Out of scope
 
