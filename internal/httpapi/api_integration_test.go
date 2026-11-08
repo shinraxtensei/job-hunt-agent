@@ -768,3 +768,30 @@ func TestDocumentsAreKept(t *testing.T) {
 		}
 	}
 }
+
+// M5-03 AC5: a document downloads as the stored bytes, an attachment named after the
+// person, the kind and the company; an unknown id is 404.
+func TestDocumentPDF(t *testing.T) {
+	h := server(t)
+	get := func(path string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		return rec
+	}
+	rec := get("/api/documents/9202/pdf")
+	if rec.Code != http.StatusOK || rec.Body.String() != "%PDF-letter" {
+		t.Fatalf("%d %q", rec.Code, rec.Body.String())
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "application/pdf" {
+		t.Errorf("content type %q", ct)
+	}
+	if cd := rec.Header().Get("Content-Disposition"); cd != `attachment; filename=Sam-Example-Cover-letter-Acme.pdf` {
+		t.Errorf("disposition %q", cd)
+	}
+	if rec.Header().Get("X-Content-Type-Options") != "nosniff" {
+		t.Error("no nosniff")
+	}
+	if rec := get("/api/documents/9999/pdf"); rec.Code != http.StatusNotFound {
+		t.Errorf("unknown: %d", rec.Code)
+	}
+}

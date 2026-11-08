@@ -60,7 +60,7 @@ agents/              Python 3.15 (uv, ADR-0017): src/jobhunt_agents/ (worker, qu
                      M3-06); evidence.py + evidence_sync.py (the evidence bank, M4-01), numbers.py
                      (normalised numbers, also M4-04's check), variant.py (CV variant, M4-06),
                      coverage.py (M4-03), drafts.py + validator.py (draft schema and guardrail
-                     checks, M4-04), tailor.py (the tailoring agent, M4-02; the cover letter, M5-01), checker.py (the claim checker, M5-02); agents/Dockerfile is the worker image
+                     checks, M4-04), tailor.py (the tailoring agent, M4-02; the cover letter, M5-01), checker.py (the claim checker, M5-02), pdf.py + fonts/ (PDF export, M5-03, ADR-0027); agents/Dockerfile is the worker image
 web/                 TypeScript UI (Vite + React, ADR-0013); built into web/dist/app, embedded in cmd/api
 db/migrations/       plain SQL migrations (goose), forward-only
 db/contract/         work_items.columns: the Go <-> Python queue contract, checked by both sides
@@ -93,7 +93,7 @@ testdata/            golden files (recorded board responses, sample postings)
 | Regenerate sqlc | `make sqlc` |
 | Check committed sqlc code is current (part of `make check`) | `make sqlc-check` |
 | New migration | `make migration name=<snake_case>` |
-| Vulnerability scan | `make vuln` → govulncheck |
+| Vulnerability scan (fails on any Go finding, and on Python ones with a fix) | `make vuln` → govulncheck; `uv audit` over `agents/uv.lock` |
 | Fuzz the source parsers (30s each) | `make fuzz` |
 | Whole stack on the Mac (Postgres, migrations, API + tracker on http://127.0.0.1:8080, Python worker) | `make up` / `make down` |
 | Collect now, inside the stack (no schedule until D) | `make collect` |
@@ -132,6 +132,8 @@ Never run `python` or `pytest` directly — always through `uv run`.
 - Prompts live in `agents/src/jobhunt_agents/prompts/<agent>/v<N>.md` as versioned files, not inline strings.
 - Every model call goes through `ModelClient` (`model.py`); CI never calls the real API (`tests/fakes.py`).
 - Log model, tokens, and cost per call to the `model_calls` table.
+- No image is ever parsed: no PIL import, no fpdf2 `image()`/`write_html()` (ruff TID251 and
+  `tests/test_no_images.py`, ADR-0027).
 
 ## Testing expectations
 
@@ -180,6 +182,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0024 | The evidence bank: a checked YAML file, synced by the worker into versioned tables | Accepted |
 | 0025 | Drafts: requested through the API, made by a `tailor` work item, validated before shown | Accepted |
 | 0026 | Exported documents: immutable rows in Postgres, sent marked by the owner | Accepted |
+| 0027 | PDF export with fpdf2 and a vendored Noto Sans font; no image parsed; Python deps scanned | Accepted |
 
 ## Project skills
 

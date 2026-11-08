@@ -15,6 +15,7 @@ from jobhunt_agents.db import open_pool
 from jobhunt_agents.evidence import EvidenceWatcher
 from jobhunt_agents.evidence_sync import sync as sync_evidence
 from jobhunt_agents.model import AnthropicProvider, ModelClient
+from jobhunt_agents.pdf import export_approved
 from jobhunt_agents.profile import FILES, ProfileError, ProfileWatcher
 from jobhunt_agents.queue import Handler, process_one
 from jobhunt_agents.rescore import rescore
@@ -117,6 +118,8 @@ def run(s: Settings) -> None:
                 if bank is not None and sync_evidence(pool, bank):
                     log.info("evidence synced", extra={"version": bank.version[:12]})
                 tailor.queue_drafts(pool)  # M4-02: requested drafts get a tailor item
+                if exported := export_approved(pool):  # M5-03: approved drafts as PDFs
+                    log.info("exported", extra={"count": exported})
             # The daily budget (ADR-0018): stop claiming until the next UTC day.
             if client is not None and client.budget_exhausted():
                 today = datetime.now(UTC).date()

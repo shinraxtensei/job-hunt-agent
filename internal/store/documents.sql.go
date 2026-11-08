@@ -11,6 +11,35 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const documentPDF = `-- name: DocumentPDF :one
+SELECT d.pdf, d.kind, coalesce(x.content #>> '{person,name}', '')::text AS person, c.name AS company
+FROM documents d
+JOIN drafts x ON x.id = d.draft_id
+JOIN jobs j ON j.posting_id = d.posting_id
+JOIN companies c ON c.id = j.company_id
+WHERE d.id = $1
+`
+
+type DocumentPDFRow struct {
+	Pdf     []byte
+	Kind    string
+	Person  string
+	Company string
+}
+
+// One document's bytes for download (M5-03), with the names for its file name.
+func (q *Queries) DocumentPDF(ctx context.Context, id int64) (DocumentPDFRow, error) {
+	row := q.db.QueryRow(ctx, documentPDF, id)
+	var i DocumentPDFRow
+	err := row.Scan(
+		&i.Pdf,
+		&i.Kind,
+		&i.Person,
+		&i.Company,
+	)
+	return i, err
+}
+
 const listDocuments = `-- name: ListDocuments :many
 SELECT id, draft_id, kind, sha256, made_at, sent_at
 FROM documents WHERE posting_id = $1 ORDER BY made_at DESC, id DESC

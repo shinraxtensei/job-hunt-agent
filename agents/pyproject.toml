@@ -5,6 +5,8 @@ description = "Model work for the job-hunt agent: extraction and scoring (M3), r
 requires-python = "==3.15.*"
 dependencies = [
     "anthropic>=2.4.0,<3",
+    "fonttools<4.68",
+    "fpdf2>=2.8,<2.9",
     "psycopg[binary,pool]>=3.3.8,<4",
     "pydantic>=2.14.2,<3",
     "pydantic-settings>=2.16.2,<3",
@@ -16,6 +18,7 @@ jobhunt-worker = "jobhunt_agents.__main__:main"
 
 [dependency-groups]
 dev = [
+    "pypdf>=6.21.4,<7",
     "pyright==1.1.414",
     "pytest==9.2.0",
     "ruff==0.17.3",
@@ -34,7 +37,7 @@ line-length = 100
 target-version = "py315"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "B", "UP", "S", "BLE", "RUF", "PL", "PT", "SIM", "TRY", "ANN"]
+select = ["E", "F", "W", "I", "B", "UP", "S", "BLE", "RUF", "PL", "PT", "SIM", "TRY", "ANN", "TID251"]
 ignore = ["PLR2004", "TRY003"]
 
 [tool.ruff.lint.isort]
@@ -51,10 +54,19 @@ max-args = 8
 "src/jobhunt_agents/evidence.py" = ["ANN401", "PLR0912", "PLR0915"]
 "tests/**" = ["S101","S105","S106", "S603", "S607", "PLR0913", "ANN401"]
 
+# ADR-0027: no image is ever parsed. Pillow comes with fpdf2 but is never used; fpdf2's
+# HTML and SVG parsers would fetch and decode images. tests/test_no_images.py also bans
+# the image-drawing calls.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"PIL".msg = "no image is ever parsed (ADR-0027)"
+"fpdf.html".msg = "fpdf2's HTML parser loads images (ADR-0027)"
+"fpdf.svg".msg = "fpdf2's SVG parser loads images (ADR-0027)"
+"fpdf.image_parsing".msg = "no image is ever parsed (ADR-0027)"
+
 [tool.pyright]
 pythonVersion = "3.15"
 typeCheckingMode = "strict"
-include = ["src", "tests"]
+include = ["src", "tests", "tools"]
 venvPath = "."
 venv = ".venv"
 

@@ -114,8 +114,9 @@ fuzz: ## Fuzz the source parsers and the normaliser for 30s each (not part of ch
 	go test -run '^$$' -fuzz=FuzzClassify -fuzztime=30s ./internal/job/
 	go test -run '^$$' -fuzz=FuzzParseBoardLink -fuzztime=30s ./internal/job/
 
-vuln: ## Scan dependencies for known vulnerabilities
+vuln: ## Scan dependencies for known vulnerabilities: govulncheck (Go), uv audit over agents/uv.lock (fails on fixable ones)
 	$(TOOL) govulncheck ./...
+	cd agents && uv audit --frozen --preview-features audit-command,json-output --output-format json | uv run python tools/audit_fixable.py
 
 up: ## Start the whole stack (Postgres, migrations, API + tracker on http://127.0.0.1:8080)
 	@test -f .env || { echo "no .env: cp .env.example .env and fill it in"; exit 1; }

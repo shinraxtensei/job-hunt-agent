@@ -144,6 +144,7 @@ for (const width of [375, 1280]) {
         // M5-04: the exported PDFs; the sent CV is marked, the letter can be marked sent
         const docs = dialog.getByRole("region", { name: "Documents" });
         await expect(docs.locator("li", { hasText: "CV PDF" })).toContainText("Sent");
+        await expect(docs.locator("li", { hasText: "CV PDF" }).getByRole("link", { name: "Download" })).toHaveAttribute("href", "/api/documents/9201/pdf");
         const sent = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/documents/9202/sent"));
         await docs.locator("li", { hasText: "Cover letter PDF" }).getByRole("button", { name: "Mark as sent" }).click();
         expect((await sent).headers()["content-type"]).toBe("application/json");

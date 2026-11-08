@@ -14,3 +14,12 @@ SELECT m.sent_at FROM marked m
 UNION ALL
 SELECT d.sent_at FROM documents d
 WHERE d.id = @doc_id::bigint AND NOT EXISTS (SELECT 1 FROM marked);
+
+-- name: DocumentPDF :one
+-- One document's bytes for download (M5-03), with the names for its file name.
+SELECT d.pdf, d.kind, coalesce(x.content #>> '{person,name}', '')::text AS person, c.name AS company
+FROM documents d
+JOIN drafts x ON x.id = d.draft_id
+JOIN jobs j ON j.posting_id = d.posting_id
+JOIN companies c ON c.id = j.company_id
+WHERE d.id = @id;

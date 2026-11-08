@@ -107,7 +107,7 @@ export function DraftDialog({ lead, open, onClose }: { lead: Lead; open: boolean
             </>
           )}
         </div>
-        <p className="draft-note">Nothing is sent from here. Approving records your decision; the PDFs come later.</p>
+        <p className="draft-note">Nothing is sent from here. Approving makes the PDFs; you send them and mark what you sent.</p>
         {error && (
           <p className="draft-error" role="alert">
             {error}
@@ -342,6 +342,9 @@ function DocumentsView({ documents, onSent }: { documents: Draft["documents"]; o
         {documents.map((doc) => (
           <li key={doc.id}>
             <b>{doc.kind === "cv" ? "CV" : "Cover letter"} PDF</b> <span className="cv-dates">made {day(doc.made_at)}</span>{" "}
+            <a href={`/api/documents/${doc.id}/pdf`} download>
+              Download
+            </a>{" "}
             {doc.sent_at ? (
               <span>· Sent {day(doc.sent_at)}</span>
             ) : (

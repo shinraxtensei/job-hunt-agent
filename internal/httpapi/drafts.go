@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/jackc/pgx/v5"
 
@@ -263,4 +266,46 @@ func (a *api) markSent(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeJSON(w, http.StatusOK, map[string]any{"sent_at": at.Time.UTC()})
 	}
+}
+
+// fileWord keeps letters and digits (any script) for a download's file name; anything
+// else becomes "-", so a name can't break the header.
+func fileWord(s string) string {
+	var b strings.Builder
+	dash := false
+	for _, r := range s {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			b.WriteRune(r)
+			dash = false
+		} else if !dash && b.Len() > 0 {
+			b.WriteByte('-')
+			dash = true
+		}
+	}
+	return strings.Trim(b.String(), "-")
+}
+
+// documentPDF serves one exported PDF as a download (M5-03): the owner's own data, the
+// bytes exactly as stored (ADR-0026).
+func (a *api) documentPDF(w http.ResponseWriter, r *http.Request) {
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	d, err := a.q.DocumentPDF(r.Context(), id)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		writeError(w, http.StatusNotFound, "id", "no such document")
+		return
+	case err != nil:
+		a.fail(w, r, err)
+		return
+	}
+	kind := map[string]string{"cv": "CV", "letter": "Cover-letter"}[d.Kind]
+	name := strings.Join(slices.DeleteFunc([]string{fileWord(d.Person), kind, fileWord(d.Company)},
+		func(s string) bool { return s == "" }), "-") + ".pdf"
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": name}))
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(d.Pdf) // the client went away: nothing to do
 }
