@@ -300,7 +300,7 @@ every sentence in the selectable text, and ’ and — intact.
   - no hand edits before export (OI-9);
   - letters are English only (OI-7; French evidence for M7-04).
 
-## M6: Full tracker
+## M6: Full tracker ✅ done 2026-11-08
 
 **Goal:** every application has a status, a history and a next step.
 
@@ -321,6 +321,49 @@ M2-07 note below)
 
 Order: M6-01 → M6-05 → M6-03 → M6-04 → M6-02 → M6-06; the board can slip (PRD cut
 line). Owner input: `docs/stories/M6-owner-input.md`.
+
+**Wrap-up (2026-11-08).** All exit criteria are met; the board was built as well. Every
+M6 test was proved by breaking the code it guards (#58 to #63).
+
+- **Delivered:**
+  - **Applications (ADR-0028):** one per lead group, with an append-only status
+    history; `drafted` is set automatically on approve; a snapshot of the posting is
+    kept when first applied; sent documents are linked.
+  - **Skips:** one click with Undo, a reason from your list, and the score at that
+    moment (`/api/skips` for M8).
+  - **Notes and contacts:** kept only in the database. A test plants a note and a
+    contact in a failing request and checks the log; another checks no agent code reads
+    them.
+  - **Follow-ups:** due 7 days after `applied`, with your template filled in by code;
+    copy, Done, Snooze 3 or 7 days.
+  - **Board:** OI-13's columns, moved by drag or menu, one column on phones.
+  - **Company merge:** `collector merge-company`.
+- **Found by the checks:**
+  - a test that couldn't see an overwritten `applied_at`;
+  - follow-up history written with the wrong clock;
+  - a board that scrolled sideways at 1280 px;
+  - dark-mode contrast on native controls (CI's Linux browser);
+  - two pieces of dead code, removed.
+- **Live:** the tracker, board and follow-ups run on the local stack. Statuses on your
+  real leads are yours to set: none were set on your behalf.
+- **Open:**
+  - the board's Done column sets `closed` on drop (the menu picks rejected or skipped);
+  - reapplying to the same group a year later needs a second application
+    (ADR-0028's "revisit when").
+
+## v1 complete (2026-11-08)
+
+M0 to M6 and L are done: collection, scoring, CV and cover-letter drafts from the
+evidence bank with a claim checker, one-page PDFs, and the full tracker all run locally
+with `make up`. The README's "How to use it daily" is the owner's guide.
+
+Remaining milestones, in order:
+- **M7:** digest and more sources;
+- **M8:** feedback and write-up;
+- **D:** deploy to a server, last as planned;
+- **S:** sharing (unscheduled).
+
+Model spend for all of v1's building and evals: about $1.50.
 
 **Notes**
 - Company merge (from M2-07, ADR-0015): a board-less company typed with `collector add
@@ -434,3 +477,4 @@ with their own filters, without seeing anything private of the owner's.
 | 2026-11-08 | **M4 complete.** M4-01…M4-06 (#47…#51). ADR-0024, ADR-0025. Owner's evidence bank loaded; drafts validated before shown; review page in the tracker. OI-3 skipped (role-family proxy), OI-2/OI-4 optional. Next: **M5**. | Every M4 exit criterion is met and seen working locally. |
 | 2026-11-08 | M5 stories written; linking documents to applications moved from M5-04 to M6. | Applications are created in M6. |
 | 2026-11-08 | **M5 complete.** M5-01…M5-04 (#53…#56); ADR-0026, ADR-0027. M6 stories written, M6-06 Company merge added from the M2-07 note. Next: **M6**. | Every M5 exit criterion is met and seen working locally. |
+| 2026-11-08 | **M6 complete; v1 complete.** M6-01…M6-06 (#58…#63), ADR-0028. README: "How to use it daily". Next: **M7**, then M8, then D. | Every M6 exit criterion is met; the owner asked to mark v1 complete when M6 is done. |
