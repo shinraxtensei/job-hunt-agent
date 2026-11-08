@@ -176,6 +176,7 @@ describe("CV drafts (M4-05)", () => {
       requested_at: "2026-11-08T00:00:00Z",
       made_at: null,
       decided_at: null,
+      documents: [],
     };
     act(() => createRoot(el).render(<DraftView draft={draft} evidence={{ l1: { text: "<b>evidence</b>", retired: false } }} waiting={false} />));
     expect(el.querySelector("img, b.x")).toBeNull();

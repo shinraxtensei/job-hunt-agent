@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -76,6 +77,16 @@ type Draft struct {
 	RequestedAt     time.Time       `json:"requested_at"`
 	MadeAt          *time.Time      `json:"made_at"`
 	DecidedAt       *time.Time      `json:"decided_at"`
+	Documents       []Document      `json:"documents"` // M5-04: its exported PDFs, newest first
+}
+
+// Document is one exported PDF, without its bytes (M5-04).
+type Document struct {
+	ID     int64      `json:"id"`
+	Kind   string     `json:"kind"` // cv | letter
+	SHA256 string     `json:"sha256"`
+	MadeAt time.Time  `json:"made_at"`
+	SentAt *time.Time `json:"sent_at"`
 }
 
 func raw(b []byte) json.RawMessage {
@@ -96,10 +107,25 @@ func (a *api) drafts(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
+	docs, err := a.q.ListDocuments(r.Context(), id)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	byDraft := map[int64][]Document{}
+	for _, d := range docs {
+		x := Document{ID: d.ID, Kind: d.Kind, SHA256: hex.EncodeToString(d.Sha256), MadeAt: d.MadeAt.Time.UTC()}
+		if d.SentAt.Valid {
+			t := d.SentAt.Time.UTC()
+			x.SentAt = &t
+		}
+		byDraft[d.DraftID] = append(byDraft[d.DraftID], x)
+	}
 	out := make([]Draft, 0, len(rows))
 	for _, d := range rows {
 		x := Draft{ID: d.ID, Status: d.Status, Content: raw(d.Content), Letter: raw(d.Letter), Coverage: raw(d.Coverage),
-			Findings: raw(d.Findings), RequestedAt: d.RequestedAt.Time.UTC()}
+			Findings: raw(d.Findings), RequestedAt: d.RequestedAt.Time.UTC(),
+			Documents: append([]Document{}, byDraft[d.ID]...)}
 		if d.Variant.Valid {
 			x.Variant = &d.Variant.String
 		}
@@ -215,5 +241,26 @@ func (a *api) decide(status string) http.HandlerFunc {
 		default:
 			writeJSON(w, http.StatusOK, map[string]string{"status": status})
 		}
+	}
+}
+
+// markSent records that the owner sent a document (M5-04): sent_at is set once, and
+// marking it again returns the first time. The system sends nothing (rule 6).
+func (a *api) markSent(w http.ResponseWriter, r *http.Request) {
+	if !guardWrite(w, r) {
+		return
+	}
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	at, err := a.q.MarkDocumentSent(r.Context(), id)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		writeError(w, http.StatusNotFound, "id", "no such document")
+	case err != nil:
+		a.fail(w, r, err)
+	default:
+		writeJSON(w, http.StatusOK, map[string]any{"sent_at": at.Time.UTC()})
 	}
 }

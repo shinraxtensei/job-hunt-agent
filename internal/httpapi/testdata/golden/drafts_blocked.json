@@ -169,7 +169,8 @@
       "error": null,
       "requested_at": "2026-11-02T09:30:00Z",
       "made_at": "2026-11-02T09:30:00Z",
-      "decided_at": null
+      "decided_at": null,
+      "documents": []
     }
   ],
   "evidence": {

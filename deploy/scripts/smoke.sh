@@ -115,4 +115,11 @@ echo "$out" | grep -q "tar -xzf '$personal'" || {
 }
 $COMPOSE up -d --wait api
 curl -fsS "$base/api/leads?limit=1" | grep -q '"leads"'
+# M5-04: exported documents live in Postgres; their keep-trigger survives the round trip.
+kept=$($COMPOSE exec -T postgres psql -U postgres -d jobhunt -Atc \
+	"SELECT count(*) FROM pg_trigger WHERE tgname = 'documents_keep'")
+[ "$kept" = 1 ] || {
+	echo "restored database lacks the documents keep-trigger" >&2
+	exit 1
+}
 echo "restore: ok"

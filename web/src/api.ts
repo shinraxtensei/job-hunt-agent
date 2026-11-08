@@ -156,7 +156,10 @@ export type Draft = {
   requested_at: string;
   made_at: string | null;
   decided_at: string | null;
+  documents: DraftDocument[];
 };
+// An exported PDF (M5-04): kept as it was; the owner marks what they sent.
+export type DraftDocument = { id: number; kind: "cv" | "letter"; sha256: string; made_at: string; sent_at: string | null };
 export type Drafts = { drafts: Draft[]; evidence: Record<string, { text: string; retired: boolean }> };
 
 // post is a same-origin JSON write (ADR-0022: the API refuses anything else).

@@ -48,6 +48,19 @@ type Company struct {
 	Active    bool
 }
 
+type Document struct {
+	ID              int64
+	DraftID         int64
+	PostingID       int64
+	Kind            string
+	Pdf             []byte
+	Sha256          []byte
+	EvidenceVersion string
+	RendererVersion int32
+	MadeAt          pgtype.Timestamptz
+	SentAt          pgtype.Timestamptz
+}
+
 type Draft struct {
 	ID              int64
 	PostingID       int64

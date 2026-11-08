@@ -13,7 +13,7 @@ ATS software can read, so that I can send them as they are.
 ## Context
 
 PRD: "one-page PDFs". Only an approved draft (M4-05) is exported; the PDF holds exactly
-the stored, validated and checked text. A PDF library is a new dependency: ADR-0026.
+the stored, validated and checked text. A PDF library is a new dependency: ADR-0027.
 
 ## Owner input
 
@@ -46,7 +46,7 @@ applies; defaults until set.
 
 ## Decisions (owner, 2026-11-08)
 
-- OI-8: `fpdf2`, `pypdf` test-only (ADR-0026).
+- OI-8: `fpdf2`, `pypdf` test-only (ADR-0027).
 - fpdf2's built-in fonts are Latin-1 only. A vendored open-licence TTF is embedded, with
   its licence file committed, so accents and non-Latin names render (é, ç, ü, "Côte
   d'Ivoire"). A test exports a draft with accented text and checks the text layer with
@@ -58,7 +58,7 @@ applies; defaults until set.
 
 ## Security notes
 
-- New dependency (ADR-0026): pure Python, no native code, fed only our own stored text
+- New dependency (ADR-0027): pure Python, no native code, fed only our own stored text
   and a bundled font (OFL).
 - The download is a GET of the owner's own data; same Host allowlist as every route.
 

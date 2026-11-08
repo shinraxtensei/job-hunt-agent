@@ -176,7 +176,23 @@
       "error": null,
       "requested_at": "2026-11-02T09:00:00Z",
       "made_at": "2026-11-02T09:00:00Z",
-      "decided_at": null
+      "decided_at": null,
+      "documents": [
+        {
+          "id": 9202,
+          "kind": "letter",
+          "sha256": "60feba570eca5a627c231e5a7d19c6447e48aaa3467128e99a64ab851f402ce3",
+          "made_at": "2026-11-02T09:10:00Z",
+          "sent_at": null
+        },
+        {
+          "id": 9201,
+          "kind": "cv",
+          "sha256": "b70f4a39fd0b72813109f769e7f16b9c12d1225c47ccb82d15261332b8d265c6",
+          "made_at": "2026-11-02T09:10:00Z",
+          "sent_at": "2026-11-02T10:00:00Z"
+        }
+      ]
     },
     {
       "id": 9101,
@@ -354,7 +370,8 @@
       "error": null,
       "requested_at": "2026-11-02T08:00:00Z",
       "made_at": "2026-11-02T08:00:00Z",
-      "decided_at": "2026-11-02T08:05:00Z"
+      "decided_at": "2026-11-02T08:05:00Z",
+      "documents": []
     }
   ],
   "evidence": {

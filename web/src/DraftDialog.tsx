@@ -131,13 +131,26 @@ export function DraftDialog({ lead, open, onClose }: { lead: Lead; open: boolean
             </select>
           </div>
         )}
-        {draft && data && <DraftView draft={draft} evidence={data.evidence} waiting={waiting && shown === 0} />}
+        {draft && data && (
+          <DraftView
+            draft={draft}
+            evidence={data.evidence}
+            waiting={waiting && shown === 0}
+            onSent={(id) => {
+              setError(null);
+              post(`/api/documents/${id}/sent`)
+                .then(() => load())
+                .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+            }}
+          />
+        )}
       </div>
     </dialog>
   );
 }
 
-export function DraftView({ draft: d, evidence, waiting }: { draft: Draft; evidence: Drafts["evidence"]; waiting: boolean }) {
+export function DraftView(props: { draft: Draft; evidence: Drafts["evidence"]; waiting: boolean; onSent?: (id: number) => void }) {
+  const { draft: d, evidence, waiting, onSent } = props;
   const findings = [...(d.findings?.violations ?? []).map((f) => ({ ...f, warning: false })), ...(d.findings?.warnings ?? []).map((f) => ({ ...f, warning: true }))];
   const at = (where: string) => findings.filter((f) => f.where === where);
   const c = d.content;
@@ -259,6 +272,7 @@ export function DraftView({ draft: d, evidence, waiting }: { draft: Draft; evide
           )}
         </section>
       )}
+      {d.documents.length > 0 && <DocumentsView documents={d.documents} onSent={onSent} />}
       {d.coverage && <CoverageView skills={d.coverage.skills} />}
       <p className="draft-versions">
         {[d.model, d.prompt_version && `prompt v${d.prompt_version}`, d.evidence_version && `evidence ${d.evidence_version.slice(0, 8)}`]
@@ -313,6 +327,34 @@ function FindingItem({ f, warning, evidence }: { f: Finding; warning: boolean; e
         </span>
       )}
     </li>
+  );
+}
+
+const day = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+
+// DocumentsView: the draft's exported PDFs, kept as they were (M5-04). The owner sends
+// them and marks what they sent; nothing is sent from here.
+function DocumentsView({ documents, onSent }: { documents: Draft["documents"]; onSent?: (id: number) => void }) {
+  return (
+    <section aria-label="Documents" className="documents">
+      <h3>Documents</h3>
+      <ul className="plain">
+        {documents.map((doc) => (
+          <li key={doc.id}>
+            <b>{doc.kind === "cv" ? "CV" : "Cover letter"} PDF</b> <span className="cv-dates">made {day(doc.made_at)}</span>{" "}
+            {doc.sent_at ? (
+              <span>· Sent {day(doc.sent_at)}</span>
+            ) : (
+              onSent && (
+                <button type="button" className="link-button" onClick={() => onSent(doc.id)}>
+                  Mark as sent
+                </button>
+              )
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

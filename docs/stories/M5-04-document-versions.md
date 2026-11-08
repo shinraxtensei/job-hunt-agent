@@ -1,6 +1,6 @@
 # M5-04: Document versions
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M5 — Documents
 - **Linear:** [HAM-58](https://linear.app/hamid-corp/issue/HAM-58/m5-04-document-versions)
 - **Estimate:** ½ day
@@ -33,6 +33,17 @@ linked to its draft and lead.
 4. **Given** `make backup`
    **When** it runs
    **Then** the documents are in the dump (they live in Postgres; restore test).
+
+## Results (2026-11-08)
+
+- ADR-0026. The trigger refuses every change except setting `sent_at` once, for any role.
+- The API lists each draft's documents (no bytes) and adds `POST /api/documents/{id}/sent`.
+  The review page shows them with "Mark as sent".
+- AC4: the smoke test checks the keep-trigger after a backup is restored. The bytes are
+  in the same dump.
+- The PDF download (`GET /api/documents/{id}/pdf`) comes with M5-03, which writes the
+  rows.
+- Each Go check was broken on purpose and its test seen to fail (in the PR).
 
 ## Out of scope
 

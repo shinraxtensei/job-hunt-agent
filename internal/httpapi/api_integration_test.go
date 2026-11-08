@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -213,6 +214,11 @@ func seedDrafts(t *testing.T, exec func(string, ...any)) {
 			SELECT $1, $2, $3, content_hash, 'BE', $4::jsonb, $9::jsonb, $5::jsonb, $6::jsonb, 'v', 'p', 1, 'claude-haiku-5-5', $7, $7, $8
 			FROM postings WHERE id = $2`, d.id, d.posting, d.status, draftContent, cov, d.findings, d.requested, decided, draftLetter)
 	}
+	// M5-04: the ready draft's exported PDFs; the CV was sent.
+	exec(`INSERT INTO documents (id, draft_id, posting_id, kind, pdf, sha256, evidence_version, renderer_version, made_at, sent_at)
+		OVERRIDING SYSTEM VALUE VALUES
+		(9201, 9102, 9001, 'cv', '%PDF-cv', sha256('%PDF-cv'), 'v', 1, '2026-11-02T09:10:00Z', '2026-11-02T10:00:00Z'),
+		(9202, 9102, 9001, 'letter', '%PDF-letter', sha256('%PDF-letter'), 'v', 1, '2026-11-02T09:10:00Z', NULL)`)
 }
 
 func server(t *testing.T) http.Handler {
@@ -709,5 +715,56 @@ func TestDecideDraft(t *testing.T) {
 	}
 	if s1 != "approved" || s2 != "discarded" {
 		t.Errorf("statuses %s, %s", s1, s2)
+	}
+}
+
+// M5-04 AC2: marking a document sent sets sent_at once; again returns the first time;
+// an unknown id is 404; a cross-site request is refused. (Its own document, on a lead no
+// golden file lists, because sent_at can't be cleared afterwards.)
+func TestMarkDocumentSent(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	if _, err := db.Exec(t.Context(), `INSERT INTO documents (id, draft_id, posting_id, kind, pdf, sha256, evidence_version, renderer_version)
+		OVERRIDING SYSTEM VALUE VALUES (9299, 9103, 9002, 'cv', 'x', sha256('x'), 'v', 1)`); err != nil {
+		t.Fatal(err)
+	}
+	post := func(path, site string) (int, string) {
+		req := httptest.NewRequest(http.MethodPost, path, nil)
+		req.Header.Set("Content-Type", "application/json")
+		if site != "" {
+			req.Header.Set("Sec-Fetch-Site", site)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code, rec.Body.String()
+	}
+	if code, _ := post("/api/documents/9299/sent", "cross-site"); code != http.StatusForbidden {
+		t.Errorf("cross-site: %d", code)
+	}
+	code, first := post("/api/documents/9299/sent", "same-origin")
+	if code != http.StatusOK || !strings.Contains(first, `"sent_at"`) {
+		t.Fatalf("first mark: %d %s", code, first)
+	}
+	if code, again := post("/api/documents/9299/sent", ""); code != http.StatusOK || again != first {
+		t.Errorf("second mark: %d %s, want %s", code, again, first)
+	}
+	if code, _ := post("/api/documents/9999/sent", ""); code != http.StatusNotFound {
+		t.Errorf("unknown: %d", code)
+	}
+}
+
+// M5-04 AC1: a document is never changed or deleted; only sent_at is set, once.
+func TestDocumentsAreKept(t *testing.T) {
+	db := world(t)
+	for _, q := range []string{
+		`DELETE FROM documents WHERE id = 9202`,
+		`UPDATE documents SET pdf = 'changed' WHERE id = 9202`,
+		`UPDATE documents SET kind = 'cv', sent_at = now() WHERE id = 9202`,
+		`UPDATE documents SET sent_at = now() WHERE id = 9201`, // already sent
+		`UPDATE documents SET sent_at = NULL WHERE id = 9201`,
+	} {
+		if _, err := db.Exec(t.Context(), q); err == nil || !strings.Contains(err.Error(), "documents are kept") {
+			t.Errorf("%s: %v, want refused", q, err)
+		}
 	}
 }

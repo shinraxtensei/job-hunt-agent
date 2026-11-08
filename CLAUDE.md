@@ -179,6 +179,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0023 | Reconcile stores the default preset's matched location on jobs, for the scorer | Accepted |
 | 0024 | The evidence bank: a checked YAML file, synced by the worker into versioned tables | Accepted |
 | 0025 | Drafts: requested through the API, made by a `tailor` work item, validated before shown | Accepted |
+| 0026 | Exported documents: immutable rows in Postgres, sent marked by the owner | Accepted |
 
 ## Project skills
 

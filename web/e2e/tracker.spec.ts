@@ -13,7 +13,7 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
     if (route.request().method() === "POST" && /^\/api\/leads\/\d+\/reason$/.test(path)) {
       return route.fulfill({ status: 202, contentType: "application/json", body: '{"requested":true}' });
     }
-    if (route.request().method() === "POST" && /^\/api\/(leads\/\d+\/draft|drafts\/\d+\/(approve|discard))$/.test(path)) {
+    if (route.request().method() === "POST" && /^\/api\/(leads\/\d+\/draft|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent)$/.test(path)) {
       return route.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' });
     }
     const body =
@@ -141,6 +141,12 @@ for (const width of [375, 1280]) {
         await expect(letter.getByText("I am available to start <b>within</b> one month.")).toBeVisible();
         await letter.locator("li", { hasText: "available to start" }).getByRole("button", { name: "Evidence (1)" }).click();
         await expect(letter.getByText("Available to start within one month.")).toBeVisible();
+        // M5-04: the exported PDFs; the sent CV is marked, the letter can be marked sent
+        const docs = dialog.getByRole("region", { name: "Documents" });
+        await expect(docs.locator("li", { hasText: "CV PDF" })).toContainText("Sent");
+        const sent = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/documents/9202/sent"));
+        await docs.locator("li", { hasText: "Cover letter PDF" }).getByRole("button", { name: "Mark as sent" }).click();
+        expect((await sent).headers()["content-type"]).toBe("application/json");
         await expect(dialog.getByLabel("Version")).toBeVisible(); // two versions
         await noHorizontalScroll(page);
         await noAxeViolations(page);
