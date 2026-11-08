@@ -66,6 +66,7 @@ type Draft struct {
 	Status          string          `json:"status"` // requested | blocked | ready_for_review | approved | discarded | failed
 	Variant         *string         `json:"variant"`
 	Content         json.RawMessage `json:"content"`
+	Letter          json.RawMessage `json:"letter"` // M5-01
 	Coverage        json.RawMessage `json:"coverage"`
 	Findings        json.RawMessage `json:"findings"`
 	EvidenceVersion *string         `json:"evidence_version"`
@@ -97,7 +98,7 @@ func (a *api) drafts(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]Draft, 0, len(rows))
 	for _, d := range rows {
-		x := Draft{ID: d.ID, Status: d.Status, Content: raw(d.Content), Coverage: raw(d.Coverage),
+		x := Draft{ID: d.ID, Status: d.Status, Content: raw(d.Content), Letter: raw(d.Letter), Coverage: raw(d.Coverage),
 			Findings: raw(d.Findings), RequestedAt: d.RequestedAt.Time.UTC()}
 		if d.Variant.Valid {
 			x.Variant = &d.Variant.String
@@ -138,25 +139,38 @@ type EvidenceLine struct {
 	Retired bool   `json:"retired"`
 }
 
-// citedEvidence is the text of every evidence line the drafts cite, by id.
+type cited struct {
+	EvidenceIDs []string `json:"evidence_ids"`
+}
+
+// citedEvidence is the text of every evidence line the drafts (CV and letter) cite, by id.
 func (a *api) citedEvidence(r *http.Request, rows []store.ListDraftsRow) (map[string]EvidenceLine, error) {
 	var ids []string
 	for _, d := range rows {
 		var c struct {
-			Summary []struct {
-				EvidenceIDs []string `json:"evidence_ids"`
-			} `json:"summary"`
+			Summary         []cited `json:"summary"`
 			Roles, Projects []struct {
-				Bullets []struct {
-					EvidenceIDs []string `json:"evidence_ids"`
-				} `json:"bullets"`
+				Bullets []cited `json:"bullets"`
 			}
+		}
+		var l struct {
+			Paragraphs [][]cited `json:"paragraphs"`
 		}
 		if len(d.Content) == 0 {
 			continue
 		}
 		if err := json.Unmarshal(d.Content, &c); err != nil {
 			return nil, fmt.Errorf("decoding draft %d: %w", d.ID, err)
+		}
+		if len(d.Letter) > 0 {
+			if err := json.Unmarshal(d.Letter, &l); err != nil {
+				return nil, fmt.Errorf("decoding draft %d letter: %w", d.ID, err)
+			}
+		}
+		for _, p := range l.Paragraphs {
+			for _, b := range p {
+				ids = append(ids, b.EvidenceIDs...)
+			}
 		}
 		for _, b := range c.Summary {
 			ids = append(ids, b.EvidenceIDs...)

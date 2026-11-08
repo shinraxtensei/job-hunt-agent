@@ -132,11 +132,21 @@ export type SkillCoverage = {
   lines: string[];
   suspicious: boolean;
 };
+// The cover letter (M5-01): greeting, opening, closing and name by code; sentences cite evidence.
+export type DraftLetter = {
+  greeting: string;
+  opening: string;
+  paragraphs: DraftBullet[][];
+  closing: string;
+  name: string;
+  words: number;
+};
 export type Draft = {
   id: number;
   status: "requested" | "blocked" | "ready_for_review" | "approved" | "discarded" | "failed";
   variant: string | null;
   content: DraftContent | null;
+  letter: DraftLetter | null;
   coverage: { variant: string; skills: SkillCoverage[] } | null;
   findings: { violations: Finding[]; warnings: Finding[] } | null;
   evidence_version: string | null;

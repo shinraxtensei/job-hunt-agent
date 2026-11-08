@@ -74,6 +74,32 @@
         ],
         "certifications": []
       },
+      "letter": {
+        "name": "Sam Example",
+        "words": 33,
+        "closing": "Best regards,",
+        "opening": "I am writing to apply for the Backend Engineer role at Example Corp.",
+        "greeting": "Dear Hiring Team,",
+        "paragraphs": [
+          [
+            {
+              "text": "I brought the invoice job down to 6 minutes, from 40.",
+              "evidence_ids": [
+                "ex-billing"
+              ]
+            }
+          ],
+          [
+            {
+              "text": "I am available to start \u003cb\u003ewithin\u003c/b\u003e one month.",
+              "evidence_ids": [
+                "ex-letter"
+              ]
+            }
+          ]
+        ],
+        "prompt_version": 1
+      },
       "coverage": {
         "skills": [
           {
@@ -226,6 +252,32 @@
         ],
         "certifications": []
       },
+      "letter": {
+        "name": "Sam Example",
+        "words": 33,
+        "closing": "Best regards,",
+        "opening": "I am writing to apply for the Backend Engineer role at Example Corp.",
+        "greeting": "Dear Hiring Team,",
+        "paragraphs": [
+          [
+            {
+              "text": "I brought the invoice job down to 6 minutes, from 40.",
+              "evidence_ids": [
+                "ex-billing"
+              ]
+            }
+          ],
+          [
+            {
+              "text": "I am available to start \u003cb\u003ewithin\u003c/b\u003e one month.",
+              "evidence_ids": [
+                "ex-letter"
+              ]
+            }
+          ]
+        ],
+        "prompt_version": 1
+      },
       "coverage": {
         "skills": [
           {
@@ -313,6 +365,10 @@
     "ex-deploys": {
       "text": "Moved the services to Docker images built in CI.",
       "retired": true
+    },
+    "ex-letter": {
+      "text": "Available to start within one month.",
+      "retired": false
     },
     "ex-summary": {
       "text": "Backend engineer with 3 years building Node.js services on PostgreSQL.",

@@ -27,9 +27,9 @@ from jobhunt_agents.profile import Level, Profile
 log = logging.getLogger(__name__)
 
 VARIANTS = ("BE", "PAY", "DIST", "FS", "AI", "CONS")
-_RESERVED = {"person", "summary", "languages"}  # item ids the bank uses itself
+_RESERVED = {"person", "summary", "languages", "letter"}  # item ids the bank uses itself
 _DATE = re.compile(r"^(\d{4})(-(0[1-9]|1[0-2]))?$")
-Kind = Literal["summary", "role", "project"]
+Kind = Literal["summary", "role", "project", "letter"]
 
 
 class _Frozen(BaseModel):
@@ -110,6 +110,7 @@ class Bank(_Frozen):
     education: tuple[Education, ...]
     certifications: tuple[Certification, ...]
     languages: tuple[Language, ...]
+    letter: tuple[Line, ...] = ()  # owner-written lines for the letter only (M5-01, OI-6)
     version: str  # sha256 of the file and the skill map's version: stored with every draft
 
     def lines(self) -> Iterator[Line]:
@@ -118,6 +119,7 @@ class Bank(_Frozen):
             yield from r.lines
         for p in self.projects:
             yield from p.lines
+        yield from self.letter
 
     def line(self, line_id: str) -> Line:
         return next(x for x in self.lines() if x.id == line_id)
@@ -225,6 +227,8 @@ class _Reader:
                 refs.append(SkillRef(name=name, skill=s.name, level=s.level))
             if m.get("checked") is not True:
                 self.add(self.at(m, "checked") if "checked" in m else self.at(m), "not checked")
+            if kind == "letter" and (variants or refs):
+                self.add(self.at(m), "a letter line has no variants or skills")
             text = self.text(m, "text")
             out.append(
                 Line(
@@ -258,7 +262,16 @@ def _parse(raw: bytes, profile: Profile) -> Bank:
         raise EvidenceError(["evidence.yaml line 1: want a mapping with person, roles, ..."])
     r = _Reader(profile)
     d = cast(Any, doc)
-    top = ("person", "summary", "roles", "projects", "education", "certifications", "languages")
+    top = (
+        "person",
+        "summary",
+        "roles",
+        "projects",
+        "education",
+        "certifications",
+        "languages",
+        "letter",
+    )
     r.keys(d, top, ("person",))
     pm = d.get("person") or {}
     r.keys(pm, ("name", "headline", "email", "phone", "location", "links"), ("name",))
@@ -271,6 +284,7 @@ def _parse(raw: bytes, profile: Profile) -> Bank:
         links=tuple(str(x) for x in pm.get("links") or []),
     )
     summary = r.lines(d.get("summary"), "summary", "summary")
+    letter = r.lines(d.get("letter"), "letter", "letter")
     roles: list[Role] = []
     for m in _items(d, "roles"):
         role_keys = ("id", "employer", "title", "start", "end", "location", "lines")
@@ -359,6 +373,7 @@ def _parse(raw: bytes, profile: Profile) -> Bank:
         education=tuple(education),
         certifications=tuple(certs),
         languages=tuple(languages),
+        letter=counted(letter),
         version=_version(raw, profile),
     )
 

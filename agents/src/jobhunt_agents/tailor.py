@@ -11,6 +11,10 @@ evidence bank only (evidence-bank-guardrails).
 3. Code fills in the header and the exact facts (titles, employers, dates, degrees).
 4. The validator (M4-04) checks every sentence; the draft is stored blocked or
    ready_for_review. Nothing is ever sent.
+
+The cover letter (M5-01) is made in the same draft, from a second call with the same
+selected lines plus the bank's `letter` lines. Code adds the greeting, the opening (the
+lead's job title and company), the sign-off and the name; the model writes none of them.
 """
 
 import logging
@@ -23,20 +27,25 @@ from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, ConfigDict
 from ruamel.yaml import YAML
 
-from jobhunt_agents.coverage import Coverage, coverage
-from jobhunt_agents.drafts import DraftContent
+from jobhunt_agents.coverage import Coverage, coverage, suspicious
+from jobhunt_agents.drafts import DraftContent, LetterContent
 from jobhunt_agents.evidence import Bank, EvidenceWatcher, Line
 from jobhunt_agents.extraction import Extraction, drop_company
 from jobhunt_agents.model import MODEL, ModelClient, Prompt
 from jobhunt_agents.profile import Profile, ProfileWatcher
 from jobhunt_agents.queue import Handler, Item, ItemError, NeedsReview
-from jobhunt_agents.validator import validate
+from jobhunt_agents.validator import Finding, Report, validate
 
 log = logging.getLogger(__name__)
 
 AGENT = "tailor"
 PROMPT_VERSION = 1
 MAX_TOKENS = 2000
+LETTER_AGENT = "letter"
+LETTER_PROMPT_VERSION = 1
+MAX_WORDS = 250  # the whole letter, greeting and sign-off included (PRD)
+GREETING = "Dear Hiring Team,"  # OI-10
+SIGN_OFF = "Best regards,"
 
 
 class Layout(BaseModel):
@@ -151,9 +160,28 @@ def prompt_data(cov: Coverage, sel: Selection, layout: Layout, profile: Profile)
 
 
 class Tailorer:
-    def __init__(self, client: ModelClient, prompt: Prompt | None = None) -> None:
+    def __init__(
+        self,
+        client: ModelClient,
+        prompt: Prompt | None = None,
+        letter_prompt: Prompt | None = None,
+    ) -> None:
         self.client = client
         self.prompt = prompt or Prompt.load(AGENT, PROMPT_VERSION, cacheable=False)
+        self.letter_prompt = letter_prompt or Prompt.load(
+            LETTER_AGENT, LETTER_PROMPT_VERSION, cacheable=False
+        )
+
+    def letter(self, data: str, posting_id: int | None = None) -> LetterContent:
+        return self.client.structured(
+            agent=LETTER_AGENT,
+            prompt=self.letter_prompt,
+            data=data,
+            output=LetterContent,
+            max_tokens=MAX_TOKENS,
+            posting_id=posting_id,
+            thinking=False,
+        )
 
     def draft(self, data: str, posting_id: int | None = None) -> DraftContent:
         return self.client.structured(
@@ -216,6 +244,95 @@ def checked(rendered: dict[str, Any]) -> DraftContent:
     )
 
 
+def opening(title: str, company: str) -> str:
+    """The letter's first sentence, by code. The title comes from the posting (untrusted):
+    one line, and replaced when it looks like an instruction (suspicious() also catches
+    anything over 60 characters)."""
+    title, company = " ".join(title.split()), " ".join(company.split())[:80]
+    if not title or suspicious(title):
+        return f"I am writing to apply for the open role at {company}."
+    return f"I am writing to apply for the {title} role at {company}."
+
+
+def for_letter(sel: Selection) -> Selection:
+    """The selection without lines naming a learning skill: a project line may state one
+    as fact in the CV, but the letter would read it as experience (guardrail rule 3)."""
+
+    def keep(lines: tuple[Line, ...]) -> tuple[Line, ...]:
+        return tuple(x for x in lines if all(r.level != "learning" for r in x.skills))
+
+    def picked(ps: tuple[Picked, ...]) -> tuple[Picked, ...]:
+        return tuple(Picked(p.id, p.limit, keep(p.lines)) for p in ps if keep(p.lines))
+
+    return Selection(keep(sel.summary), picked(sel.roles), picked(sel.projects))
+
+
+def letter_data(base: str, bank: Bank, budget: int) -> str:
+    """The CV's prompt data, the letter lines and the word budget for the sentences."""
+    out = [base, "", "Letter lines (letter only):"]
+    out += [f"- [{x.id}] {x.text}" for x in bank.letter]
+    out += ["", f"Words: at most {budget} in all your sentences together."]
+    return "\n".join(out)
+
+
+def _words(text: str) -> int:
+    return len(text.split())
+
+
+def render_letter(content: LetterContent, bank: Bank, title: str, company: str) -> dict[str, Any]:
+    first = opening(title, company)
+    paragraphs = [[b.model_dump() for b in p.sentences] for p in content.paragraphs]
+    fixed = (GREETING, first, SIGN_OFF, bank.person.name)
+    words = sum(map(_words, fixed)) + sum(_words(b["text"]) for p in paragraphs for b in p)
+    return {
+        "greeting": GREETING,
+        "opening": first,
+        "paragraphs": paragraphs,
+        "closing": SIGN_OFF,
+        "name": bank.person.name,
+        "words": words,
+    }
+
+
+@dataclass(frozen=True)
+class Made:
+    content: dict[str, Any]
+    letter: dict[str, Any]
+    report: Report
+
+
+def make(
+    tailorer: Tailorer,
+    bank: Bank,
+    profile: Profile,
+    cov: Coverage,
+    layout: Layout,
+    title: str,
+    company: str,
+    posting_id: int | None = None,
+) -> Made:
+    """CV and letter for one lead, validated together (NeedsReview propagates)."""
+    sel = select(bank, cov, layout)
+    data = prompt_data(cov, sel, layout, profile)
+    content = render(tailorer.draft(data, posting_id), bank, sel, layout, profile)
+    fixed = sum(map(_words, (GREETING, opening(title, company), SIGN_OFF, bank.person.name)))
+    budget = MAX_WORDS - fixed
+    ldata = letter_data(prompt_data(cov, for_letter(sel), layout, profile), bank, budget)
+    raw = tailorer.letter(ldata, posting_id)
+    letter = render_letter(raw, bank, title, company)
+    if letter["words"] > MAX_WORDS:  # one retry, told how long it was
+        note = f"\nPrevious attempt: {letter['words'] - fixed} words, over the budget."
+        raw = tailorer.letter(ldata + note, posting_id)
+        letter = render_letter(raw, bank, title, company)
+    letter["prompt_version"] = tailorer.letter_prompt.version
+    report = validate(checked(content), bank, profile, coverage=cov, letter=raw)
+    if letter["words"] > MAX_WORDS:
+        report.violations.append(
+            Finding("too_long", "letter", "", None, f"{letter['words']} words, at most {MAX_WORDS}")
+        )
+    return Made(content, letter, report)
+
+
 # Requested drafts get a tailor item; a done item is re-queued for a new request.
 _QUEUE = """
 INSERT INTO work_items (posting_id, kind, content_hash)
@@ -229,7 +346,7 @@ WHERE work_items.state IN ('done', 'failed')
 """
 
 _LEAD = """
-SELECT p.content_hash, e.data, c.name, coalesce(s.cv_variant, 'BE')
+SELECT p.content_hash, e.data, c.name, coalesce(s.cv_variant, 'BE'), j.title
 FROM postings p
 JOIN jobs j ON j.posting_id = p.id
 JOIN companies c ON c.id = j.company_id
@@ -243,9 +360,9 @@ SELECT id FROM drafts WHERE posting_id = %s AND status = 'requested' ORDER BY id
 """
 
 _STORE = """
-UPDATE drafts SET status = %s, content_hash = %s, variant = %s, content = %s, coverage = %s,
-    findings = %s, evidence_version = %s, profile_version = %s, prompt_version = %s, model = %s,
-    made_at = now()
+UPDATE drafts SET status = %s, content_hash = %s, variant = %s, content = %s, letter = %s,
+    coverage = %s, findings = %s, evidence_version = %s, profile_version = %s,
+    prompt_version = %s, model = %s, made_at = now()
 WHERE posting_id = %s AND status = 'requested' AND id <= %s
 """
 
@@ -282,20 +399,18 @@ def handler(
             return  # nothing requested (already made)
         if lead is None:
             raise ItemError("no score or extraction for this posting")
-        content_hash, data, company, variant = lead
+        content_hash, data, company, variant, title = lead
         layout = Layout.load(layout_path) if layout_path else Layout()
         cov = coverage(
             drop_company(Extraction.model_validate(data), company), profile, bank, variant
         )
-        sel = select(bank, cov, layout)
         try:
-            content = tailorer.draft(prompt_data(cov, sel, layout, profile), item.posting_id)
+            made = make(tailorer, bank, profile, cov, layout, title, company, item.posting_id)
         except NeedsReview as e:
             with pool.connection() as conn:
                 conn.execute(_FAIL, (f"{type(e).__name__}: {e}"[:500], item.posting_id))
             raise
-        rendered = render(content, bank, sel, layout, profile)
-        report = validate(checked(rendered), bank, profile, coverage=cov)
+        report = made.report
         findings = {
             "violations": [f.__dict__ for f in report.violations],
             "warnings": [f.__dict__ for f in report.warnings],
@@ -307,7 +422,8 @@ def handler(
                     report.status,
                     content_hash,
                     variant,
-                    Jsonb(rendered),
+                    Jsonb(made.content),
+                    Jsonb(made.letter),
                     Jsonb(cov.model_dump()),
                     Jsonb(findings),
                     bank.version,

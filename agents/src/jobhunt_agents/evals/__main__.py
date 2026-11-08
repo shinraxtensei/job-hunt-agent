@@ -76,17 +76,8 @@ from jobhunt_agents.score import (
     total,
 )
 from jobhunt_agents.tailor import PROMPT_VERSION as TAILOR_PROMPT
-from jobhunt_agents.tailor import (
-    Layout,
-    Selection,
-    Tailorer,
-    checked,
-    prompt_data,
-    render,
-    select,
-)
+from jobhunt_agents.tailor import Layout, Tailorer, make, select
 from jobhunt_agents.text import language
-from jobhunt_agents.validator import validate
 from jobhunt_agents.variant import cv_variant, proxy_variant
 
 REAL_ITEMS = 36  # plus one fixture per injection: 40 in all
@@ -378,24 +369,25 @@ def _draft_one(
     bank: Bank,
     profile: Profile,
     cov: Coverage,
-    sel: Selection,
     layout: Layout,
     variant: str,
+    title: str,
+    company: str,
 ) -> dict[str, Any]:
     began = time.monotonic()
     try:
-        content = tailorer.draft(prompt_data(cov, sel, layout, profile))
+        made = make(tailorer, bank, profile, cov, layout, title, company)
     except NeedsReview as err:
         return {"status": "failed", "error": type(err).__name__}
-    rendered = render(content, bank, sel, layout, profile)
-    report_ = validate(checked(rendered), bank, profile, coverage=cov)
+    report_ = made.report
     return {
         "status": report_.status,
         "seconds": round(time.monotonic() - began, 1),
         "variant": variant,
         "violations": [[f.rule, f.where, f.detail] for f in report_.violations],
         "warnings": [[f.rule, f.where] for f in report_.warnings],
-        "content": rendered,
+        "content": made.content,
+        "letter": made.letter,
     }
 
 
@@ -417,6 +409,7 @@ def _tailor_injections(
             for b in sec["bullets"]
         ]
         said += c.get("skills", [])
+        said += [b["text"] for p in rec.get("letter", {}).get("paragraphs", []) for b in p]
         words = f" {normalize(' '.join(said))} "
         followed = [t for t in i.injection.forbidden if f" {normalize(t)} " in words]
         same_evidence = selections.get(i.id) == selections.get(base)
@@ -432,7 +425,7 @@ def _tailor_injections(
     return failed
 
 
-def cmd_tailor(s: EvalSet) -> int:
+def cmd_tailor(s: EvalSet) -> int:  # noqa: PLR0915
     """`make evals-tailor` (M4-02 AC4): drafts for the eval postings the owner labelled
     good or better, plus every injection fixture and its base, from the owner's real
     evidence bank (personal: the run goes to evals/private/). Real model; cost first."""
@@ -451,7 +444,7 @@ def cmd_tailor(s: EvalSet) -> int:
             i.fixture_of is not None or i.id in bases or i.fit in ("very_strong", "strong", "good")
         )
     ]
-    est = Decimal("0.008") * len(picked)  # ~3k input + ~700 output tokens a draft
+    est = Decimal("0.002") * len(picked)  # CV + letter; M4-02 measured ~$0.0007 a CV
     print(f"{len(picked)} drafts, estimated ${est:.3f}")
     if est > RUN_LIMIT_USD:
         sys.exit(f"over the ${RUN_LIMIT_USD} run limit")
@@ -475,7 +468,9 @@ def cmd_tailor(s: EvalSet) -> int:
             cov = coverage(e, profile, bank, variant)
             sel = select(bank, cov, layout)
             selections[i.id] = sel
-            out[i.id] = _draft_one(tailorer, bank, profile, cov, sel, layout, variant)
+            out[i.id] = _draft_one(
+                tailorer, bank, profile, cov, layout, variant, job.title, i.company
+            )
     finally:
         cost = client.spent_today() - spent
         pool.close()
@@ -483,6 +478,9 @@ def cmd_tailor(s: EvalSet) -> int:
     statuses = Counter(r["status"] for r in out.values())
     rules = Counter(v[0] for r in out.values() for v in r.get("violations", []))
     secs = [r["seconds"] for r in out.values() if "seconds" in r]
+    words = [r["letter"]["words"] for r in out.values() if "letter" in r]
+    if words:
+        print(f"letter words: mean {sum(words) / len(words):.0f}, max {max(words)}")
     print(f"drafts: {dict(statuses)} · blocked by rule: {dict(rules)}")
     if secs:
         print(f"time per draft: mean {sum(secs) / len(secs):.1f} s, max {max(secs):.1f} s")

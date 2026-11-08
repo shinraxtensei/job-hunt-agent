@@ -66,7 +66,7 @@ func (q *Queries) EvidenceLines(ctx context.Context, ids []string) ([]EvidenceLi
 }
 
 const listDrafts = `-- name: ListDrafts :many
-SELECT id, status, variant, content, coverage, findings, evidence_version, prompt_version,
+SELECT id, status, variant, content, letter, coverage, findings, evidence_version, prompt_version,
 	model, error, requested_at, made_at, decided_at
 FROM drafts WHERE posting_id = $1 ORDER BY requested_at DESC, id DESC LIMIT 10
 `
@@ -76,6 +76,7 @@ type ListDraftsRow struct {
 	Status          string
 	Variant         pgtype.Text
 	Content         []byte
+	Letter          []byte
 	Coverage        []byte
 	Findings        []byte
 	EvidenceVersion pgtype.Text
@@ -87,7 +88,7 @@ type ListDraftsRow struct {
 	DecidedAt       pgtype.Timestamptz
 }
 
-// A lead's drafts, newest first (M4-05 shows them). CV content: never logged.
+// A lead's drafts, newest first (M4-05 shows them). CV and letter content: never logged.
 func (q *Queries) ListDrafts(ctx context.Context, postingID int64) ([]ListDraftsRow, error) {
 	rows, err := q.db.Query(ctx, listDrafts, postingID)
 	if err != nil {
@@ -102,6 +103,7 @@ func (q *Queries) ListDrafts(ctx context.Context, postingID int64) ([]ListDrafts
 			&i.Status,
 			&i.Variant,
 			&i.Content,
+			&i.Letter,
 			&i.Coverage,
 			&i.Findings,
 			&i.EvidenceVersion,

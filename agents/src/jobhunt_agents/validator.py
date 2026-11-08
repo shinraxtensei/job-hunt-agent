@@ -1,9 +1,11 @@
-"""The draft validator (M4-04): every sentence of a CV draft checked in code against the
-evidence lines it cites (evidence-bank-guardrails). Any violation blocks the draft;
+"""The draft validator (M4-04): every sentence of a CV draft and its letter (M5-01)
+checked in code against the evidence lines it cites (evidence-bank-guardrails).
+Any violation blocks the draft;
 warnings don't. No model, and never bypassed: drafts reach the page only through it.
 
 Violations: unsupported, altered_fact, inflated_number, learning_as_experience,
-familiar_in_bullet. Warnings: scope_inflation, suspicious_input.
+familiar_in_bullet, too_long (a letter over 250 words, set by tailor.py).
+Warnings: scope_inflation, suspicious_input.
 The independent model claim checker (M5-02) runs on top of this.
 """
 
@@ -15,7 +17,7 @@ from typing import Literal
 from jobhunt_agents import aliases
 from jobhunt_agents.aliases import canon, normalize
 from jobhunt_agents.coverage import Coverage
-from jobhunt_agents.drafts import Bullet, DraftContent
+from jobhunt_agents.drafts import Bullet, DraftContent, LetterContent
 from jobhunt_agents.evidence import Bank, Line
 from jobhunt_agents.numbers import Number, numbers
 from jobhunt_agents.profile import Profile
@@ -26,6 +28,7 @@ Rule = Literal[
     "inflated_number",
     "learning_as_experience",
     "familiar_in_bullet",
+    "too_long",
     "scope_inflation",
     "suspicious_input",
 ]
@@ -34,7 +37,7 @@ Rule = Literal[
 @dataclass(frozen=True)
 class Finding:
     rule: Rule
-    where: str  # summary[0], roles[ora].bullets[2], skills[3], draft
+    where: str  # summary[0], roles[ora].bullets[2], skills[3], letter[1][0], draft
     sentence: str
     closest: str | None  # the evidence line it most resembles
     detail: str
@@ -172,7 +175,13 @@ class _Validator:
     def bullet(self, b: Bullet, where: str, kind: str, section: str) -> None:
         """One sentence: the first violation found, then the scope warning."""
         known = [self.lines[i] for i in b.evidence_ids if i in self.lines and i not in self.retired]
-        foreign = [x for x in known if kind != "summary" and x.parent != section]
+        # the summary and the letter may cite any section; letter lines only the letter
+        foreign = [
+            x
+            for x in known
+            if (kind not in ("summary", "letter") and x.parent != section)
+            or (kind != "letter" and x.kind == "letter")
+        ]
         if not b.evidence_ids or len(known) != len(b.evidence_ids) or foreign:
             detail = "no evidence, an unknown or retired line, or a line from another section"
             self.add("unsupported", where, b.text, known, detail)
@@ -190,8 +199,8 @@ class _Validator:
     def _skills_named(self, text: str, c: _Cited) -> tuple[Rule, str] | None:
         """A bullet names a skill only if a cited line names or tags it (any level)."""
         for key, s in self.skills.find(text).items():
-            if c.kind == "summary" and s.level == "learning":
-                return "learning_as_experience", f"{s.display} is learning: never in the summary"
+            if c.kind in ("summary", "letter") and s.level == "learning":
+                return "learning_as_experience", f"{s.display} is learning: never in the {c.kind}"
             if key in c.skills:
                 continue
             if s.level == "familiar":
@@ -245,7 +254,7 @@ class _Cited:
         self.kind = kind
         self.text = " ".join(x.text for x in lines)
         self.parents: set[str] = {x.parent for x in lines}
-        if kind != "summary":
+        if kind not in ("summary", "letter"):
             self.parents.add(section)
         titles = " ".join(v.parents[p][0] for p in self.parents if p in v.parents)
         context = f"{self.text} {titles} {v.bank.person.headline}"
@@ -265,9 +274,10 @@ def validate(
     *,
     retired: Iterable[str] = (),
     coverage: Coverage | None = None,
+    letter: LetterContent | None = None,
 ) -> Report:
-    """Checks every sentence against its cited evidence; the draft is blocked if any
-    violation is found."""
+    """Checks every sentence (CV and letter) against its cited evidence; the draft is
+    blocked if any violation is found."""
     v = _Validator(bank, profile, frozenset(retired), coverage)
     for i, b in enumerate(draft.summary):
         v.bullet(b, f"summary[{i}]", "summary", "summary")
@@ -276,6 +286,9 @@ def validate(
             for i, b in enumerate(sec.bullets):
                 v.bullet(b, f"{kind}[{sec.id}].bullets[{i}]", kind[:-1], sec.id)
     v.skills_section(draft.skills)
+    for p, para in enumerate(letter.paragraphs if letter else []):
+        for i, b in enumerate(para.sentences):
+            v.bullet(b, f"letter[{p}][{i}]", "letter", "letter")
     if coverage is not None and coverage.suspicious:
         names = ", ".join(s.name[:40] for s in coverage.skills if s.suspicious)
         v.add(

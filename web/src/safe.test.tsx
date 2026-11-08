@@ -166,6 +166,7 @@ describe("CV drafts (M4-05)", () => {
         education: [],
         languages: [],
       },
+      letter: { greeting: "Dear Hiring Team,", opening: "I am writing.", paragraphs: [[{ text: payload, evidence_ids: ["l1"] }]], closing: "Best regards,", name: "Sam", words: 9 },
       coverage: null,
       findings: { violations: [{ rule: "inflated_number", where: "roles[r].bullets[0]", sentence: payload, closest: "l1", detail: "5 isn't in the cited evidence" }], warnings: [] },
       evidence_version: null,
@@ -180,6 +181,7 @@ describe("CV drafts (M4-05)", () => {
     expect(el.querySelector("img, b.x")).toBeNull();
     expect(el.textContent).toContain(payload);
     expect(el.textContent).toContain("Blocks the draft");
+    expect(el.querySelectorAll("section[aria-label='Cover letter'] li").length).toBeGreaterThan(0);
     expect(el.textContent).toContain("“<b>evidence</b>”");
     expect((window as { pwned?: number }).pwned).toBeUndefined();
   });

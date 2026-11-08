@@ -65,6 +65,7 @@ type Draft struct {
 	RequestedAt     pgtype.Timestamptz
 	MadeAt          pgtype.Timestamptz
 	DecidedAt       pgtype.Timestamptz
+	Letter          []byte
 }
 
 type EvidenceBank struct {

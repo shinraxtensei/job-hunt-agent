@@ -39,8 +39,21 @@ def test_example_loads(profile: Profile) -> None:
         "example-billing",
         "example-deploys",
         "side-project-collector",
+        "letter-availability",
     }
+    assert [x.kind for x in bank.letter] == ["letter"]
     assert len(bank.version) == 64
+
+
+# M5-01 (OI-6): letter lines are the owner's own, for the letter only: no variants or
+# skills, so they cover no skill and are never selected for the CV.
+def test_letter_lines_take_no_skills(tmp_path: Path, profile: Profile) -> None:
+    text = EXAMPLE.read_text()
+    old = "- id: letter-availability\n    text:"
+    assert old in text
+    bad = text.replace(old, "- id: letter-availability\n    skills: [Docker]\n    text:", 1)
+    with pytest.raises(EvidenceError, match="a letter line has no variants or skills"):
+        load_evidence(write(tmp_path, bad), profile)
 
 
 # AC1: each rule, one broken file, the problem names its line.

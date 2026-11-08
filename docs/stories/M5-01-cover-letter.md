@@ -1,6 +1,6 @@
 # M5-01: Cover letter agent
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M5 — Documents
 - **Linear:** [HAM-55](https://linear.app/hamid-corp/issue/HAM-55/m5-01-cover-letter-agent)
 - **Estimate:** 1 day
@@ -72,6 +72,16 @@ optional `letter` section in `evidence.yaml` with checked lines the owner writes
 - OI-6, OI-7, OI-9, OI-10: the defaults in `M5-owner-input.md`.
 - English only for now. French postings (M7-04) will need French evidence lines written
   and checked by the owner; evidence is never machine-translated.
+
+## Results (2026-11-08)
+
+- Tests were written after the WIP code. Each check was then broken on purpose to see its
+  test fail (results in the PR): posting company in the request, no retry, no
+  `too_long`, letter not validated, CV citing letter lines, learning skill in the letter,
+  instruction-like title kept, letter lines with skills, letter evidence missing from the
+  API, letter hidden on the page.
+- An 80-character cap on the title turned out to be dead code (`suspicious()` already
+  replaces any title over 60 characters); it was removed.
 
 ## Out of scope
 

@@ -54,3 +54,20 @@ The same pattern as reasons (ADR-0021) and the reason request (ADR-0022):
   - A fourth API write, guarded like the others.
   - Drafts accumulate. That's a few per lead; prune discarded ones later if needed.
 - **Revisit when:** drafts get edited by hand (M5), or the API gets real authentication.
+
+## Amendment (2026-11-08, M5-01): the cover letter lives in the same draft
+
+- A draft request makes the CV and the cover letter together, in one `drafts` row:
+  `drafts.letter jsonb` sits next to `content`, under the same status. A violation in
+  either blocks both, so a pair is approved or discarded as one.
+- The letter is a second model call (`prompts/letter/v1.md`) with the CV's selected
+  lines, the bank's new `letter` lines and a word budget. The model never sees the
+  posting's text, job title or company.
+- Code writes the greeting, the opening sentence (job title and company from the lead
+  record; the title is replaced by "the open role" when `suspicious()` flags it), the
+  sign-off and the name.
+- `evidence.yaml` gains an optional `letter` section: owner-written, checked lines with
+  no variants or skills. They are synced as `evidence_lines` of kind `letter`, and the
+  validator refuses them in the CV.
+- Over 250 words: one retry, with the count given as data; still over → `too_long`
+  (blocked).

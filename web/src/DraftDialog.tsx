@@ -21,6 +21,7 @@ const RULES: Record<string, string> = {
   inflated_number: "A number that isn’t in the cited evidence",
   learning_as_experience: "A skill you’re only learning, shown as experience",
   familiar_in_bullet: "A familiar skill outside the skills section",
+  too_long: "The letter is over 250 words",
   scope_inflation: "A stronger verb than the evidence uses",
   suspicious_input: "The posting’s skills look like instructions (possible injection)",
 };
@@ -104,7 +105,7 @@ export function DraftDialog({ lead, open, onClose }: { lead: Lead; open: boolean
             </>
           )}
         </div>
-        <p className="draft-note">Nothing is sent from here. Approving records your decision; the PDF comes later.</p>
+        <p className="draft-note">Nothing is sent from here. Approving records your decision; the PDFs come later.</p>
         {error && (
           <p className="draft-error" role="alert">
             {error}
@@ -228,6 +229,33 @@ export function DraftView({ draft: d, evidence, waiting }: { draft: Draft; evide
             </section>
           )}
         </>
+      )}
+      {d.letter && (
+        <section aria-label="Cover letter" className="letter">
+          <h3>Cover letter</h3>
+          <p>{d.letter.greeting}</p>
+          <p>{d.letter.opening}</p>
+          {d.letter.paragraphs.map((para, p) => (
+            <ul key={p} className="bullets letter-paragraph">
+              {para.map((b, i) => (
+                <BulletItem key={i} b={b} where={`letter[${p}][${i}]`} at={at} evidence={evidence} />
+              ))}
+            </ul>
+          ))}
+          <p>
+            {d.letter.closing}
+            <br />
+            {d.letter.name}
+          </p>
+          <p className="draft-versions">{d.letter.words} words</p>
+          {at("letter").length > 0 && (
+            <ul className="findings">
+              {at("letter").map((f, i) => (
+                <FindingItem key={i} f={f} warning={f.warning} evidence={evidence} />
+              ))}
+            </ul>
+          )}
+        </section>
       )}
       {d.coverage && <CoverageView skills={d.coverage.skills} />}
       <p className="draft-versions">

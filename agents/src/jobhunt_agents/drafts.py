@@ -23,3 +23,16 @@ class DraftContent(BaseModel):
     roles: list[Section]
     projects: list[Section]
     skills: list[str]  # the skills section: proven and familiar skills only
+
+
+class Paragraph(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    sentences: list[Bullet]
+
+
+class LetterContent(BaseModel):
+    """The cover letter's sentences (M5-01). Greeting, opening (company and job title),
+    sign-off and name are added by code, never by the model."""
+
+    model_config = ConfigDict(extra="forbid")
+    paragraphs: list[Paragraph] = Field(min_length=1, max_length=4)

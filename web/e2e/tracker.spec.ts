@@ -134,6 +134,13 @@ for (const width of [375, 1280]) {
         await expect(dialog.getByText(/cutting its run time from 40 to 6 minutes/)).toBeVisible();
         await expect(dialog.getByText(/A stronger verb than the evidence uses/)).toBeVisible();
         await expect(dialog.getByText(/possible injection, ignored/)).toBeVisible();
+        // M5-01: the letter under the CV, its sentences with their evidence, markup as text
+        const letter = dialog.getByRole("region", { name: "Cover letter" });
+        await expect(letter.getByText("Dear Hiring Team,")).toBeVisible();
+        await expect(letter.getByText("I am writing to apply for the Backend Engineer role at Example Corp.")).toBeVisible();
+        await expect(letter.getByText("I am available to start <b>within</b> one month.")).toBeVisible();
+        await letter.locator("li", { hasText: "available to start" }).getByRole("button", { name: "Evidence (1)" }).click();
+        await expect(letter.getByText("Available to start within one month.")).toBeVisible();
         await expect(dialog.getByLabel("Version")).toBeVisible(); // two versions
         await noHorizontalScroll(page);
         await noAxeViolations(page);

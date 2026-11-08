@@ -60,7 +60,7 @@ agents/              Python 3.15 (uv, ADR-0017): src/jobhunt_agents/ (worker, qu
                      M3-06); evidence.py + evidence_sync.py (the evidence bank, M4-01), numbers.py
                      (normalised numbers, also M4-04's check), variant.py (CV variant, M4-06),
                      coverage.py (M4-03), drafts.py + validator.py (draft schema and guardrail
-                     checks, M4-04), tailor.py (the tailoring agent, M4-02); agents/Dockerfile is the worker image
+                     checks, M4-04), tailor.py (the tailoring agent, M4-02; the cover letter, M5-01); agents/Dockerfile is the worker image
 web/                 TypeScript UI (Vite + React, ADR-0013); built into web/dist/app, embedded in cmd/api
 db/migrations/       plain SQL migrations (goose), forward-only
 db/contract/         work_items.columns: the Go <-> Python queue contract, checked by both sides

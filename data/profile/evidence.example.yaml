@@ -71,3 +71,9 @@ certifications: []             # id, name, issuer, date (YYYY-MM)
 languages:                      # printed as written
   - {name: Arabic, level: native}
   - {name: English, level: fluent}
+
+letter:                         # optional (M5-01): your own lines for the cover letter only,
+                                # never the CV; no variants or skills
+  - id: letter-availability
+    text: "Available to start within one month."
+    checked: true

@@ -164,15 +164,25 @@ const draftContent = `{
 	"layout": {"page": "A4"}
 }`
 
+// draftLetter is a rendered cover letter (M5-01): greeting, opening, sign-off and name by
+// code, sentences with their evidence ids; one cites a letter-only line.
+const draftLetter = `{
+	"greeting": "Dear Hiring Team,", "opening": "I am writing to apply for the Backend Engineer role at Example Corp.",
+	"paragraphs": [[{"text": "I brought the invoice job down to 6 minutes, from 40.", "evidence_ids": ["ex-billing"]}],
+		[{"text": "I am available to start <b>within</b> one month.", "evidence_ids": ["ex-letter"]}]],
+	"closing": "Best regards,", "name": "Sam Example", "words": 33, "prompt_version": 1
+}`
+
 // seedDrafts stores evidence lines and drafts: 9001 has a discarded older draft and a
 // ready one with a scope warning; 9006 a blocked one with an inflated number.
 func seedDrafts(t *testing.T, exec func(string, ...any)) {
 	t.Helper()
-	exec(`INSERT INTO evidence_items (id, kind, facts, position, version) VALUES ('ex-role', 'role', '{}', 0, 'v'), ('summary', 'summary', '{}', 1, 'v')`)
+	exec(`INSERT INTO evidence_items (id, kind, facts, position, version) VALUES ('ex-role', 'role', '{}', 0, 'v'), ('summary', 'summary', '{}', 1, 'v'), ('letter', 'letter', '{}', 2, 'v')`)
 	exec(`INSERT INTO evidence_lines (id, item_id, kind, text, variants, skills, numbers, position, version, retired) VALUES
 		('ex-summary', 'summary', 'summary', 'Backend engineer with 3 years building Node.js services on PostgreSQL.', '{BE}', '[]', '[]', 0, 'v', false),
 		('ex-billing', 'ex-role', 'role', 'Rebuilt the billing service''s invoice job, cutting its run time from 40 to 6 minutes.', '{BE,PAY}', '[]', '[]', 1, 'v', false),
-		('ex-deploys', 'ex-role', 'role', 'Moved the services to Docker images built in CI.', '{BE}', '[]', '[]', 2, 'v', true)`)
+		('ex-deploys', 'ex-role', 'role', 'Moved the services to Docker images built in CI.', '{BE}', '[]', '[]', 2, 'v', true),
+		('ex-letter', 'letter', 'letter', 'Available to start within one month.', '{}', '[]', '[]', 3, 'v', false)`)
 	cov := `{"variant": "BE", "skills": [
 		{"name": "PostgreSQL", "kind": "required", "skill": "PostgreSQL", "level": "proven", "status": "covered", "why": null, "lines": ["ex-billing"], "suspicious": false},
 		{"name": "Docker", "kind": "required", "skill": "Docker", "level": "familiar", "status": "listed", "why": null, "lines": ["ex-deploys"], "suspicious": false},
@@ -197,11 +207,11 @@ func seedDrafts(t *testing.T, exec func(string, ...any)) {
 		if d.decided != "" {
 			decided = d.decided
 		}
-		exec(`INSERT INTO drafts (id, posting_id, status, content_hash, variant, content, coverage, findings,
+		exec(`INSERT INTO drafts (id, posting_id, status, content_hash, variant, content, letter, coverage, findings,
 				evidence_version, profile_version, prompt_version, model, requested_at, made_at, decided_at)
 			OVERRIDING SYSTEM VALUE
-			SELECT $1, $2, $3, content_hash, 'BE', $4::jsonb, $5::jsonb, $6::jsonb, 'v', 'p', 1, 'claude-haiku-5-5', $7, $7, $8
-			FROM postings WHERE id = $2`, d.id, d.posting, d.status, draftContent, cov, d.findings, d.requested, decided)
+			SELECT $1, $2, $3, content_hash, 'BE', $4::jsonb, $9::jsonb, $5::jsonb, $6::jsonb, 'v', 'p', 1, 'claude-haiku-5-5', $7, $7, $8
+			FROM postings WHERE id = $2`, d.id, d.posting, d.status, draftContent, cov, d.findings, d.requested, decided, draftLetter)
 	}
 }
 

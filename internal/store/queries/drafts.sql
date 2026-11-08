@@ -8,8 +8,8 @@ WHERE EXISTS (SELECT 1 FROM scores WHERE posting_id = @posting_id::bigint)
 RETURNING id;
 
 -- name: ListDrafts :many
--- A lead's drafts, newest first (M4-05 shows them). CV content: never logged.
-SELECT id, status, variant, content, coverage, findings, evidence_version, prompt_version,
+-- A lead's drafts, newest first (M4-05 shows them). CV and letter content: never logged.
+SELECT id, status, variant, content, letter, coverage, findings, evidence_version, prompt_version,
 	model, error, requested_at, made_at, decided_at
 FROM drafts WHERE posting_id = @posting_id ORDER BY requested_at DESC, id DESC LIMIT 10;
 

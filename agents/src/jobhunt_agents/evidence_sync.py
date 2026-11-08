@@ -52,6 +52,7 @@ def _items(bank: Bank) -> list[tuple[str, str, dict[str, Any]]]:
     out += [(e.id, "education", e.model_dump()) for e in bank.education]
     out += [(c.id, "certification", c.model_dump()) for c in bank.certifications]
     out.append(("languages", "languages", {"languages": [x.model_dump() for x in bank.languages]}))
+    out.append(("letter", "letter", {}))
     return out
 
 

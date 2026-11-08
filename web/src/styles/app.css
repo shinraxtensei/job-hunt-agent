@@ -967,6 +967,12 @@ dialog[open] {
 .draft-open {
   float: right;
 }
+.letter p {
+  margin: var(--space-2) 0;
+}
+.letter-paragraph {
+  margin-bottom: var(--space-3);
+}
 @media (max-width: 640px) {
   .draft-sheet {
     inset: 0;
