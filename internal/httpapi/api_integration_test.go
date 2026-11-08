@@ -677,7 +677,7 @@ func TestDecideDraft(t *testing.T) {
 	h := server(t)
 	t.Cleanup(func() {
 		ctx := context.Background()
-		for _, q := range []string{`UPDATE drafts SET status = 'ready_for_review', decided_at = NULL WHERE id = 9102`,
+		for _, q := range []string{forgetApplications, `UPDATE drafts SET status = 'ready_for_review', decided_at = NULL WHERE id = 9102`,
 			`UPDATE drafts SET status = 'blocked', decided_at = NULL WHERE id = 9103`} {
 			if _, err := db.Exec(ctx, q); err != nil {
 				t.Error(err)
@@ -793,5 +793,163 @@ func TestDocumentPDF(t *testing.T) {
 	}
 	if rec := get("/api/documents/9999/pdf"); rec.Code != http.StatusNotFound {
 		t.Errorf("unknown: %d", rec.Code)
+	}
+}
+
+// forgetApplications removes what M6 tests create, so other tests see every lead as new.
+const forgetApplications = `WITH a AS (SELECT id FROM applications), e AS (DELETE FROM application_events WHERE application_id IN (SELECT id FROM a))
+	DELETE FROM applications`
+
+func postJSON(h http.Handler, path, body, site string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	if site != "" {
+		req.Header.Set("Sec-Fetch-Site", site)
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+func getJSON(t *testing.T, h http.Handler, path string, v any) {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("%s: %d %s", path, rec.Code, rec.Body)
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), v); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type appView struct {
+	Application *struct {
+		Status    string            `json:"status"`
+		AppliedAt *time.Time        `json:"applied_at"`
+		Snapshot  map[string]any    `json:"snapshot"`
+		History   []httpapi.Event   `json:"history"`
+		Documents []json.RawMessage `json:"documents"`
+	} `json:"application"`
+}
+
+// M6-01 AC1, AC2, AC5: setting a status creates the application and keeps every change;
+// the first `applied` keeps the posting as it was; the leads API filters by status.
+func TestApplicationStatus(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	t.Cleanup(func() {
+		ctx := context.Background()
+		for _, q := range []string{forgetApplications, `UPDATE postings SET title = 'Senior Backend Engineer' WHERE id = 9002`} {
+			if _, err := db.Exec(ctx, q); err != nil {
+				t.Error(err)
+			}
+		}
+	})
+	var v appView
+	getJSON(t, h, "/api/leads/9002/application", &v)
+	if v.Application != nil {
+		t.Fatal("a new lead has no application")
+	}
+	for _, c := range []struct {
+		body, site string
+		want       int
+		changed    bool
+	}{
+		{`{"status":"shortlisted"}`, "cross-site", http.StatusForbidden, false},
+		{`{"status":"maybe"}`, "", http.StatusBadRequest, false},
+		{`{"status":"shortlisted","x":1}`, "", http.StatusBadRequest, false},
+		{`{"status":"shortlisted"}`, "same-origin", http.StatusOK, true},
+		{`{"status":"shortlisted"}`, "", http.StatusOK, false}, // unchanged: no new event
+		{`{"status":"applied"}`, "", http.StatusOK, true},
+	} {
+		rec := postJSON(h, "/api/leads/9002/status", c.body, c.site)
+		if rec.Code != c.want || c.want == http.StatusOK && strings.Contains(rec.Body.String(), `"changed":true`) != c.changed {
+			t.Errorf("%s (%s): %d %s", c.body, c.site, rec.Code, rec.Body)
+		}
+	}
+	if rec := postJSON(h, "/api/leads/99999/status", `{"status":"applied"}`, ""); rec.Code != http.StatusNotFound {
+		t.Errorf("unknown lead: %d", rec.Code)
+	}
+	getJSON(t, h, "/api/leads/9002/application", &v)
+	if v.Application == nil || v.Application.AppliedAt == nil {
+		t.Fatal("applied without applied_at")
+	}
+	first := *v.Application.AppliedAt
+	// the board changes the posting later: the snapshot keeps what was applied to
+	if _, err := db.Exec(t.Context(), `UPDATE postings SET title = 'Changed later' WHERE id = 9002`); err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []string{"replied", "applied"} {
+		postJSON(h, "/api/leads/9002/status", `{"status":"`+s+`"}`, "")
+	}
+	getJSON(t, h, "/api/leads/9002/application", &v)
+	a := v.Application
+	if a == nil || a.Status != "applied" || a.AppliedAt == nil || !a.AppliedAt.Equal(first) {
+		t.Fatalf("application (applied_at stays the first time): %+v", a)
+	}
+	if a.Snapshot["title"] != "Senior Backend Engineer" || a.Snapshot["url"] == "" || a.Snapshot["content_hash"] == "" {
+		t.Errorf("snapshot: %v", a.Snapshot)
+	}
+	var got []string
+	for _, e := range a.History {
+		got = append(got, e.Status)
+	}
+	if strings.Join(got, ",") != "applied,replied,applied,shortlisted" {
+		t.Errorf("history newest first: %v", got)
+	}
+	var p struct {
+		Leads []struct {
+			ID     int64  `json:"id"`
+			Status string `json:"status"`
+		} `json:"leads"`
+	}
+	getJSON(t, h, "/api/leads?preset=none&status=applied", &p)
+	if len(p.Leads) != 1 || p.Leads[0].ID != 9001 || p.Leads[0].Status != "applied" { // 9002 is in 9001's group
+		t.Errorf("status filter: %+v", p.Leads)
+	}
+	if rec := httptest.NewRecorder(); true {
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/leads?status=maybe", nil))
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("unknown status filter: %d", rec.Code)
+		}
+	}
+}
+
+// M6-01 AC3, AC4 (OI-11): approving a draft moves a new or shortlisted lead to drafted,
+// marked automatic, but never moves it back from applied; sent documents are listed.
+func TestApproveSetsDrafted(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	t.Cleanup(func() {
+		ctx := context.Background()
+		for _, q := range []string{forgetApplications, `UPDATE drafts SET status = 'ready_for_review', decided_at = NULL WHERE id = 9102`} {
+			if _, err := db.Exec(ctx, q); err != nil {
+				t.Error(err)
+			}
+		}
+	})
+	postJSON(h, "/api/leads/9001/status", `{"status":"shortlisted"}`, "")
+	if rec := postJSON(h, "/api/drafts/9102/approve", "", ""); rec.Code != http.StatusOK {
+		t.Fatalf("approve: %d %s", rec.Code, rec.Body)
+	}
+	var v appView
+	getJSON(t, h, "/api/leads/9001/application", &v)
+	if v.Application == nil || v.Application.Status != "drafted" || !v.Application.History[0].Auto || v.Application.History[1].Auto {
+		t.Fatalf("after approve: %+v", v.Application)
+	}
+	if b, _ := json.Marshal(v.Application.Documents); !strings.Contains(string(b), `"id":9201`) || strings.Contains(string(b), `"id":9202`) {
+		docs := string(b)
+		t.Errorf("sent documents (the CV 9201, not the unsent letter 9202): %s", docs)
+	}
+	// applied stays applied when another draft is approved
+	postJSON(h, "/api/leads/9001/status", `{"status":"applied"}`, "")
+	if _, err := db.Exec(t.Context(), `UPDATE drafts SET status = 'ready_for_review', decided_at = NULL WHERE id = 9102`); err != nil {
+		t.Fatal(err)
+	}
+	postJSON(h, "/api/drafts/9102/approve", "", "")
+	getJSON(t, h, "/api/leads/9001/application", &v)
+	if v.Application.Status != "applied" {
+		t.Errorf("approve moved an applied lead to %s", v.Application.Status)
 	}
 }

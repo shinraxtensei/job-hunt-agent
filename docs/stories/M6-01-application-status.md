@@ -1,6 +1,6 @@
 # M6-01: Application status and history
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M6 — Full tracker
 - **Linear:** [HAM-59](https://linear.app/hamid-corp/issue/HAM-59/m6-01-application-status-and-history)
 - **Estimate:** 1 day
@@ -46,6 +46,14 @@ exists): `docs/stories/M6-owner-input.md`.
    **When** I open a lead
    **Then** I see its status (changeable), its history (newest first, with dates), the
    snapshot when applied, and the sent documents. The leads API can filter by status.
+
+## Results (2026-11-08)
+
+- ADR-0028.
+- Tests: `TestApplicationStatus`, `TestApproveSetsDrafted`, the goldens (`status` on
+  leads), and Playwright "a lead's status and history".
+- Each check was broken on purpose and its test seen to fail. The first run let an
+  overwritten `applied_at` through; the test now checks it keeps the first time.
 
 ## Out of scope
 

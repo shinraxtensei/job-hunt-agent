@@ -37,6 +37,8 @@ const lead = (over: Partial<Lead>): Lead => ({
   cv_variant: null,
   reason_current: false,
   score_status: "not_queued",
+  status: "new",
+  status_at: null,
   ...over,
 });
 

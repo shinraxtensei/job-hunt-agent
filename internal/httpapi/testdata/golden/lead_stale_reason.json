@@ -80,6 +80,8 @@
   ],
   "cv_variant": "FS",
   "reason_current": false,
-  "score_status": "scored"
+  "score_status": "scored",
+  "status": "new",
+  "status_at": null
 }
 

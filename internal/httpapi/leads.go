@@ -58,6 +58,10 @@ type Lead struct {
 	ReasonCurrent bool     `json:"reason_current"` // false: from older inputs, shown marked
 	ScoreStatus   string   `json:"score_status"`   // scored | pending | needs_review | not_queued
 
+	// The application (M6-01): "new" with no time until the lead first leaves new.
+	Status   string     `json:"status"`
+	StatusAt *time.Time `json:"status_at"`
+
 	companyID int64
 	titleKey  string
 	group     preset.Group
@@ -87,6 +91,14 @@ func (a *api) load(ctx context.Context) ([]Lead, error) {
 	if err != nil {
 		return nil, fmt.Errorf("listing scores: %w", err)
 	}
+	apps, err := a.q.ListApplications(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("listing applications: %w", err)
+	}
+	byGroup := make(map[key]store.ListApplicationsRow, len(apps))
+	for _, ap := range apps {
+		byGroup[key{ap.CompanyID, ap.TitleKey}] = ap
+	}
 	byPosting := make(map[int64]store.ListLeadScoresRow, len(scores))
 	for _, s := range scores {
 		byPosting[s.PostingID] = s
@@ -106,7 +118,11 @@ func (a *api) load(ctx context.Context) ([]Lead, error) {
 			RemoteScopes: []string{}, Countries: []string{}, Locations: r.Locations,
 			Closed: r.Closed, Team: r.Team, URL: r.Url, FirstSeenAt: r.FirstSeenAt.Time.UTC(),
 			Origin: r.Origin, Members: r.Members, MembersURL: fmt.Sprintf("/api/leads/%d/members", r.PostingID),
-			companyID: r.CompanyID, titleKey: r.TitleKey,
+			companyID: r.CompanyID, titleKey: r.TitleKey, Status: "new",
+		}
+		if ap, ok := byGroup[key{r.CompanyID, r.TitleKey}]; ok {
+			t := ap.StatusAt.Time.UTC()
+			l.Status, l.StatusAt = ap.Status, &t
 		}
 		if r.ExperienceMinYears.Valid {
 			l.ExperienceMinYears = &r.ExperienceMinYears.Int32
@@ -207,6 +223,7 @@ type filters struct {
 	newOnly   bool
 	since     time.Time
 	fits      []string // fit levels, or "unscored"
+	statuses  []string // M6-01
 	sort      string   // score (default) | date
 	limit     int
 	cursor    *cursor
@@ -214,7 +231,7 @@ type filters struct {
 
 var (
 	params = []string{"preset", "role_family", "seniority", "max_experience", "closed", "workplace",
-		"remote_scope", "country", "city", "track", "company", "new", "since", "limit", "cursor", "sort", "fit"}
+		"remote_scope", "country", "city", "track", "company", "new", "since", "limit", "cursor", "sort", "fit", "status"}
 	// location parameters and the preset rule keys they set
 	locationParams = [][2]string{{"workplace", "workplace"}, {"remote_scope", "remote_scopes"},
 		{"country", "countries"}, {"city", "cities"}, {"track", "track"}}
@@ -251,6 +268,12 @@ func (a *api) parse(q url.Values) (filters, error) {
 			return filters{}, &paramError{"fit", fmt.Sprintf("unknown value %q", v)}
 		}
 		f.fits = append(f.fits, v)
+	}
+	for _, v := range values(q, "status") {
+		if !slices.Contains(Statuses, v) {
+			return filters{}, &paramError{"status", fmt.Sprintf("unknown value %q", v)}
+		}
+		f.statuses = append(f.statuses, v)
 	}
 	var err error
 	if f.preset, err = a.loadPreset(cmp.Or(q.Get("preset"), "default")); err != nil {
@@ -363,7 +386,8 @@ func (a *api) split(all []Lead, f filters) (shown, hidden []Lead) {
 		if len(f.companies) > 0 && !slices.Contains(f.companies, strings.ToLower(l.Company.Name)) ||
 			f.newOnly && !l.FirstSeenAt.After(a.now().Add(-24*time.Hour)) ||
 			!f.since.IsZero() && l.FirstSeenAt.Before(f.since) ||
-			len(f.fits) > 0 && !slices.Contains(f.fits, fitOf(l)) {
+			len(f.fits) > 0 && !slices.Contains(f.fits, fitOf(l)) ||
+			len(f.statuses) > 0 && !slices.Contains(f.statuses, l.Status) {
 			continue
 		}
 		if l.HiddenBy = f.preset.Evaluate(l.group); l.HiddenBy == nil {

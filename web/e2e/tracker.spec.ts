@@ -7,13 +7,30 @@ import { readFileSync } from "node:fs";
 const golden = (name: string) =>
   readFileSync(new URL(`../../internal/httpapi/testdata/golden/${name}.json`, import.meta.url), "utf8");
 
+// M6-01: an applied lead, its history and the CV sent; the snapshot title carries markup.
+const APPLICATION = {
+  application: {
+    id: 1,
+    status: "applied",
+    status_at: "2026-11-03T09:00:00Z",
+    applied_at: "2026-11-03T09:00:00Z",
+    snapshot: { title: "Senior Backend Engineer <img src=x onerror=alert(1)>", url: "https://jobs.lever.co/acme/1", content_hash: "ab" },
+    history: [
+      { status: "applied", at: "2026-11-03T09:00:00Z", auto: false },
+      { status: "drafted", at: "2026-11-02T10:00:00Z", auto: true },
+      { status: "shortlisted", at: "2026-11-02T09:00:00Z", auto: false },
+    ],
+    documents: [{ id: 9201, kind: "cv", sent_at: "2026-11-03T08:55:00Z" }],
+  },
+};
+
 async function mockAPI(page: Page, leads = golden("leads_default")) {
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
     if (route.request().method() === "POST" && /^\/api\/leads\/\d+\/reason$/.test(path)) {
       return route.fulfill({ status: 202, contentType: "application/json", body: '{"requested":true}' });
     }
-    if (route.request().method() === "POST" && /^\/api\/(leads\/\d+\/draft|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent)$/.test(path)) {
+    if (route.request().method() === "POST" && /^\/api\/(leads\/\d+\/(draft|status)|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent)$/.test(path)) {
       return route.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' });
     }
     const body =
@@ -22,6 +39,8 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
       : path === "/api/leads/9006" ? golden("lead_stale_reason")
       : path === "/api/leads/9001/drafts" ? golden("drafts")
       : path === "/api/leads/9006/drafts" ? golden("drafts_blocked")
+      : path === "/api/leads/9001/application" ? JSON.stringify(APPLICATION)
+      : path.endsWith("/application") ? '{"application":null}'
       : path === "/api/leads/hidden" ? golden("hidden_default")
       : path === "/api/facets" ? golden("facets_default")
       : path === "/api/presets" ? golden("presets")
@@ -154,6 +173,28 @@ for (const width of [375, 1280]) {
         const approve = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/drafts/9102/approve"));
         await dialog.getByRole("button", { name: "Approve" }).click();
         expect((await approve).headers()["content-type"]).toBe("application/json");
+      });
+
+      // M6-01: the expanded lead shows its status (a same-origin JSON write to change it),
+      // the history with automatic changes marked, the posting as applied to, the CV sent.
+      test("a lead's status and history", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/");
+        await page.locator("tr.row", { hasText: "Senior Backend Engineer" }).getByRole("button", { name: /Show details/ }).click();
+        const app = page.getByRole("region", { name: "Application" });
+        await expect(app.getByLabel("Status")).toHaveValue("applied");
+        await expect(app.getByText("Senior Backend Engineer <img src=x onerror=alert(1)>")).toBeVisible();
+        await expect(app.locator("img")).toHaveCount(0);
+        await expect(app.getByRole("link", { name: "CV" })).toHaveAttribute("href", "/api/documents/9201/pdf");
+        await app.getByText("History (3)").click();
+        await expect(app.getByText(/Drafted ·.*· automatic/)).toBeVisible();
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+        const sent = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9001/status"));
+        await app.getByLabel("Status").selectOption("interviewing");
+        const req = await sent;
+        expect(req.headers()["content-type"]).toBe("application/json");
+        expect(req.postDataJSON()).toEqual({ status: "interviewing" });
       });
 
       test("a blocked draft can't be approved", async ({ page }) => {

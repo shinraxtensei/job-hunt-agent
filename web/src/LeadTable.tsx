@@ -1,3 +1,4 @@
+import { ApplicationPanel } from "./Application";
 import { useState, type Ref } from "react";
 import { get, type Lead, type Members } from "./api";
 import { Icon } from "./icons";
@@ -221,6 +222,7 @@ function LeadRow(props: {
       {open && (
         <tr className="detail" id={detail}>
           <td colSpan={9}>
+            <ApplicationPanel lead={l} />
             <ScoreDetail lead={l} updating={updating} />
             <dl>
               <div className="pair">

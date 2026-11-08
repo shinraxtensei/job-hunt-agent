@@ -2,6 +2,18 @@
 // URL and the API; anything this map doesn't know is shown with underscores as spaces.
 
 const words: Record<string, Record<string, string>> = {
+  status: {
+    new: "New",
+    shortlisted: "Shortlisted",
+    drafted: "Drafted",
+    applied: "Applied",
+    replied: "Replied",
+    interviewing: "Interviewing",
+    offer: "Offer",
+    rejected: "Rejected",
+    closed: "Closed",
+    skipped: "Skipped",
+  },
   role_family: {
     backend: "Backend",
     frontend: "Frontend",

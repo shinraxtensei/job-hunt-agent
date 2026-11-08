@@ -87,7 +87,9 @@
       ],
       "cv_variant": "BE",
       "reason_current": true,
-      "score_status": "scored"
+      "score_status": "scored",
+      "status": "new",
+      "status_at": null
     },
     {
       "id": 9006,
@@ -171,7 +173,9 @@
       ],
       "cv_variant": "FS",
       "reason_current": false,
-      "score_status": "scored"
+      "score_status": "scored",
+      "status": "new",
+      "status_at": null
     }
   ],
   "next_cursor": "eyJtIjoic2NvcmUiLCJmIjo0LCJzIjoyMCwidCI6MTc5MzUzNjIwMDAwMDAwMCwiYyI6OTAyLCJrIjoibW9iaWxlIGVuZ2luZWVyIGZsdXR0ZXIifQ"

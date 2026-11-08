@@ -235,7 +235,10 @@ func (a *api) decide(status string) http.HandlerFunc {
 		if !ok {
 			return
 		}
-		_, err := a.q.DecideDraft(r.Context(), store.DecideDraftParams{ID: id, Status: status})
+		posting, err := a.q.DecideDraft(r.Context(), store.DecideDraftParams{ID: id, Status: status})
+		if err == nil && status == "approved" { // OI-11: the lead moves on to drafted by itself
+			_, err = a.status(r, posting, "drafted", true, []string{"new", "shortlisted"})
+		}
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
 			writeError(w, http.StatusConflict, "", "this draft can't be "+status+" in its current state")

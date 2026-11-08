@@ -41,7 +41,9 @@
       "gaps": null,
       "cv_variant": null,
       "reason_current": false,
-      "score_status": "needs_review"
+      "score_status": "needs_review",
+      "status": "new",
+      "status_at": null
     },
     {
       "id": 9004,
@@ -87,7 +89,9 @@
       "gaps": null,
       "cv_variant": null,
       "reason_current": false,
-      "score_status": "pending"
+      "score_status": "pending",
+      "status": "new",
+      "status_at": null
     },
     {
       "id": 9003,
@@ -130,7 +134,9 @@
       "gaps": null,
       "cv_variant": null,
       "reason_current": false,
-      "score_status": "not_queued"
+      "score_status": "not_queued",
+      "status": "new",
+      "status_at": null
     }
   ]
 }

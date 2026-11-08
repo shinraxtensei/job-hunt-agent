@@ -1,6 +1,18 @@
 // Types and fetchers for the M2-05 leads API. Every string in a Lead or Member is
 // untrusted posting text or model output: render it only as React text.
 
+// M6-01: the PRD's tracker statuses, in order.
+export const STATUSES = ["new", "shortlisted", "drafted", "applied", "replied", "interviewing", "offer", "rejected", "closed", "skipped"] as const;
+export type Status = (typeof STATUSES)[number];
+export type Application = {
+  id: number;
+  status: Status;
+  status_at: string;
+  applied_at: string | null;
+  snapshot: { title: string; url: string; content_hash: string } | null;
+  history: { status: Status; at: string; auto: boolean }[];
+  documents: { id: number; kind: "cv" | "letter"; sent_at: string }[];
+};
 export type Lead = {
   id: number;
   company: { name: string; track: string };
@@ -32,6 +44,8 @@ export type Lead = {
   cv_variant: string | null;
   reason_current: boolean; // false: from older inputs, shown marked until regenerated
   score_status: "scored" | "pending" | "needs_review" | "not_queued";
+  status: Status;
+  status_at: string | null;
 };
 
 export const FIT_LEVELS = ["very_strong", "strong", "good", "stretch", "no"] as const;
@@ -163,8 +177,12 @@ export type DraftDocument = { id: number; kind: "cv" | "letter"; sha256: string;
 export type Drafts = { drafts: Draft[]; evidence: Record<string, { text: string; retired: boolean }> };
 
 // post is a same-origin JSON write (ADR-0022: the API refuses anything else).
-export async function post<T>(path: string): Promise<T> {
-  const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" } });
+export async function post<T>(path: string, payload?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: payload === undefined ? undefined : JSON.stringify(payload),
+  });
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
     const err = (body as { error?: { message?: string } } | null)?.error;

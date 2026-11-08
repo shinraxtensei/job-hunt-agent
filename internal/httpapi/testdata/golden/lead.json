@@ -84,6 +84,8 @@
   ],
   "cv_variant": "BE",
   "reason_current": true,
-  "score_status": "scored"
+  "score_status": "scored",
+  "status": "new",
+  "status_at": null
 }
 

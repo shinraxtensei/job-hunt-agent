@@ -183,6 +183,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0025 | Drafts: requested through the API, made by a `tailor` work item, validated before shown | Accepted |
 | 0026 | Exported documents: immutable rows in Postgres, sent marked by the owner | Accepted |
 | 0027 | PDF export with fpdf2 and a vendored Noto Sans font; no image parsed; Python deps scanned | Accepted |
+| 0028 | Applications: one per lead group, an append-only status history, a snapshot when applied | Accepted |
 
 ## Project skills
 

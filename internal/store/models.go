@@ -14,6 +14,26 @@ type AgentPrompt struct {
 	UpdatedAt pgtype.Timestamptz
 }
 
+type Application struct {
+	ID        int64
+	CompanyID int64
+	TitleKey  string
+	PostingID int64
+	Status    string
+	StatusAt  pgtype.Timestamptz
+	AppliedAt pgtype.Timestamptz
+	Snapshot  []byte
+	CreatedAt pgtype.Timestamptz
+}
+
+type ApplicationEvent struct {
+	ID            int64
+	ApplicationID int64
+	Status        string
+	At            pgtype.Timestamptz
+	Auto          bool
+}
+
 type CollectorRun struct {
 	ID                 int64
 	StartedAt          pgtype.Timestamptz
