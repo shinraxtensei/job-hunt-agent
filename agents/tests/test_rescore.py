@@ -114,6 +114,7 @@ def test_shown_lead_is_scored(app_dsn: str, go: Go, profile_dir: Path) -> None:
     )
     assert got["extraction_prompt_version"] == 2
     assert got["not_enough_info"] is False
+    assert got["cv_variant"] == "BE"  # M4-06: chosen in code with the score (Backend Engineer)
     assert reason_item(app_dsn, posting) == "pending"
 
 

@@ -186,6 +186,7 @@ type Score struct {
 	ReasonInputs            string
 	ReasonRequestedAt       pgtype.Timestamptz
 	ScoredAt                pgtype.Timestamptz
+	CvVariant               pgtype.Text
 }
 
 type ScoreReason struct {

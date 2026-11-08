@@ -118,11 +118,12 @@ class Config(_Strict):
     bands_version: str
 
 
-SCORE_CODE = 5  # bump when scoring code changes what a score is: every lead re-scores
+SCORE_CODE = 7  # bump when scoring code changes what a score is: every lead re-scores
 # 2: skills named like the posting's company are dropped (M3-06 review)
 # 3: freshness in whole days; stored factors carry their weight (M3-08)
 # 4: the location detail names the place (M3-09)
 # 5: ... the matched location first (ADR-0023)
+# 6, 7: the CV variant is chosen with the score (M4-06)
 
 
 def _hash(v: object) -> str:
@@ -153,6 +154,8 @@ class Job:
     locations: tuple[str, ...]
     published_at: datetime | None
     matched_location: str = ""  # passed the default preset's rules (reconcile, ADR-0023)
+    role_family: str = "unknown"  # the job's facet (M2), for the CV variant (M4-06)
+    track: str = ""  # the company's track (ADR-0005)
 
 
 class Match(_Strict):
@@ -323,15 +326,15 @@ def band(points: float, b: Bands) -> FitLevel:
 
 
 JOB_SQL = """
-SELECT title, seniority, experience_min_years, workplace, remote_scopes, countries,
-       locations, published_at, matched_location
-FROM jobs WHERE posting_id = %s
+SELECT j.title, j.seniority, j.experience_min_years, j.workplace, j.remote_scopes, j.countries,
+       j.locations, j.published_at, j.matched_location, j.role_family, coalesce(c.track, '')
+FROM jobs j JOIN companies c ON c.id = j.company_id WHERE j.posting_id = %s
 """
 
 
 def job_from_row(row: tuple[Any, ...]) -> Job:
     """A row of JOB_SQL."""
-    t, sen, years, workplace, scopes, countries, locations, published, matched = row
+    t, sen, years, workplace, scopes, countries, locations, published, matched, family, track = row
     return Job(
         title=t,
         seniority=sen,
@@ -342,4 +345,6 @@ def job_from_row(row: tuple[Any, ...]) -> Job:
         locations=tuple(locations),
         published_at=published,
         matched_location=matched,
+        role_family=family,
+        track=track,
     )

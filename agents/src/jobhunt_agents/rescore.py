@@ -16,6 +16,7 @@ from jobhunt_agents.extraction import Extraction, drop_company
 from jobhunt_agents.profile import Profile
 from jobhunt_agents.reason import PROMPT_VERSION as REASON_PROMPT_VERSION
 from jobhunt_agents.score import Config, Scored, job_from_row, score
+from jobhunt_agents.variant import cv_variant
 
 # "Shown" = has an extract item: Go queues those only for leads the default preset shows.
 # ponytail: a lead hidden by a later preset change keeps its score (ADR-0021); job facet
@@ -23,7 +24,8 @@ from jobhunt_agents.score import Config, Scored, job_from_row, score
 _STALE = """
 SELECT p.id, p.content_hash, e.id, e.prompt_version, e.data, c.name,
        j.title, j.seniority, j.experience_min_years, j.workplace, j.remote_scopes,
-       j.countries, j.locations, j.published_at, j.matched_location
+       j.countries, j.locations, j.published_at, j.matched_location, j.role_family,
+       coalesce(c.track, '')
 FROM work_items w
 JOIN postings p ON p.id = w.posting_id
 JOIN jobs j ON j.posting_id = p.id
@@ -43,9 +45,10 @@ WHERE w.kind = 'extract'
 _UPSERT = """
 INSERT INTO scores (posting_id, content_hash, extraction_id, extraction_prompt_version,
     points, factors, not_enough_info, freshness, bands, weights_version, bands_version,
-    profile_version, reason_inputs)
+    profile_version, reason_inputs, cv_variant)
 VALUES (%(posting)s, %(hash)s, %(extraction)s, %(prompt)s, %(points)s, %(factors)s,
-    %(nei)s, %(freshness)s, %(bands_json)s, %(weights)s, %(bands)s, %(profile)s, %(inputs)s)
+    %(nei)s, %(freshness)s, %(bands_json)s, %(weights)s, %(bands)s, %(profile)s, %(inputs)s,
+    %(variant)s)
 ON CONFLICT (posting_id) DO UPDATE SET
     content_hash = excluded.content_hash, extraction_id = excluded.extraction_id,
     extraction_prompt_version = excluded.extraction_prompt_version,
@@ -53,7 +56,7 @@ ON CONFLICT (posting_id) DO UPDATE SET
     not_enough_info = excluded.not_enough_info, freshness = excluded.freshness,
     bands = excluded.bands, weights_version = excluded.weights_version,
     bands_version = excluded.bands_version, profile_version = excluded.profile_version,
-    reason_inputs = excluded.reason_inputs, scored_at = now()
+    reason_inputs = excluded.reason_inputs, cv_variant = excluded.cv_variant, scored_at = now()
 """
 
 # A reason is queued at once for posting content it hasn't described (a new or changed
@@ -105,7 +108,8 @@ def rescore(pool: ConnectionPool, profile: Profile, cfg: Config) -> int:
             _STALE, keys
         ).fetchall():
             e = drop_company(Extraction.model_validate(data), company)  # stored before the filter
-            s = score(e, job_from_row(tuple(job)), profile, cfg)
+            j = job_from_row(tuple(job))
+            s = score(e, j, profile, cfg)
             conn.execute(
                 _UPSERT,
                 {
@@ -122,6 +126,7 @@ def rescore(pool: ConnectionPool, profile: Profile, cfg: Config) -> int:
                     "freshness": freshness,
                     "bands_json": bands,
                     "inputs": reason_inputs(s),
+                    "variant": cv_variant(j.role_family, j.title, e.required_skills, j.track),
                 },
             )
             n += 1

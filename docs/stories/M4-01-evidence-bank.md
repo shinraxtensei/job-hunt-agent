@@ -1,6 +1,6 @@
 # M4-01: Evidence bank
 
-- **Status:** In progress
+- **Status:** Done
 - **Milestone:** M4 — Evidence bank and tailoring
 - **Linear:** [HAM-49](https://linear.app/hamid-corp/issue/HAM-49/m4-01-evidence-bank)
 - **Estimate:** 1 day

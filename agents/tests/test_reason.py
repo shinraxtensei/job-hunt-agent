@@ -90,24 +90,22 @@ def item(dsn: str, posting: int) -> tuple[str, str | None]:
     return r[0], r[1]
 
 
-# AC2: the model writes the reason and gaps from the breakdown; the CV variant comes from
-# decide(); stored as current. The model sees the breakdown and the skill levels, never
-# the posting's text.
+# AC2: the model writes the reason and gaps from the breakdown; the CV variant is the
+# score's, chosen in code (M4-06): one model call, no decide(). The model sees the
+# breakdown and the skill levels, never the posting's text.
 def test_reason_gaps_and_variant_stored(app_dsn: str, go: Go, profile_dir: Path) -> None:
     posting = scored(app_dsn, go, profile_dir)
-    provider = FakeProvider(answer(json.dumps(GOOD)), answer('{"choice": "BE"}'))
+    provider = FakeProvider(answer(json.dumps(GOOD)))
     only(app_dsn, posting)
     run_reason(app_dsn, provider)
     assert item(app_dsn, posting) == ("done", None)
     assert stored(app_dsn, posting) == (GOOD_REASON, ["Rust"], "BE", True)
-    reason_req, decide_req = provider.requests
+    [reason_req] = provider.requests
     assert "Rust: missing" in reason_req.user
     assert "PostgreSQL: proven" in reason_req.user
     assert "Backend Engineer" not in reason_req.user  # no posting text, not even the title
     assert "untrusted" in reason_req.system
-    assert "BE" in decide_req.user
     assert not reason_req.thinking
-    assert not decide_req.thinking
 
 
 # AC2: output that breaks the rules twice → needs_review; nothing stored. Here: three
@@ -193,7 +191,6 @@ def test_injection_cannot_change_score_or_reason(app_dsn: str, go: Go, profile_d
     }
     provider = FakeProvider(
         answer(json.dumps(GOOD)),  # the clean posting's item is claimed first
-        answer('{"choice": "BE"}'),
         answer(json.dumps(obey)),
         answer(json.dumps(repeat)),
     )
@@ -224,7 +221,7 @@ def test_capped_lead_breakdown_says_why(app_dsn: str, go: Go, profile_dir: Path)
     extracted(app_dsn, posting, EXTRACTION | {"remote_policy": "onsite"})
     with open_pool(app_dsn, max_size=2) as pool:
         rescore(pool, load(profile_dir), load_config())
-    provider = FakeProvider(answer(json.dumps(GOOD)), answer('{"choice": "BE"}'))
+    provider = FakeProvider(answer(json.dumps(GOOD)))
     only(app_dsn, posting)
     run_reason(app_dsn, provider)
     user = provider.requests[0].user

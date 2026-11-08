@@ -9,7 +9,7 @@ drafts something, you check every line before it is used, as with `skill_gaps.ya
 |---|---|---|---|---|
 | OI-1 | Master CV as evidence lines (**draft path chosen**: Claude drafts, you check) | `data/profile/evidence.yaml` | M4-01 | M4-02, M4-03, M4-05 |
 | OI-2 | Evidence for the 9 skills set to familiar (optional) | `data/profile/skill_map.yaml` | M4-01 | nothing |
-| OI-3 | CV-variant label for the 36 eval postings | `agents/evals/variants.yaml` | M4-06 | M4-06's measurement |
+| OI-3 | CV-variant label for the 36 eval postings (**deferred**: role-family proxy for now) | `agents/evals/variants.yaml` | M4-06 | nothing |
 | OI-4 | One-page CV layout (**defaults for now**) | `data/profile/cv_layout.yaml` | M4-02 | nothing |
 | OI-5 | Review and approve the M4 stories | this PR | all | all |
 

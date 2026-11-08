@@ -1,0 +1,114 @@
+# CV variant per eval posting (M4-06, OI-3). Label blind: this file never shows
+# the model's choice. variant: one of BE PAY DIST FS AI CONS
+#   BE backend · PAY payments/fintech · DIST distributed systems/infrastructure
+#   FS full-stack · AI AI/LLM/ML · CONS consulting or client-facing
+# note: optional, only for a close call ("PAY or BE").
+
+p3928:  # Adyen — Senior AML Compliance Data Specialist
+  variant: "?"
+  note: ""
+p4446:  # Cloudflare — Senior Customer Engineer, Majors - Southwest
+  variant: "?"
+  note: ""
+p51324:  # Doctolib — Research Scientist (x/f/m)
+  variant: "?"
+  note: ""
+p3727:  # SumUp — Senior Android Engineer- Hardware
+  variant: "?"
+  note: ""
+p4974:  # Datadog — Senior Applied Scientist
+  variant: "?"
+  note: ""
+p10495:  # Mollie — Senior UI Engineer
+  variant: "?"
+  note: ""
+p1581:  # Elastic — Senior Software Developer - Search Algorithms - Elasticsearch
+  variant: "?"
+  note: ""
+p2139:  # Canonical — Web Frontend Engineer - JS, CSS, React, Flutter
+  variant: "?"
+  note: ""
+p4067:  # Monzo — Senior Android Engineer
+  variant: "?"
+  note: ""
+p3061:  # Stripe — Managing Editor, Stripe Press
+  variant: "?"
+  note: ""
+p2071:  # Canonical — Software Engineer - Data Infrastructure - Kafka
+  variant: "?"
+  note: ""
+p51316:  # Doctolib — Senior Technical Onboarding Engineer – AI Phone Assistant (x/f/m)
+  variant: "?"
+  note: ""
+p2970:  # Stripe — Full Stack Engineer, Money as a Service
+  variant: "?"
+  note: ""
+p9115:  # Railway — Senior Full-Stack Engineer - Product
+  variant: "?"
+  note: ""
+p3968:  # Adyen — Senior Product Analyst
+  variant: "?"
+  note: ""
+p3501:  # SumUp — Backend Engineer - Run & Grow
+  variant: "?"
+  note: ""
+p4114:  # Trade Republic — Front Desk Agent
+  variant: "?"
+  note: ""
+p5732:  # Supabase — Data API Engineer
+  variant: "?"
+  note: ""
+p4216:  # GoCardless — Data Analyst II
+  variant: "?"
+  note: ""
+p4960:  # Datadog — Research Manager - Post-Training for Agents
+  variant: "?"
+  note: ""
+p3927:  # Adyen — Senior AI Research Engineer
+  variant: "?"
+  note: ""
+p2813:  # Stripe — Android BSP Engineer
+  variant: "?"
+  note: ""
+p40282:  # Jumia — Fraud Analyst - Jumia (Full Time)
+  variant: "?"
+  note: ""
+p2057:  # Canonical — Site Reliability / Gitops Engineer
+  variant: "?"
+  note: ""
+p2282:  # GitLab — Senior Frontend Engineer
+  variant: "?"
+  note: ""
+p4080:  # Monzo — Senior iOS Engineer
+  variant: "?"
+  note: ""
+p5740:  # Supabase — Software Engineer - Spark
+  variant: "?"
+  note: ""
+p1165:  # Thoughtworks — Graduate Systems Support Engineer
+  variant: "?"
+  note: ""
+p5516:  # ClickHouse — Full Stack Software Engineer - Billing Team
+  variant: "?"
+  note: ""
+p35154:  # Elastic — Senior Full Stack Engineer - Observability APM UI
+  variant: "?"
+  note: ""
+p11:  # Spotify — Backend Engineer - Data Platform
+  variant: "?"
+  note: ""
+p41589:  # GitLab — Intermediate Backend Engineer, Authorization
+  variant: "?"
+  note: ""
+p290:  # Theodo — Candidature spontanée - Theodo Maroc
+  variant: "?"
+  note: ""
+p4106:  # Trade Republic — Backend Engineer (Berlin)
+  variant: "?"
+  note: ""
+p1291:  # Elastic — Analytics Engineer, HR Analytics
+  variant: "?"
+  note: ""
+p3771:  # SumUp — Senior Software Engineer (Golang) – Pricing Domain
+  variant: "?"
+  note: ""

@@ -12,6 +12,8 @@
                     prompt's recorded run (or the labels); job facets from DATABASE_URL.
                     No model call.
     reasons         the reason agent over all 36 and the fixtures, real model (M3-06)
+    variants [init] the owner's blind CV-variant labels (variants.yaml) against the
+                    latest recorded reasons run; init writes the blank file (M4-06)
     replay          re-score recorded runs; no network (CI)
 
 Environment: DATABASE_URL (app role on the local stack), JOBHUNT_API_URL (default
@@ -39,6 +41,7 @@ from jobhunt_agents.evals.data import EvalSet, Item, Lead, sample
 from jobhunt_agents.evals.fit import Agreement, fit_bands
 from jobhunt_agents.evals.label import label_extraction, label_fit, prefill_all
 from jobhunt_agents.evals.report import format_report, load_thresholds, replay, run_live, score_run
+from jobhunt_agents.evals.variants import init_file, load_labels, model_choices, report
 from jobhunt_agents.extract import AGENT, MAX_TOKENS, Extractor
 from jobhunt_agents.extraction import Extraction, drop_company
 from jobhunt_agents.model import (
@@ -67,6 +70,7 @@ from jobhunt_agents.score import (
     total,
 )
 from jobhunt_agents.text import language
+from jobhunt_agents.variant import cv_variant, proxy_variant
 
 REAL_ITEMS = 36  # plus one fixture per injection: 40 in all
 SEED = 20261105
@@ -247,7 +251,7 @@ def _reason_one(
     try:
         r = reasoner.reason(factors, sc.not_enough_info, cfg.weights.model_dump(), capped=sc.capped)
         rec |= {"reason": r.reason, "gaps": r.gaps[:5]}
-        rec["cv_variant"] = reasoner.variant(job.title, e.model_dump(), None)
+        rec["cv_variant"] = cv_variant(job.role_family, job.title, e.required_skills, job.track)
     except NeedsReview as err:
         rec["needs_review"] = type(err).__name__
     return rec
@@ -319,6 +323,39 @@ def cmd_reasons(s: EvalSet) -> int:
     return 1 if failed else 0
 
 
+def cmd_variants(s: EvalSet, *, init: bool) -> int:
+    """`make evals-variants [SET=init]` (M4-06): labels (or the role-family proxy) against
+    decide()'s recorded choices and the code rule. No model call."""
+    path = s.dir / "variants.yaml"
+    if init:
+        init_file(s, path)
+        print(f"wrote {path}: one blank answer per posting; label them, then run without init")
+        return 0
+    labels = load_labels(path) if path.exists() else {}
+    real = [i for i in s.items() if i.fixture_of is None]
+    if not labels or any(v == "?" for v in labels.values()):
+        # OI-3 deferred (owner, 2026-11-08): the fit labels' role family stands in.
+        labels = {i.id: proxy_variant(i.role_family) for i in real}
+        print("labels: PROXY from the eval set's role families (OI-3 not given yet)")
+    runs = sorted((s.dir / "private").glob("reasons-v*.json"), key=lambda p: int(p.stem[9:]))
+    if runs:
+        print(f"\ndecide() as recorded in {runs[-1].name}:")
+        print(report(labels, model_choices(runs[-1])).format())
+    outputs = json.loads((s.dir / "runs" / f"{FIT_RUN}.json").read_text())["outputs"]
+    code: dict[str, str] = {}
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        for i in real:
+            row = conn.execute(JOB_SQL, (i.posting_id,)).fetchone()
+            if row is None or i.id not in outputs:
+                continue
+            j = job_from_row(row)
+            skills = Extraction.model_validate(outputs[i.id]["extraction"]).required_skills
+            code[i.id] = cv_variant(j.role_family, j.title, skills, j.track)
+    print("\nthe code rule (variant.py):")
+    print(report(labels, code).format())
+    return 0
+
+
 RUN_LIMIT_USD = Decimal("0.20")  # one eval run; the story's total budget is $0.50
 
 
@@ -374,7 +411,7 @@ def cmd_run(s: EvalSet, subset: str, version: int) -> int:
     return 0
 
 
-def main(argv: list[str]) -> int:
+def main(argv: list[str]) -> int:  # noqa: PLR0911 - one return per command
     s = EvalSet(Path(os.environ.get("EVALS_DIR", "evals")))
     match argv:
         case ["sample"]:
@@ -394,6 +431,8 @@ def main(argv: list[str]) -> int:
             return cmd_fit(s, subset, "labels" if rest else "run")
         case ["reasons"]:
             return cmd_reasons(s)
+        case ["variants", *rest] if rest in ([], ["init"]):
+            return cmd_variants(s, init=bool(rest))
         case ["replay"]:
             return replay(
                 s, s.dir / "runs", thresholds=load_thresholds(s.dir), show=print, skills=_skills()

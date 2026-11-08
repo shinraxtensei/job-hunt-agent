@@ -107,9 +107,14 @@ func applyScore(l *Lead, r store.ListLeadScoresRow, now time.Time) error {
 		l.Breakdown = append(l.Breakdown, Factor{k, x.Weight, round2(x.Value), round1(x.Weight * x.Value), x.Detail})
 	}
 	l.Breakdown = append(l.Breakdown, Factor{"freshness", fp.Weight, round2(f), round1(fp.Weight * f), ""})
+	switch { // M4-06: the variant chosen with the score; the reason's for older rows
+	case r.ScoreVariant.Valid:
+		l.CVVariant = &r.ScoreVariant.String
+	case r.CvVariant.Valid:
+		l.CVVariant = &r.CvVariant.String
+	}
 	if r.Reason.Valid {
 		l.Reason = &r.Reason.String
-		l.CVVariant = &r.CvVariant.String
 		if err := json.Unmarshal(r.Gaps, &l.Gaps); err != nil {
 			return fmt.Errorf("decoding gaps of posting %d: %w", l.ID, err)
 		}

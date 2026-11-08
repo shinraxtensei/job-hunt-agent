@@ -1,5 +1,5 @@
 """The reason agent (M3-06 AC2, ADR-0021): a reason of at most two sentences and the gaps,
-from the coded breakdown only, plus the CV variant through decide().
+from the coded breakdown only. The CV variant is the score's, chosen in code (M4-06).
 
 The model never sees the posting's text: only factor values, the profile's level for each
 skill the extraction named, and (for decide) the title and skill names. Its output can't
@@ -15,7 +15,6 @@ from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from jobhunt_agents.aliases import canon
-from jobhunt_agents.extraction import Extraction, drop_company
 from jobhunt_agents.model import MODEL, ModelClient, Prompt
 from jobhunt_agents.queue import Handler, Item, ItemError
 from jobhunt_agents.score import Config, load_config
@@ -23,12 +22,6 @@ from jobhunt_agents.score import Config, load_config
 AGENT = "reason"
 PROMPT_VERSION = 3  # bump with a new prompts/reason/vN.md; leads regenerate when opened
 MAX_TOKENS = 400
-VARIANTS = ["BE", "PAY", "DIST", "FS", "AI", "CONS"]
-VARIANT_QUESTION = (
-    "Which CV variant fits this job best? BE: backend engineering. PAY: payments and "
-    "fintech. DIST: distributed systems and infrastructure. FS: full-stack. AI: AI, LLM "
-    "and ML engineering. CONS: consulting or client-facing engineering."
-)
 _LABELS = {
     "required": "required skills",
     "title": "title match",
@@ -170,21 +163,11 @@ class Reasoner:
             thinking=False,  # a short answer; thinking used whole budgets in evals
         )
 
-    def variant(self, title: str, extraction: dict[str, Any], posting_id: int | None) -> str:
-        context = (
-            f"Title: {title}\nRequired skills: {', '.join(extraction['required_skills'])}\n"
-            f"Optional skills: {', '.join(extraction['optional_skills'])}"
-        )
-        return self.client.decide(VARIANT_QUESTION, VARIANTS, context, posting_id=posting_id)
-
 
 _LOAD = """
-SELECT s.content_hash, s.factors, s.not_enough_info, s.reason_inputs, j.title, e.data, c.name,
-       s.bands
+SELECT s.content_hash, s.factors, s.not_enough_info, s.reason_inputs, s.bands,
+       coalesce(s.cv_variant, 'BE')
 FROM scores s
-JOIN jobs j ON j.posting_id = s.posting_id
-JOIN companies c ON c.id = j.company_id
-JOIN extractions e ON e.id = s.extraction_id
 WHERE s.posting_id = %s
 """
 
@@ -210,12 +193,10 @@ def handler(pool: ConnectionPool, reasoner: Reasoner, cfg: Config | None = None)
             row = conn.execute(_LOAD, (item.posting_id,)).fetchone()
         if row is None:
             raise ItemError("no score for this posting")
-        content_hash, factors, nei, inputs, title, data, company, bands = row
+        content_hash, factors, nei, inputs, bands, variant = row  # variant: the score's (M4-06)
         loc = factors["location"]
         capped = loc["weight"] * loc["value"] < bands.get("location_gate", 0)  # as score.capped
-        extraction = drop_company(Extraction.model_validate(data), company).model_dump()
         got = reasoner.reason(factors, nei, weights, item.posting_id, capped=capped)
-        variant = reasoner.variant(title, extraction, item.posting_id)
         with pool.connection() as conn:
             conn.execute(
                 _STORE,

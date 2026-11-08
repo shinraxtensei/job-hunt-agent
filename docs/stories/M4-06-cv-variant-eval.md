@@ -1,6 +1,6 @@
 # M4-06: Measure the CV-variant choice
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M4 — Evidence bank and tailoring
 - **Linear:** [HAM-54](https://linear.app/hamid-corp/issue/HAM-54/m4-06-measure-the-cv-variant-choice)
 - **Estimate:** ½ day
@@ -16,6 +16,19 @@ M3-06 picks a variant per lead with `decide()`. In the 509-lead run it chose DIS
 times, against 88 BE, 71 CONS, 66 AI, 56 PAY and 55 FS. That looks skewed for a backend
 profile. M4-02 starts each draft from the lead's variant, so it must be measured first.
 Roadmap follow-up from M3.
+
+## Decision (owner, 2026-11-08)
+
+OI-3 is deferred: the owner's fit labels' role families stand in as labels, and the DIST
+skew is fixed in code.
+- `variant.py` chooses the variant from the role family, the title, the extracted
+  skills and the company's track. The order is payments, AI, client-facing,
+  full-stack, distributed, then backend.
+- It replaces the `decide()` call: one model call less per reason, and deterministic.
+- It is stored on `scores.cv_variant` and computed by the free re-score.
+
+AC2 and AC3 below are kept for when OI-3 arrives; `make evals-variants` already uses
+the owner's file when it has answers.
 
 ## Owner input
 
