@@ -800,7 +800,9 @@ func TestDocumentPDF(t *testing.T) {
 // forgetApplications removes what M6 tests create, so other tests see every lead as new.
 const forgetApplications = `WITH a AS (SELECT id FROM applications),
 	e AS (DELETE FROM application_events WHERE application_id IN (SELECT id FROM a)),
-	s AS (DELETE FROM skips WHERE application_id IN (SELECT id FROM a))
+	s AS (DELETE FROM skips WHERE application_id IN (SELECT id FROM a)),
+	n AS (DELETE FROM notes WHERE application_id IN (SELECT id FROM a)),
+	c AS (DELETE FROM contacts WHERE application_id IN (SELECT id FROM a))
 	DELETE FROM applications`
 
 func postJSON(h http.Handler, path, body, site string) *httptest.ResponseRecorder {
@@ -1020,5 +1022,95 @@ func TestSkip(t *testing.T) {
 	postJSON(h, "/api/leads/9001/status", `{"status":"new"}`, "")
 	if !slices.Contains(ids(""), 9001) {
 		t.Error("undo should show the lead again")
+	}
+}
+
+// M6-03 AC1-AC3: notes are dated, editable and deletable; contacts are checked (format
+// only) and kept with the application; a note on a new lead keeps it new; neither a note
+// nor a contact reaches the log.
+func TestNotesAndContacts(t *testing.T) {
+	db := world(t)
+	var logs bytes.Buffer
+	h := httpapi.New(db, "../../data/presets", "test-sha", func() time.Time { return now },
+		slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() {
+		if _, err := db.Exec(context.Background(), forgetApplications); err != nil {
+			t.Error(err)
+		}
+	})
+	type view struct {
+		Application *struct {
+			Status   string            `json:"status"`
+			Notes    []httpapi.Note    `json:"notes"`
+			Contacts []httpapi.Contact `json:"contacts"`
+		} `json:"application"`
+	}
+	do := func(method, path, body string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec
+	}
+	const secret = "Recruiter said the salary band is SECRET-NOTE-42"
+	for _, c := range []struct {
+		method, path, body string
+		want               int
+	}{
+		{"POST", "/api/leads/9006/notes", `{"body":"  "}`, http.StatusBadRequest},
+		{"POST", "/api/leads/9006/notes", `{"body":"` + strings.Repeat("x", 5001) + `"}`, http.StatusBadRequest},
+		{"POST", "/api/leads/99999/notes", `{"body":"x"}`, http.StatusNotFound},
+		{"POST", "/api/leads/9006/notes", `{"body":"SECRET-NOTE-42 \u0000"}`, http.StatusInternalServerError}, // Postgres refuses NUL: the error is logged
+		{"POST", "/api/leads/9006/notes", `{"body":"first"}`, http.StatusCreated},
+		{"POST", "/api/leads/9006/notes", `{"body":"` + secret + `"}`, http.StatusCreated},
+		{"POST", "/api/notes/99999", `{"body":"x"}`, http.StatusNotFound},
+		{"DELETE", "/api/notes/99999", ``, http.StatusNotFound},
+		{"POST", "/api/leads/9006/contacts", `{"name":""}`, http.StatusBadRequest},
+		{"POST", "/api/leads/9006/contacts", `{"name":"Ann","email":"not an email"}`, http.StatusBadRequest},
+		{"POST", "/api/leads/9006/contacts", `{"name":"Ann","email":"Ann <ann@x.test>"}`, http.StatusBadRequest},
+		{"POST", "/api/leads/9006/contacts", `{"name":"Ann","linkedin":"javascript:alert(1)"}`, http.StatusBadRequest},
+		{"POST", "/api/leads/9006/contacts", `{"name":"Ann","linkedin":"http://linkedin.com/in/ann"}`, http.StatusBadRequest},
+		{"POST", "/api/leads/9006/contacts", `{"name":"Ann","linkedin":"https://linkedin.com.evil.test/in/ann"}`, http.StatusBadRequest},
+		{"POST", "/api/leads/9006/contacts", `{"name":"Ann","phone":"call me"}`, http.StatusBadRequest},
+		{"POST", "/api/leads/9006/contacts", `{"name":"Ann","id":5}`, http.StatusBadRequest},
+		{"POST", "/api/leads/9006/contacts", `{"name":"Ann Smith","role":"Recruiter","email":"ann.secret@x.test","linkedin":"https://www.linkedin.com/in/ann","phone":"+212 600-000000"}`, http.StatusCreated},
+	} {
+		if rec := do(c.method, c.path, c.body); rec.Code != c.want {
+			t.Errorf("%s %s %.40s: %d %s", c.method, c.path, c.body, rec.Code, rec.Body)
+		}
+	}
+	var v view
+	getJSON(t, h, "/api/leads/9006/application", &v)
+	a := v.Application
+	if a == nil || a.Status != "new" || len(a.Notes) != 2 || a.Notes[0].Body != secret || len(a.Contacts) != 1 {
+		t.Fatalf("application: %+v", a)
+	}
+	if c := a.Contacts[0]; c.Name != "Ann Smith" || c.Email != "ann.secret@x.test" || c.LinkedIn != "https://www.linkedin.com/in/ann" {
+		t.Errorf("contact: %+v", c)
+	}
+	first, contact := a.Notes[1].ID, a.Contacts[0].ID
+	if rec := do("POST", fmt.Sprintf("/api/notes/%d", first), `{"body":"first, edited"}`); rec.Code != http.StatusOK {
+		t.Errorf("edit note: %d", rec.Code)
+	}
+	if rec := do("POST", fmt.Sprintf("/api/contacts/%d", contact), `{"name":"Ann Smith","role":"Hiring manager"}`); rec.Code != http.StatusOK {
+		t.Errorf("edit contact: %d %s", rec.Code, rec.Body)
+	}
+	if rec := do("DELETE", fmt.Sprintf("/api/notes/%d", a.Notes[0].ID), ``); rec.Code != http.StatusOK {
+		t.Errorf("delete note: %d", rec.Code)
+	}
+	getJSON(t, h, "/api/leads/9006/application", &v)
+	a = v.Application
+	if len(a.Notes) != 1 || a.Notes[0].Body != "first, edited" || a.Notes[0].EditedAt == nil ||
+		a.Contacts[0].Role != "Hiring manager" || a.Contacts[0].Email != "" {
+		t.Errorf("after edits: %+v", a)
+	}
+	if rec := do("DELETE", fmt.Sprintf("/api/contacts/%d", contact), ``); rec.Code != http.StatusOK {
+		t.Errorf("delete contact: %d", rec.Code)
+	}
+	if !strings.Contains(logs.String(), "request failed") {
+		t.Fatal("the failing request should have been logged")
+	}
+	if strings.Contains(logs.String(), "SECRET-NOTE-42") || strings.Contains(logs.String(), "ann.secret") {
+		t.Error("a note or a contact reached the log")
 	}
 }

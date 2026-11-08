@@ -1029,3 +1029,28 @@ dialog[open] {
   border-color: var(--text);
   font-weight: 600;
 }
+
+/* M6-03 */
+.notes textarea {
+  width: 100%;
+  max-width: 40rem;
+  font: inherit;
+}
+.note-body {
+  margin: var(--space-1) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.contact-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: end;
+}
+.notes li {
+  overflow-wrap: anywhere;
+}
+.mini-head {
+  margin: var(--space-3) 0 var(--space-1);
+  font-weight: 600;
+}

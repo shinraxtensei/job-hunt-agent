@@ -21,6 +21,8 @@ const APPLICATION = {
       { status: "shortlisted", at: "2026-11-02T09:00:00Z", auto: false },
     ],
     documents: [{ id: 9201, kind: "cv", sent_at: "2026-11-03T08:55:00Z" }],
+    notes: [{ id: 1, body: "Call went well <b>really</b>\nNext: tech round", created_at: "2026-11-04T10:00:00Z", edited_at: null }],
+    contacts: [{ id: 1, name: "Ann Smith", role: "Recruiter", email: "ann@example.com", linkedin: "https://www.linkedin.com/in/ann", phone: "" }],
   },
 };
 
@@ -30,7 +32,7 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
     if (route.request().method() === "POST" && /^\/api\/leads\/\d+\/reason$/.test(path)) {
       return route.fulfill({ status: 202, contentType: "application/json", body: '{"requested":true}' });
     }
-    if (route.request().method() === "POST" && /^\/api\/(leads\/\d+\/(draft|status|skip)|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent)$/.test(path)) {
+    if (["POST", "DELETE"].includes(route.request().method()) && /^\/api\/(leads\/\d+\/(draft|status|skip|notes|contacts)|notes\/\d+|contacts\/\d+|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent)$/.test(path)) {
       return route.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' });
     }
     const body =
@@ -190,6 +192,17 @@ for (const width of [375, 1280]) {
         await expect(app.getByText(/Drafted ·.*· automatic/)).toBeVisible();
         await noHorizontalScroll(page);
         await noAxeViolations(page);
+        // M6-03: notes and contacts as text (markup inert, addresses not links); adding sends JSON
+        await expect(app.getByText("Call went well <b>really</b>", { exact: false })).toBeVisible();
+        await expect(app.getByRole("region", { name: "Contacts" }).getByRole("link")).toHaveCount(0);
+        const note = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9001/notes"));
+        await app.getByLabel("New note").fill("Sent the take-home");
+        await app.getByRole("button", { name: "Add note" }).click();
+        expect((await note).postDataJSON()).toEqual({ body: "Sent the take-home" });
+        page.once("dialog", (d) => void d.accept());
+        const del = page.waitForRequest((r) => r.method() === "DELETE" && r.url().endsWith("/api/contacts/1"));
+        await app.getByRole("region", { name: "Contacts" }).getByRole("button", { name: "Delete" }).click();
+        await del;
         const sent = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9001/status"));
         await app.getByLabel("Status").selectOption("interviewing");
         const req = await sent;
@@ -210,7 +223,7 @@ for (const width of [375, 1280]) {
         const panel = page.getByRole("region", { name: "Application" });
         const skip = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/skip"));
         app = JSON.stringify({
-          application: { id: 2, status: "skipped", status_at: "2026-11-08T10:00:00Z", applied_at: null, snapshot: null, history: [{ status: "skipped", at: "2026-11-08T10:00:00Z", auto: false }], documents: [] },
+          application: { id: 2, status: "skipped", status_at: "2026-11-08T10:00:00Z", applied_at: null, snapshot: null, history: [{ status: "skipped", at: "2026-11-08T10:00:00Z", auto: false }], documents: [], notes: [], contacts: [] },
         });
         await panel.getByRole("button", { name: "Skip" }).click();
         expect((await skip).postDataJSON()).toEqual({});

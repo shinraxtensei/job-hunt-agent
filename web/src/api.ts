@@ -12,7 +12,25 @@ export type Application = {
   snapshot: { title: string; url: string; content_hash: string } | null;
   history: { status: Status; at: string; auto: boolean }[];
   documents: { id: number; kind: "cv" | "letter"; sent_at: string }[];
+  notes: Note[];
+  contacts: Contact[];
 };
+// M6-03: the owner's notes; contacts are other people's data (never logged or exported).
+export type Note = { id: number; body: string; created_at: string; edited_at: string | null };
+export type Contact = { id: number; name: string; role: string; email: string; linkedin: string; phone: string };
+
+// send is a same-origin JSON write with any method (ADR-0022).
+export async function send(method: "POST" | "DELETE", path: string, payload?: unknown): Promise<void> {
+  const res = await fetch(path, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: payload === undefined ? undefined : JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+    throw new Error(body?.error?.message ?? `HTTP ${res.status}`);
+  }
+}
 export type Lead = {
   id: number;
   company: { name: string; track: string };

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { STATUSES, get, post, type Application, type Lead, type Status } from "./api";
 import { label } from "./labels";
+import { NotesAndContacts } from "./Notes";
 import { ExternalLink } from "./safe";
 
 // OI-16's skip reasons, in the order offered.
@@ -95,6 +96,8 @@ export function ApplicationPanel({ lead, onStatus }: { lead: Lead; onStatus?: (s
           {error}
         </p>
       )}
+      {/* a lead that never left `new` has no application yet: a note starts one (M6-03) */}
+      {app === null && <NotesAndContacts leadId={lead.id} notes={[]} contacts={[]} reload={load} />}
       {app && (
         <>
           {app.snapshot && (
@@ -116,6 +119,7 @@ export function ApplicationPanel({ lead, onStatus }: { lead: Lead; onStatus?: (s
               ))}
             </p>
           )}
+          <NotesAndContacts leadId={lead.id} notes={app.notes} contacts={app.contacts} reload={load} />
           <details className="history">
             <summary>History ({app.history.length})</summary>
             <ol>

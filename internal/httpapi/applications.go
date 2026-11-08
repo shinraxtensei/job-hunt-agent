@@ -121,6 +121,11 @@ func (a *api) application(w http.ResponseWriter, r *http.Request) {
 		a.fail(w, r, err)
 		return
 	}
+	notes, contacts, err := a.notesAndContacts(r, app.ID)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
 	out := struct {
 		ID        int64           `json:"id"`
 		Status    string          `json:"status"`
@@ -129,8 +134,10 @@ func (a *api) application(w http.ResponseWriter, r *http.Request) {
 		Snapshot  json.RawMessage `json:"snapshot"` // posting text: untrusted, JSON-encoded only
 		History   []Event         `json:"history"`
 		Documents []SentDocument  `json:"documents"`
+		Notes     []Note          `json:"notes"`    // M6-03
+		Contacts  []Contact       `json:"contacts"` // M6-03: personal data, never logged
 	}{ID: app.ID, Status: app.Status, StatusAt: app.StatusAt.Time.UTC(), Snapshot: raw(app.Snapshot),
-		History: []Event{}, Documents: []SentDocument{}}
+		History: []Event{}, Documents: []SentDocument{}, Notes: notes, Contacts: contacts}
 	if app.AppliedAt.Valid {
 		t := app.AppliedAt.Time.UTC()
 		out.AppliedAt = &t

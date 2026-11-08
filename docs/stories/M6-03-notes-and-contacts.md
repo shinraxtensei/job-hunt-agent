@@ -1,6 +1,6 @@
 # M6-03: Notes and contacts
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M6 — Full tracker
 - **Linear:** [HAM-61](https://linear.app/hamid-corp/issue/HAM-61/m6-03-notes-and-contacts)
 - **Estimate:** 1 day
@@ -29,6 +29,19 @@ PRD: "notes, contacts". Contacts are other people's personal data (OI-14).
    **When** anything is logged, sent to a model or exported
    **Then** neither is included: they never leave the database (test on the model
    client's requests and the logs).
+
+## Results (2026-11-08)
+
+- `notes` and `contacts` tables. Notes can be added, edited (the edit time is kept) and
+  deleted with a confirmation. Contact fields are checked for format only: email,
+  `https://` LinkedIn hosts only, a phone number. Addresses are shown as text, not links.
+- **Decision:** a note or contact on a lead still at `new` creates its application at
+  `new`, with no status event. ADR-0028 created it only when the lead left `new`; this
+  just adds a place to hang the note.
+- AC3: a Go test forces a database error on a request carrying a planted note, then
+  checks the log has the failure but not the note or the contact. A Python test checks no
+  agent code reads `notes` or `contacts`, so neither can reach a model.
+- Each check was broken on purpose and its test seen to fail.
 
 ## Out of scope
 

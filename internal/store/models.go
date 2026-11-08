@@ -68,6 +68,17 @@ type Company struct {
 	Active    bool
 }
 
+type Contact struct {
+	ID            int64
+	ApplicationID int64
+	Name          string
+	Role          string
+	Email         string
+	Linkedin      string
+	Phone         string
+	CreatedAt     pgtype.Timestamptz
+}
+
 type Document struct {
 	ID              int64
 	DraftID         int64
@@ -204,6 +215,14 @@ type ModelCall struct {
 	LatencyMs                int32
 	Outcome                  string
 	PostingID                pgtype.Int8
+}
+
+type Note struct {
+	ID            int64
+	ApplicationID int64
+	Body          string
+	CreatedAt     pgtype.Timestamptz
+	EditedAt      pgtype.Timestamptz
 }
 
 type Posting struct {
