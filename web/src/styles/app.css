@@ -1082,3 +1082,67 @@ dialog[open] {
   gap: var(--space-2);
   align-items: center;
 }
+
+/* M6-02: the board; columns side by side on wide screens, a list by status on phones */
+.board-wrap {
+  padding: var(--space-3) var(--space-4);
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); /* wraps: never a side scroll */
+  gap: var(--space-3);
+}
+.column {
+  min-height: 8rem;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius, 8px);
+}
+.column.over {
+  border-color: var(--text);
+}
+.column h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 0.9rem;
+}
+.column .count {
+  color: var(--muted);
+  font-weight: 400;
+}
+.card {
+  margin-bottom: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius, 8px);
+  cursor: grab;
+  overflow-wrap: anywhere;
+}
+.card p {
+  margin: 0 0 var(--space-1);
+}
+/* the theme's colours: a native control's default background fails contrast in dark mode */
+.card select,
+.field input,
+.notes textarea {
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+}
+.card select,
+.field input {
+  height: 30px;
+  padding: 0 var(--space-2);
+}
+.due {
+  font-weight: 600;
+}
+@media (max-width: 767px) {
+  .board {
+    grid-template-columns: 1fr;
+  }
+  .column {
+    min-height: 0;
+  }
+}

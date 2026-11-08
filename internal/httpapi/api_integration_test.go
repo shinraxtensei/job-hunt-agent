@@ -1189,3 +1189,33 @@ func TestFollowups(t *testing.T) {
 		t.Error("a reply ends the reminder")
 	}
 }
+
+// M6-02 AC1: the board has every lead that left new (whatever the presets say), newest
+// status first, with fit and a due follow-up marked.
+func TestBoard(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	t.Cleanup(func() {
+		if _, err := db.Exec(context.Background(), forgetApplications); err != nil {
+			t.Error(err)
+		}
+	})
+	var v struct{ Cards []httpapi.Card }
+	getJSON(t, h, "/api/board", &v)
+	if len(v.Cards) != 0 {
+		t.Fatalf("no application yet: %+v", v.Cards)
+	}
+	postJSON(h, "/api/leads/9006/status", `{"status":"applied"}`, "")
+	if _, err := db.Exec(t.Context(), `UPDATE applications SET applied_at = $1 WHERE posting_id = 9006`, now.AddDate(0, 0, -9)); err != nil {
+		t.Fatal(err)
+	}
+	postJSON(h, "/api/leads/9001/status", `{"status":"interviewing"}`, "")
+	if rec := postJSON(h, "/api/leads/9004/notes", `{"body":"x"}`, ""); rec.Code != http.StatusCreated { // a note alone (status new) keeps a lead off the board
+		t.Fatalf("note: %d", rec.Code)
+	}
+	getJSON(t, h, "/api/board", &v)
+	if len(v.Cards) != 2 || v.Cards[0].LeadID != 9001 || v.Cards[0].Status != "interviewing" ||
+		v.Cards[1].LeadID != 9006 || !v.Cards[1].FollowupDue || v.Cards[0].FollowupDue || v.Cards[0].FitLevel == nil {
+		t.Errorf("board: %+v", v.Cards)
+	}
+}

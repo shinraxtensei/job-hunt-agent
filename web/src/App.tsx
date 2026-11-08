@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { apiQuery, get, type Facets, type Lead, type Page, type Presets } from "./api";
+import { Board } from "./Board";
 import { FilterSheet } from "./FilterSheet";
 import { Followups } from "./Followups";
 import { applied } from "./filters";
@@ -72,6 +73,7 @@ export function App() {
   const helpRef = useRef<HTMLDialogElement>(null);
 
   const hidden = params.get("view") === "hidden";
+  const board = params.get("view") === "board"; // M6-02
   const key = withParam(params, "q", null).toString(); // q is searched here, not by the API
   const now = useMemo(() => (data ? Date.now() : 0), [data]); // "now" is when the data arrived
 
@@ -292,7 +294,7 @@ export function App() {
           </button>
         </div>
         <div className="nav">
-          <a href={`?${view(null)}`} onClick={follow(view(null))} aria-current={!hidden ? "page" : undefined} aria-label={rail ? "Shown" : undefined}>
+          <a href={`?${view(null)}`} onClick={follow(view(null))} aria-current={!hidden && !board ? "page" : undefined} aria-label={rail ? "Shown" : undefined}>
             <Icon name="inbox" />
             <span className="nav-label">Shown</span>
             <span className="nav-count">{data && !hidden ? num.format(data.total) : data ? num.format(data.otherTotal) : ""}</span>
@@ -315,6 +317,10 @@ export function App() {
             <Icon name="hidden" />
             <span className="nav-label">Hidden by filters</span>
             <span className="nav-count">{data ? num.format(hidden ? data.total : data.otherTotal) : ""}</span>
+          </a>
+          <a href="?view=board" onClick={follow(new URLSearchParams("view=board"))} aria-current={board ? "page" : undefined} aria-label={rail ? "Board" : undefined}>
+            <Icon name="preset" />
+            <span className="nav-label">Board</span>
           </a>
           <div className="nav-section">Presets</div>
           {[...presets.filter((p) => p.preset).map((p) => p.id), "none"].map((id) => {
@@ -388,28 +394,32 @@ export function App() {
           )}
         </div>
 
-        <Body
-          data={data}
-          error={error}
-          hidden={hidden}
-          query={query}
-          visible={ordered}
-          byScore={byScore}
-          now={now}
-          focus={focus}
-          setFocus={setFocus}
-          expanded={expanded}
-          toggle={toggle}
-          rows={rows}
-          retry={() => setAttempt((a) => a + 1)}
-          reset={reset}
-          showHidden={follow(view("hidden"))}
-          showShown={follow(view(null))}
-          hiddenHref={`?${view("hidden")}`}
-          shownHref={`?${view(null)}`}
-          clearSearch={() => setQuery("")}
-          loadMore={loadMore}
-        />
+        {board ? (
+          <Board />
+        ) : (
+          <Body
+            data={data}
+            error={error}
+            hidden={hidden}
+            query={query}
+            visible={ordered}
+            byScore={byScore}
+            now={now}
+            focus={focus}
+            setFocus={setFocus}
+            expanded={expanded}
+            toggle={toggle}
+            rows={rows}
+            retry={() => setAttempt((a) => a + 1)}
+            reset={reset}
+            showHidden={follow(view("hidden"))}
+            showShown={follow(view(null))}
+            hiddenHref={`?${view("hidden")}`}
+            shownHref={`?${view(null)}`}
+            clearSearch={() => setQuery("")}
+            loadMore={loadMore}
+          />
+        )}
       </main>
 
       <FilterSheet

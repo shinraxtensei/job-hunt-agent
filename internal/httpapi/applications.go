@@ -151,3 +151,45 @@ func (a *api) application(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"application": out})
 }
+
+// Card is one application on the board (M6-02).
+type Card struct {
+	LeadID      int64     `json:"lead_id"`
+	Company     string    `json:"company"`
+	Title       string    `json:"title"`
+	FitLevel    *string   `json:"fit_level"`
+	Status      string    `json:"status"`
+	StatusAt    time.Time `json:"status_at"`
+	FollowupDue bool      `json:"followup_due"`
+}
+
+// board lists every lead that left `new` (M6-02), whatever the presets say, newest status
+// first, with whether its follow-up is due (M6-04).
+func (a *api) board(w http.ResponseWriter, r *http.Request) {
+	all, err := a.load(r.Context())
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	now := a.now()
+	due, err := a.q.ListFollowups(r.Context(), store.ListFollowupsParams{
+		DueBefore: ts(now.AddDate(0, 0, -FollowupDays)), AtTime: ts(now)})
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	followup := map[int64]bool{}
+	for _, f := range due {
+		followup[f.PostingID] = true
+	}
+	cards := []Card{}
+	for _, l := range all {
+		if l.Status == "new" || l.StatusAt == nil {
+			continue
+		}
+		cards = append(cards, Card{LeadID: l.ID, Company: l.Company.Name, Title: l.Title, FitLevel: l.FitLevel,
+			Status: l.Status, StatusAt: *l.StatusAt, FollowupDue: followup[l.ID]})
+	}
+	slices.SortFunc(cards, func(x, y Card) int { return y.StatusAt.Compare(x.StatusAt) })
+	writeJSON(w, http.StatusOK, map[string]any{"cards": cards})
+}

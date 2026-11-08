@@ -26,6 +26,15 @@ const APPLICATION = {
   },
 };
 
+// M6-02: three applications; the rejected one sits in Done; one follow-up is due.
+const BOARD = {
+  cards: [
+    { lead_id: 9001, company: "Acme", title: "Senior Backend Engineer", fit_level: "strong", status: "applied", status_at: "2026-10-25T09:00:00Z", followup_due: true },
+    { lead_id: 9006, company: "Brick", title: "Mobile <b>Engineer</b>", fit_level: null, status: "interviewing", status_at: "2026-11-01T09:00:00Z", followup_due: false },
+    { lead_id: 9003, company: "Gone", title: "Data Engineer", fit_level: "good", status: "rejected", status_at: "2026-10-20T09:00:00Z", followup_due: false },
+  ],
+};
+
 async function mockAPI(page: Page, leads = golden("leads_default")) {
   await page.route("**/api/**", (route) => {
     const path = new URL(route.request().url()).pathname;
@@ -47,6 +56,7 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
       : path === "/api/facets" ? golden("facets_default")
       : path === "/api/presets" ? golden("presets")
       : path === "/api/followups" ? '{"followups":[]}'
+      : path === "/api/board" ? JSON.stringify(BOARD)
       : path.endsWith("/members") ? golden("members")
       : null;
     return body
@@ -267,6 +277,26 @@ for (const width of [375, 1280]) {
         const snooze = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/applications/7/followup"));
         await due.getByRole("button", { name: "Snooze 3 days" }).click();
         expect((await snooze).postDataJSON()).toEqual({ action: "snooze", days: 3 });
+      });
+
+      // M6-02: applications by status; a card moves with its menu (keyboard) or by drag and
+      // drop, both through the status endpoint; at 375 px the columns stack, no side scroll.
+      test("the board moves an application", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/?view=board");
+        const applied = page.getByRole("region", { name: /^Applied/ });
+        await expect(applied.locator(".card-title")).toHaveText("Acme · Senior Backend Engineer");
+        await expect(applied.getByText("Follow-up due", { exact: false })).toBeVisible();
+        await expect(page.getByRole("region", { name: /^Interviewing/ }).locator(".card-title")).toHaveText("Brick · Mobile <b>Engineer</b>");
+        await expect(page.getByRole("region", { name: /^Done/ }).locator(".card .cv-dates")).toContainText("Rejected");
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+        const menu = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9001/status"));
+        await page.getByLabel("Move Acme Senior Backend Engineer to").selectOption("replied");
+        expect((await menu).postDataJSON()).toEqual({ status: "replied" });
+        const dragged = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/status"));
+        await page.locator(".card", { hasText: "Brick" }).dragTo(page.getByRole("region", { name: /^Offer/ }));
+        expect((await dragged).postDataJSON()).toEqual({ status: "offer" });
       });
 
       test("a blocked draft can't be approved", async ({ page }) => {

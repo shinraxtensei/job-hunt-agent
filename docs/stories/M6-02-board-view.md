@@ -1,6 +1,6 @@
 # M6-02: Board view
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M6 — Full tracker
 - **Linear:** [HAM-60](https://linear.app/hamid-corp/issue/HAM-60/m6-02-board-view)
 - **Estimate:** 1 day
@@ -32,6 +32,20 @@ Same page, design rules and vendored-skills review as M3-08 and M4-05.
 4. **Given** the page
    **When** Playwright runs at 375 and 1280 px, light and dark
    **Then** axe finds 0 violations, and moving a card works with the keyboard only.
+
+## Results (2026-11-08)
+
+- **Board:** the sidebar's Board link (`?view=board`) shows `GET /api/board`: every lead
+  that left `new`, whatever the presets say, with fit, days in its status and a due
+  follow-up.
+- **Columns:** OI-13's (shortlisted to offer, plus Done).
+- **Moving cards:** by drag and drop, or with a "Move to" menu for keyboard and touch.
+  Dropping on Done sets `closed`; the menu sets the exact status.
+- **Layout:** columns wrap to fit the width (one column at 375 px), so the page never
+  scrolls sideways. A first version with seven fixed columns overflowed at 1280 px.
+- **Tests:** `TestBoard` and Playwright "the board moves an application" (both
+  widths, both themes, axe). A check that a note-only application stays off the board
+  survived the first mutation run; the test was tightened.
 
 ## Out of scope
 
