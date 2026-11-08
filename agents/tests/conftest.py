@@ -4,6 +4,7 @@ command), like the Go tests (internal/store/storetest)."""
 
 import os
 import re
+import shutil
 import subprocess
 import uuid
 from collections.abc import Iterator
@@ -12,6 +13,9 @@ from pathlib import Path
 import psycopg
 import pytest
 from testcontainers.community.postgres import PostgresContainer
+
+from jobhunt_agents.evidence import Bank, load_evidence
+from jobhunt_agents.profile import Profile, load
 
 ROOT = Path(__file__).resolve().parents[2]
 APP_PASSWORD = "test-app"
@@ -103,3 +107,25 @@ def go(go_bin: Path, app_dsn: str) -> Go:
             "UPDATE work_items SET state = 'done', locked_until = NULL, claim_token = NULL"
         )
     return Go(go_bin, app_dsn)
+
+
+# The example profile and evidence bank (placeholder data), copied so tests may edit them.
+EXAMPLE_EVIDENCE = ROOT / "data" / "profile" / "evidence.example.yaml"
+
+
+@pytest.fixture
+def profile_dir(tmp_path: Path) -> Path:
+    for name in ("skill_map", "search_profile"):
+        shutil.copy(ROOT / "data" / "profile" / f"{name}.example.yaml", tmp_path / f"{name}.yaml")
+    shutil.copy(EXAMPLE_EVIDENCE, tmp_path / "evidence.yaml")
+    return tmp_path
+
+
+@pytest.fixture
+def profile(profile_dir: Path) -> Profile:
+    return load(profile_dir)
+
+
+@pytest.fixture
+def bank(profile: Profile) -> Bank:
+    return load_evidence(EXAMPLE_EVIDENCE, profile)

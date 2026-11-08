@@ -4,7 +4,6 @@ code fills in the exact facts; every draft is validated (M4-04) and stored block
 ready_for_review, never sent. Fake provider: CI never calls the real API."""
 
 import json
-import shutil
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -92,26 +91,23 @@ def letter(*texts: tuple[str, list[str]]) -> str:
     )
 
 
-def ok() -> tuple[Any, Any]:
-    return answer(json.dumps(GOOD)), answer(json.dumps(LETTER))
+def verdicts(n: int, bad: dict[int, str] | None = None) -> Any:
+    """The checker's answer: n verdicts, supported unless named in `bad`."""
+    bad = bad or {}
+    return answer(
+        json.dumps(
+            {
+                "verdicts": [
+                    {"n": i, "verdict": bad.get(i, "supported"), "reason": "r", "closest": None}
+                    for i in range(n)
+                ]
+            }
+        )
+    )
 
 
-@pytest.fixture
-def profile_dir(tmp_path: Path) -> Path:
-    for name in ("skill_map", "search_profile"):
-        shutil.copy(ROOT / "data" / "profile" / f"{name}.example.yaml", tmp_path / f"{name}.yaml")
-    shutil.copy(EXAMPLE, tmp_path / "evidence.yaml")
-    return tmp_path
-
-
-@pytest.fixture
-def profile(profile_dir: Path) -> Profile:
-    return load(profile_dir)
-
-
-@pytest.fixture
-def bank(profile: Profile) -> Bank:
-    return load_evidence(EXAMPLE, profile)
+def ok() -> tuple[Any, Any, Any]:  # CV, letter, checker (2 CV + 2 letter sentences)
+    return answer(json.dumps(GOOD)), answer(json.dumps(LETTER)), verdicts(4)
 
 
 def ext(*required: str) -> Extraction:
@@ -292,14 +288,14 @@ def test_letter_made_with_the_draft(app_dsn: str, go: Go, profile_dir: Path) -> 
     assert lt["name"] == "Sam Example"
     assert lt["paragraphs"][1][0]["evidence_ids"] == ["letter-availability"]
     assert lt["words"] < MAX_WORDS
-    assert len(provider.requests) == 2
+    assert len(provider.requests) == 3  # CV, letter, checker
     user = provider.requests[1].user
     assert "letter-availability" in user
     assert "example-billing" in user
     assert "side-project-collector" in provider.requests[0].user  # CV: Go stated as fact
     assert "side-project-collector" not in user  # letter: never a learning skill
     assert "Words: at most" in user
-    assert "Backend Engineer" not in user  # no title from the posting
+    assert "example-corp: Backend Engineer at Example Corp" in user  # the bank's facts
     assert company not in user
     assert company not in provider.requests[0].user
     assert "letter" in provider.requests[1].system.lower()
@@ -324,10 +320,10 @@ def test_long_letter_retried_then_blocked(app_dsn: str, go: Go, profile_dir: Pat
 def test_long_letter_shortened_on_retry(app_dsn: str, go: Go, profile_dir: Path) -> None:
     posting = lead(app_dsn, go, profile_dir)
     long = answer(letter(*LONG))
-    provider = FakeProvider(answer(json.dumps(GOOD)), long, answer(json.dumps(LETTER)))
+    provider = FakeProvider(answer(json.dumps(GOOD)), long, answer(json.dumps(LETTER)), verdicts(4))
     run(app_dsn, profile_dir, provider)
     d = latest(app_dsn, posting)
-    assert len(provider.requests) == 3
+    assert len(provider.requests) == 4
     assert d["status"] == "ready_for_review", d["findings"]
 
 

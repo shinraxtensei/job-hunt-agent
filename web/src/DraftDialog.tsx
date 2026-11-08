@@ -22,6 +22,8 @@ const RULES: Record<string, string> = {
   learning_as_experience: "A skill you’re only learning, shown as experience",
   familiar_in_bullet: "A familiar skill outside the skills section",
   too_long: "The letter is over 250 words",
+  checker_unsupported: "The claim checker found this isn’t in the cited evidence",
+  checker_altered_fact: "The claim checker found a changed title, name or date",
   scope_inflation: "A stronger verb than the evidence uses",
   suspicious_input: "The posting’s skills look like instructions (possible injection)",
 };

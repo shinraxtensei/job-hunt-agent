@@ -33,6 +33,8 @@ def rows(dsn: str, sql: LiteralString) -> list[tuple[Any, ...]]:
 
 def test_sync_stores_and_retires(app_dsn: str, profile: Profile, tmp_path: Path) -> None:
     bank = load_evidence(EXAMPLE, profile)
+    with psycopg.connect(app_dsn) as conn:  # the session database: other tests sync it too
+        conn.execute("UPDATE evidence_bank SET version = 'another'")
     with open_pool(app_dsn, max_size=2) as pool:
         assert sync(pool, bank) is True
         assert sync(pool, bank) is False  # same version: nothing written

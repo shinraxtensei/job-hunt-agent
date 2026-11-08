@@ -27,6 +27,7 @@ from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, ConfigDict
 from ruamel.yaml import YAML
 
+from jobhunt_agents.checker import Checker, sentences
 from jobhunt_agents.coverage import Coverage, coverage, suspicious
 from jobhunt_agents.drafts import DraftContent, LetterContent
 from jobhunt_agents.evidence import Bank, EvidenceWatcher, Line
@@ -165,8 +166,10 @@ class Tailorer:
         client: ModelClient,
         prompt: Prompt | None = None,
         letter_prompt: Prompt | None = None,
+        checker: Checker | None = None,
     ) -> None:
         self.client = client
+        self.checker = checker or Checker(client)  # every draft goes through it (M5-02)
         self.prompt = prompt or Prompt.load(AGENT, PROMPT_VERSION, cacheable=False)
         self.letter_prompt = letter_prompt or Prompt.load(
             LETTER_AGENT, LETTER_PROMPT_VERSION, cacheable=False
@@ -269,7 +272,9 @@ def for_letter(sel: Selection) -> Selection:
 
 def letter_data(base: str, bank: Bank, budget: int) -> str:
     """The CV's prompt data, the letter lines and the word budget for the sentences."""
-    out = [base, "", "Letter lines (letter only):"]
+    out = [base, "", "Roles (exact facts):"]
+    out += [f"- {r.id}: {r.title} at {r.employer}" for r in bank.roles]
+    out += ["", "Letter lines (letter only):"]
     out += [f"- [{x.id}] {x.text}" for x in bank.letter]
     out += ["", f"Words: at most {budget} in all your sentences together."]
     return "\n".join(out)
@@ -311,7 +316,8 @@ def make(
     company: str,
     posting_id: int | None = None,
 ) -> Made:
-    """CV and letter for one lead, validated together (NeedsReview propagates)."""
+    """CV and letter for one lead, validated together, then, if the code checks pass, by
+    the independent claim checker (M5-02). NeedsReview propagates."""
     sel = select(bank, cov, layout)
     data = prompt_data(cov, sel, layout, profile)
     content = render(tailorer.draft(data, posting_id), bank, sel, layout, profile)
@@ -330,6 +336,8 @@ def make(
         report.violations.append(
             Finding("too_long", "letter", "", None, f"{letter['words']} words, at most {MAX_WORDS}")
         )
+    if not report.violations:  # the checker judges only what the code passed
+        report.violations += tailorer.checker.check(sentences(content, letter), bank, posting_id)
     return Made(content, letter, report)
 
 

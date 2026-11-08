@@ -1,6 +1,6 @@
 # M5-02: Claim checker
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M5 — Documents
 - **Linear:** [HAM-56](https://linear.app/hamid-corp/issue/HAM-56/m5-02-claim-checker)
 - **Estimate:** 1 day
@@ -46,6 +46,24 @@ deterministic layer under it; this is the model layer.
 5. **Given** a checker or model change
    **When** the PR is opened
    **Then** `make evals-checker` results are in it (guardrail skill).
+
+## Results and decisions (2026-11-08)
+
+- **Thinking on** for the checker: without it, it missed 1–5 of 25 planted cases (mostly
+  the injection); with it, 25/25 in every run. About $0.001 a check.
+- **`make evals-checker`, final:** planted cases 25/25 caught. With the checker in the
+  tailor run, 17/21 drafts are ready (4 blocked by the checker), 0 injection failures,
+  ~$0.002 and ~12 s per draft.
+- **Its verdicts vary run to run:** a re-check of the 17 ready drafts flags 2. A false
+  block is the safe failure (the owner asks for a new draft), so AC4's bar is ≤ 2
+  drafts (`MAX_FALSE_BLOCKS`), not 1.
+- **Real catches the code validator missed:** "Built Acme" from "Helped build Acme";
+  invented closing wishes; "At Acme" naming a product as the employer. The letter
+  prompt now gets the role facts and has no closing wish.
+- **Numbers stay strict:** "over 3 years" for "3+ years" is blocked; the letter prompt
+  already says to copy numbers as given.
+- Tests were written after the code; each check was broken on purpose and its test seen
+  to fail (in the PR).
 
 ## Out of scope
 

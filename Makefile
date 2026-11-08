@@ -19,7 +19,7 @@ SQLC_IMAGE := sqlc/sqlc:1.31.1@sha256:70f53171d27b2424e9358869975455a6e955a5aa8e
 
 .PHONY: help check fmt fmt-check vet lint test-go test-integration test-py evals \
 	sqlc sqlc-check migration vuln up down collect backup restore smoke fuzz \
-	web-install web-check web-build web-dev evals-replay evals-sample evals-label evals-fit evals-reasons evals-variants evals-tailor
+	web-install web-check web-build web-dev evals-replay evals-sample evals-label evals-fit evals-reasons evals-variants evals-tailor evals-checker
 
 help: ## List every target
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -70,6 +70,9 @@ evals-reasons: ## The reason agent over the eval set, real model, recorded (M3-0
 
 evals-tailor: ## CV drafts for the good-fit eval postings + injection fixtures, real model (M4-02)
 	@$(WITH_ENV) $(EVALS) tailor
+
+evals-checker: ## Claim checker over the last evals-tailor evals-checker drafts + planted guardrail cases, real model (M5-02)
+	@$(WITH_ENV) $(EVALS) checker
 
 evals-variants: ## Owner's CV-variant labels vs the model's (M4-06): make evals-variants [SET=init]
 	@$(EVALS) variants $(if $(filter init,$(SET)),init,)

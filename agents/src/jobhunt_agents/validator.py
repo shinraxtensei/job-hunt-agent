@@ -4,7 +4,8 @@ Any violation blocks the draft;
 warnings don't. No model, and never bypassed: drafts reach the page only through it.
 
 Violations: unsupported, altered_fact, inflated_number, learning_as_experience,
-familiar_in_bullet, too_long (a letter over 250 words, set by tailor.py).
+familiar_in_bullet, too_long (a letter over 250 words, set by tailor.py), and the
+claim checker's checker_unsupported and checker_altered_fact (M5-02, checker.py).
 Warnings: scope_inflation, suspicious_input.
 The independent model claim checker (M5-02) runs on top of this.
 """
@@ -29,6 +30,8 @@ Rule = Literal[
     "learning_as_experience",
     "familiar_in_bullet",
     "too_long",
+    "checker_unsupported",
+    "checker_altered_fact",
     "scope_inflation",
     "suspicious_input",
 ]
