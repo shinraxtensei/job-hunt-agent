@@ -1114,3 +1114,78 @@ func TestNotesAndContacts(t *testing.T) {
 		t.Error("a note or a contact reached the log")
 	}
 }
+
+// M6-04 AC1, AC3: a lead applied 7+ days ago with no later status is due, with its contact
+// in the message; done and snooze take it off the list (in the history); a snooze ends;
+// a later status ends the reminder.
+func TestFollowups(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	t.Cleanup(func() {
+		if _, err := db.Exec(context.Background(), forgetApplications); err != nil {
+			t.Error(err)
+		}
+	})
+	due := func(h http.Handler) []httpapi.Followup {
+		var v struct{ Followups []httpapi.Followup }
+		getJSON(t, h, "/api/followups", &v)
+		return v.Followups
+	}
+	postJSON(h, "/api/leads/9006/status", `{"status":"applied"}`, "")
+	postJSON(h, "/api/leads/9006/contacts", `{"name":"Ann Smith"}`, "")
+	setApplied := func(days int) {
+		t.Helper()
+		if _, err := db.Exec(t.Context(), `UPDATE applications SET applied_at = $1, followup_done_at = NULL, followup_snoozed_until = NULL
+			WHERE posting_id = 9006`, now.AddDate(0, 0, -days)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setApplied(6)
+	if got := due(h); len(got) != 0 {
+		t.Fatalf("6 days: nothing due, got %+v", got)
+	}
+	setApplied(8)
+	got := due(h)
+	if len(got) != 1 || got[0].LeadID != 9006 || got[0].Days != 8 || !strings.HasPrefix(got[0].Message, "Hello Ann Smith,") {
+		t.Fatalf("8 days: %+v", got)
+	}
+	app := fmt.Sprintf("/api/applications/%d/followup", got[0].ApplicationID)
+	for _, c := range []struct {
+		body string
+		want int
+	}{
+		{`{"action":"snooze","days":5}`, http.StatusBadRequest},
+		{`{"action":"later"}`, http.StatusBadRequest},
+		{`{"action":"done","days":3}`, http.StatusBadRequest},
+	} {
+		if rec := postJSON(h, app, c.body, ""); rec.Code != c.want {
+			t.Errorf("%s: %d", c.body, rec.Code)
+		}
+	}
+	if rec := postJSON(h, "/api/applications/99999/followup", `{"action":"done"}`, ""); rec.Code != http.StatusNotFound {
+		t.Errorf("unknown application: %d", rec.Code)
+	}
+	if rec := postJSON(h, app, `{"action":"done"}`, "cross-site"); rec.Code != http.StatusForbidden {
+		t.Errorf("cross-site: %d", rec.Code)
+	}
+	if rec := postJSON(h, app, `{"action":"done"}`, ""); rec.Code != http.StatusOK || len(due(h)) != 0 {
+		t.Errorf("done: %d, still due %v", rec.Code, due(h))
+	}
+	var v appView
+	getJSON(t, h, "/api/leads/9006/application", &v)
+	if v.Application.History[0].Note != "follow-up done" {
+		t.Errorf("history: %+v", v.Application.History[0])
+	}
+	setApplied(8)
+	if rec := postJSON(h, app, `{"action":"snooze","days":3}`, ""); rec.Code != http.StatusOK || len(due(h)) != 0 {
+		t.Errorf("snooze: %d, still due", rec.Code)
+	}
+	later := httpapi.New(db, "../../data/presets", "test-sha", func() time.Time { return now.AddDate(0, 0, 4) }, quiet())
+	if len(due(later)) != 1 {
+		t.Error("due again once the snooze ends")
+	}
+	postJSON(h, "/api/leads/9006/status", `{"status":"replied"}`, "")
+	if len(due(later)) != 0 {
+		t.Error("a reply ends the reminder")
+	}
+}

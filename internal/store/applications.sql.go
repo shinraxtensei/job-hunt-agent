@@ -12,7 +12,7 @@ import (
 )
 
 const applicationHistory = `-- name: ApplicationHistory :many
-SELECT status, at, auto FROM application_events
+SELECT status, at, auto, coalesce(note, '')::text AS note FROM application_events
 WHERE application_id = $1::bigint ORDER BY at DESC, id DESC
 `
 
@@ -20,6 +20,7 @@ type ApplicationHistoryRow struct {
 	Status string
 	At     pgtype.Timestamptz
 	Auto   bool
+	Note   string
 }
 
 func (q *Queries) ApplicationHistory(ctx context.Context, applicationID int64) ([]ApplicationHistoryRow, error) {
@@ -31,7 +32,12 @@ func (q *Queries) ApplicationHistory(ctx context.Context, applicationID int64) (
 	var items []ApplicationHistoryRow
 	for rows.Next() {
 		var i ApplicationHistoryRow
-		if err := rows.Scan(&i.Status, &i.At, &i.Auto); err != nil {
+		if err := rows.Scan(
+			&i.Status,
+			&i.At,
+			&i.Auto,
+			&i.Note,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

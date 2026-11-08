@@ -32,7 +32,7 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
     if (route.request().method() === "POST" && /^\/api\/leads\/\d+\/reason$/.test(path)) {
       return route.fulfill({ status: 202, contentType: "application/json", body: '{"requested":true}' });
     }
-    if (["POST", "DELETE"].includes(route.request().method()) && /^\/api\/(leads\/\d+\/(draft|status|skip|notes|contacts)|notes\/\d+|contacts\/\d+|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent)$/.test(path)) {
+    if (["POST", "DELETE"].includes(route.request().method()) && /^\/api\/(leads\/\d+\/(draft|status|skip|notes|contacts)|notes\/\d+|contacts\/\d+|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent|applications\/\d+\/followup)$/.test(path)) {
       return route.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' });
     }
     const body =
@@ -46,6 +46,7 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
       : path === "/api/leads/hidden" ? golden("hidden_default")
       : path === "/api/facets" ? golden("facets_default")
       : path === "/api/presets" ? golden("presets")
+      : path === "/api/followups" ? '{"followups":[]}'
       : path.endsWith("/members") ? golden("members")
       : null;
     return body
@@ -238,6 +239,34 @@ for (const width of [375, 1280]) {
         const undo = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/status"));
         await why.getByRole("button", { name: "Undo" }).click();
         expect((await undo).postDataJSON()).toEqual({ status: "new" });
+      });
+
+      // M6-04: due follow-ups above the leads, with the message to copy; Done and Snooze are
+      // same-origin JSON writes; nothing is sent. The title's markup stays text.
+      test("a follow-up is due, copied and marked done", async ({ page, context }) => {
+        await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+        await mockAPI(page);
+        const message = "Hello Ann Smith,\n\nI applied for the Backend Engineer role at Acme on 25 October 2026 and wanted to follow up.";
+        await page.route("**/api/followups", (route) =>
+          route.fulfill({
+            contentType: "application/json",
+            body: JSON.stringify({
+              followups: [{ application_id: 7, lead_id: 9001, company: "Acme", title: "Backend <i>Engineer</i>", applied_at: "2026-10-25T09:00:00Z", days: 8, contact: "Ann Smith", message }],
+            }),
+          }),
+        );
+        await page.goto("/");
+        const due = page.getByRole("region", { name: /Follow-ups due \(1\)/ });
+        await expect(due.getByText("Backend <i>Engineer</i>", { exact: false })).toBeVisible();
+        await expect(due.locator("i")).toHaveCount(0);
+        await due.getByRole("button", { name: "Copy message" }).click();
+        await expect(due.getByRole("button", { name: "Copied" })).toBeVisible();
+        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(message);
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+        const snooze = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/applications/7/followup"));
+        await due.getByRole("button", { name: "Snooze 3 days" }).click();
+        expect((await snooze).postDataJSON()).toEqual({ action: "snooze", days: 3 });
       });
 
       test("a blocked draft can't be approved", async ({ page }) => {

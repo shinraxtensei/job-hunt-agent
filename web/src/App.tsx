@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { apiQuery, get, type Facets, type Lead, type Page, type Presets } from "./api";
 import { FilterSheet } from "./FilterSheet";
+import { Followups } from "./Followups";
 import { applied } from "./filters";
 import { Icon } from "./icons";
 import { isNew, LeadTable } from "./LeadTable";
@@ -330,6 +331,7 @@ export function App() {
       </nav>
 
       <main id="leads">
+        <Followups />
         <div className="topbar">
           <div className="search">
             <label htmlFor="search" className="visually-hidden">

@@ -127,6 +127,7 @@ export function ApplicationPanel({ lead, onStatus }: { lead: Lead; onStatus?: (s
                 <li key={i}>
                   {label("status", h.status)} · <time dateTime={h.at}>{when(h.at)}</time>
                   {h.auto && " · automatic"}
+                  {h.note && ` · ${h.note}`}
                 </li>
               ))}
             </ol>

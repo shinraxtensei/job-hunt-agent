@@ -15,15 +15,17 @@ type AgentPrompt struct {
 }
 
 type Application struct {
-	ID        int64
-	CompanyID int64
-	TitleKey  string
-	PostingID int64
-	Status    string
-	StatusAt  pgtype.Timestamptz
-	AppliedAt pgtype.Timestamptz
-	Snapshot  []byte
-	CreatedAt pgtype.Timestamptz
+	ID                   int64
+	CompanyID            int64
+	TitleKey             string
+	PostingID            int64
+	Status               string
+	StatusAt             pgtype.Timestamptz
+	AppliedAt            pgtype.Timestamptz
+	Snapshot             []byte
+	CreatedAt            pgtype.Timestamptz
+	FollowupDoneAt       pgtype.Timestamptz
+	FollowupSnoozedUntil pgtype.Timestamptz
 }
 
 type ApplicationEvent struct {
@@ -32,6 +34,7 @@ type ApplicationEvent struct {
 	Status        string
 	At            pgtype.Timestamptz
 	Auto          bool
+	Note          pgtype.Text
 }
 
 type CollectorRun struct {

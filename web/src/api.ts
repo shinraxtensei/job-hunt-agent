@@ -10,7 +10,7 @@ export type Application = {
   status_at: string;
   applied_at: string | null;
   snapshot: { title: string; url: string; content_hash: string } | null;
-  history: { status: Status; at: string; auto: boolean }[];
+  history: { status: Status; at: string; auto: boolean; note?: string }[];
   documents: { id: number; kind: "cv" | "letter"; sent_at: string }[];
   notes: Note[];
   contacts: Contact[];

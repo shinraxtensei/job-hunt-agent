@@ -86,6 +86,7 @@ type Event struct {
 	Status string    `json:"status"`
 	At     time.Time `json:"at"`
 	Auto   bool      `json:"auto"`
+	Note   string    `json:"note,omitempty"` // M6-04: "follow-up done", "follow-up snoozed 3 days"
 }
 
 // SentDocument is a document marked sent (M5-04), linked to its application.
@@ -143,7 +144,7 @@ func (a *api) application(w http.ResponseWriter, r *http.Request) {
 		out.AppliedAt = &t
 	}
 	for _, h := range hist {
-		out.History = append(out.History, Event{h.Status, h.At.Time.UTC(), h.Auto})
+		out.History = append(out.History, Event{h.Status, h.At.Time.UTC(), h.Auto, h.Note})
 	}
 	for _, d := range docs {
 		out.Documents = append(out.Documents, SentDocument{d.ID, d.Kind, d.SentAt.Time.UTC()})

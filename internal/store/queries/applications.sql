@@ -38,7 +38,7 @@ JOIN jobs j ON j.company_id = a.company_id AND j.title_key = a.title_key
 WHERE j.posting_id = @posting_id::bigint;
 
 -- name: ApplicationHistory :many
-SELECT status, at, auto FROM application_events
+SELECT status, at, auto, coalesce(note, '')::text AS note FROM application_events
 WHERE application_id = @application_id::bigint ORDER BY at DESC, id DESC;
 
 -- name: SentDocuments :many
