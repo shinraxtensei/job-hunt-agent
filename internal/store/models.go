@@ -254,6 +254,15 @@ type ScoreReason struct {
 	CreatedAt     pgtype.Timestamptz
 }
 
+type Skip struct {
+	ID            int64
+	ApplicationID int64
+	Reason        pgtype.Text
+	Note          pgtype.Text
+	Score         []byte
+	At            pgtype.Timestamptz
+}
+
 type WorkItem struct {
 	ID          int64
 	PostingID   int64

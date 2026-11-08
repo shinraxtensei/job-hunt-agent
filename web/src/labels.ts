@@ -2,6 +2,18 @@
 // URL and the API; anything this map doesn't know is shown with underscores as spaces.
 
 const words: Record<string, Record<string, string>> = {
+  skip_reason: {
+    location: "Location",
+    seniority: "Seniority",
+    stack: "Stack",
+    salary: "Salary",
+    company: "Company",
+    role_type: "Role type",
+    visa_relocation: "Visa / relocation",
+    language: "Language",
+    not_interested: "Not interested",
+    other: "Other",
+  },
   status: {
     new: "New",
     shortlisted: "Shortlisted",

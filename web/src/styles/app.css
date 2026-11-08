@@ -989,3 +989,43 @@ dialog[open] {
     margin-bottom: var(--space-2);
   }
 }
+
+/* M6-01, M6-05: a lead's application in its expanded row */
+.application {
+  margin-bottom: var(--space-3);
+}
+.status-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.history ol {
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-4);
+}
+.skip-why p {
+  margin: var(--space-2) 0 var(--space-1);
+}
+.reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.reason-chip {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.reason-chip:hover {
+  background: var(--hover);
+}
+.reason-chip[aria-pressed="true"] {
+  border-color: var(--text);
+  font-weight: 600;
+}

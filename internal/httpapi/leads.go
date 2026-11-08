@@ -387,7 +387,8 @@ func (a *api) split(all []Lead, f filters) (shown, hidden []Lead) {
 			f.newOnly && !l.FirstSeenAt.After(a.now().Add(-24*time.Hour)) ||
 			!f.since.IsZero() && l.FirstSeenAt.Before(f.since) ||
 			len(f.fits) > 0 && !slices.Contains(f.fits, fitOf(l)) ||
-			len(f.statuses) > 0 && !slices.Contains(f.statuses, l.Status) {
+			len(f.statuses) > 0 && !slices.Contains(f.statuses, l.Status) ||
+			len(f.statuses) == 0 && l.Status == "skipped" { // M6-05: skipped leads leave the default view
 			continue
 		}
 		if l.HiddenBy = f.preset.Evaluate(l.group); l.HiddenBy == nil {

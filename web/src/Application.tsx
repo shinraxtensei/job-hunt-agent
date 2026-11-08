@@ -3,6 +3,9 @@ import { STATUSES, get, post, type Application, type Lead, type Status } from ".
 import { label } from "./labels";
 import { ExternalLink } from "./safe";
 
+// OI-16's skip reasons, in the order offered.
+const REASONS = ["location", "seniority", "stack", "salary", "company", "role_type", "visa_relocation", "language", "not_interested", "other"];
+
 const when = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
 // ApplicationPanel: a lead's status (changeable), its dated history, the posting as
@@ -30,6 +33,19 @@ export function ApplicationPanel({ lead, onStatus }: { lead: Lead; onStatus?: (s
       })
       .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   };
+  const [undo, setUndo] = useState<Status | null>(null); // the status before a skip
+  const [reason, setReason] = useState<string | null>(null);
+  const skip = (why?: string, note?: string) => {
+    setError(null);
+    post<{ previous: Status }>(`/api/leads/${lead.id}/skip`, why ? { reason: why, note: note ?? "" } : {})
+      .then((r) => {
+        if (!why) setUndo(r.previous);
+        else setReason(why);
+        onStatus?.("skipped");
+        return load();
+      })
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+  };
   const current = app?.status ?? lead.status;
   const id = `status-${lead.id}`;
   return (
@@ -43,7 +59,37 @@ export function ApplicationPanel({ lead, onStatus }: { lead: Lead; onStatus?: (s
             </option>
           ))}
         </select>
+        {current !== "skipped" && (
+          <button type="button" className="button" onClick={() => skip()}>
+            Skip
+          </button>
+        )}
       </div>
+      {current === "skipped" && undo && (
+        <div className="skip-why" role="group" aria-label="Why skip it?">
+          <p>
+            Skipped. Why? (optional){" "}
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => {
+                const back = undo;
+                setUndo(null);
+                change(back);
+              }}
+            >
+              Undo
+            </button>
+          </p>
+          <div className="reasons">
+            {REASONS.map((r) => (
+              <button key={r} type="button" className="reason-chip" aria-pressed={reason === r} onClick={() => skip(r)}>
+                {label("skip_reason", r)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {error && (
         <p className="draft-error" role="alert">
           {error}

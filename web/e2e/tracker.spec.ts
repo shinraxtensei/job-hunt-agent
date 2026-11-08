@@ -30,7 +30,7 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
     if (route.request().method() === "POST" && /^\/api\/leads\/\d+\/reason$/.test(path)) {
       return route.fulfill({ status: 202, contentType: "application/json", body: '{"requested":true}' });
     }
-    if (route.request().method() === "POST" && /^\/api\/(leads\/\d+\/(draft|status)|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent)$/.test(path)) {
+    if (route.request().method() === "POST" && /^\/api\/(leads\/\d+\/(draft|status|skip)|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent)$/.test(path)) {
       return route.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' });
     }
     const body =
@@ -195,6 +195,36 @@ for (const width of [375, 1280]) {
         const req = await sent;
         expect(req.headers()["content-type"]).toBe("application/json");
         expect(req.postDataJSON()).toEqual({ status: "interviewing" });
+      });
+
+      // M6-05: one click skips; the answer's previous status powers Undo; a reason can follow.
+      test("a lead is skipped with a reason, and undone", async ({ page }) => {
+        let app = '{"application":null}';
+        await mockAPI(page);
+        await page.route("**/api/leads/9006/application", (route) => route.fulfill({ contentType: "application/json", body: app }));
+        await page.route("**/api/leads/9006/skip", (route) =>
+          route.fulfill({ contentType: "application/json", body: '{"status":"skipped","previous":"new"}' }),
+        );
+        await page.goto("/");
+        await page.locator("tr.row", { hasText: "Mobile Engineer" }).getByRole("button", { name: /Show details/ }).click();
+        const panel = page.getByRole("region", { name: "Application" });
+        const skip = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/skip"));
+        app = JSON.stringify({
+          application: { id: 2, status: "skipped", status_at: "2026-11-08T10:00:00Z", applied_at: null, snapshot: null, history: [{ status: "skipped", at: "2026-11-08T10:00:00Z", auto: false }], documents: [] },
+        });
+        await panel.getByRole("button", { name: "Skip" }).click();
+        expect((await skip).postDataJSON()).toEqual({});
+        const why = panel.getByRole("group", { name: "Why skip it?" });
+        await expect(why).toBeVisible();
+        const reason = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/skip"));
+        await why.getByRole("button", { name: "Visa / relocation" }).click();
+        expect((await reason).postDataJSON()).toEqual({ reason: "visa_relocation", note: "" });
+        await expect(why.getByRole("button", { name: "Visa / relocation" })).toHaveAttribute("aria-pressed", "true");
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+        const undo = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/status"));
+        await why.getByRole("button", { name: "Undo" }).click();
+        expect((await undo).postDataJSON()).toEqual({ status: "new" });
       });
 
       test("a blocked draft can't be approved", async ({ page }) => {

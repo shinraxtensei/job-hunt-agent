@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -797,7 +798,9 @@ func TestDocumentPDF(t *testing.T) {
 }
 
 // forgetApplications removes what M6 tests create, so other tests see every lead as new.
-const forgetApplications = `WITH a AS (SELECT id FROM applications), e AS (DELETE FROM application_events WHERE application_id IN (SELECT id FROM a))
+const forgetApplications = `WITH a AS (SELECT id FROM applications),
+	e AS (DELETE FROM application_events WHERE application_id IN (SELECT id FROM a)),
+	s AS (DELETE FROM skips WHERE application_id IN (SELECT id FROM a))
 	DELETE FROM applications`
 
 func postJSON(h http.Handler, path, body, site string) *httptest.ResponseRecorder {
@@ -951,5 +954,71 @@ func TestApproveSetsDrafted(t *testing.T) {
 	getJSON(t, h, "/api/leads/9001/application", &v)
 	if v.Application.Status != "applied" {
 		t.Errorf("approve moved an applied lead to %s", v.Application.Status)
+	}
+}
+
+// M6-05 AC1-AC3: one click skips a lead (it leaves the default view, a status filter shows
+// it); the answer has the previous status for undo; the reason can follow; the skip keeps
+// the score as shown; /api/skips lists it.
+func TestSkip(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	t.Cleanup(func() {
+		if _, err := db.Exec(context.Background(), forgetApplications); err != nil {
+			t.Error(err)
+		}
+	})
+	ids := func(q string) []int64 {
+		var p struct {
+			Leads []struct {
+				ID int64 `json:"id"`
+			} `json:"leads"`
+		}
+		getJSON(t, h, "/api/leads?preset=none&limit=200"+q, &p)
+		var out []int64
+		for _, l := range p.Leads {
+			out = append(out, l.ID)
+		}
+		return out
+	}
+	if !slices.Contains(ids(""), 9001) {
+		t.Fatal("9001 should be shown before the skip")
+	}
+	for _, c := range []struct {
+		body string
+		want int
+	}{
+		{`{"reason":"boredom"}`, http.StatusBadRequest},
+		{`{"note":"` + strings.Repeat("x", 501) + `"}`, http.StatusBadRequest},
+	} {
+		if rec := postJSON(h, "/api/leads/9001/skip", c.body, ""); rec.Code != c.want {
+			t.Errorf("%.30s: %d", c.body, rec.Code)
+		}
+	}
+	if rec := postJSON(h, "/api/leads/9001/skip", `{}`, "cross-site"); rec.Code != http.StatusForbidden {
+		t.Errorf("cross-site: %d", rec.Code)
+	}
+	rec := postJSON(h, "/api/leads/9001/skip", `{}`, "same-origin")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"previous":"new"`) {
+		t.Fatalf("skip: %d %s", rec.Code, rec.Body)
+	}
+	if slices.Contains(ids(""), 9001) || !slices.Contains(ids("&status=skipped"), 9001) {
+		t.Error("a skipped lead leaves the default view and shows under status=skipped")
+	}
+	postJSON(h, "/api/leads/9001/skip", `{"reason":"visa_relocation","note":"no sponsorship"}`, "")
+	var s struct{ Skips []httpapi.Skip }
+	getJSON(t, h, "/api/skips", &s)
+	if len(s.Skips) != 1 {
+		t.Fatalf("skips: %+v", s.Skips)
+	}
+	k := s.Skips[0]
+	if k.LeadID != 9001 || k.Reason == nil || *k.Reason != "visa_relocation" || k.Note == nil || *k.Note != "no sponsorship" ||
+		!strings.Contains(string(k.Score), `"fit_level"`) || !strings.Contains(string(k.Score), `"breakdown"`) {
+		t.Errorf("skip: %+v %s", k, k.Score)
+	}
+	// undo: the previous status comes back, and the lead is shown again
+	postJSON(h, "/api/leads/9001/status", `{"status":"new"}`, "")
+	if !slices.Contains(ids(""), 9001) {
+		t.Error("undo should show the lead again")
 	}
 }

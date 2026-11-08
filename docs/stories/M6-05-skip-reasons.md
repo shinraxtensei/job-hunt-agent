@@ -1,6 +1,6 @@
 # M6-05: Skip reasons
 
-- **Status:** Ready
+- **Status:** Done
 - **Milestone:** M6 — Full tracker
 - **Linear:** [HAM-63](https://linear.app/hamid-corp/issue/HAM-63/m6-05-skip-reasons)
 - **Estimate:** ½ day
@@ -28,6 +28,15 @@ PRD: "Skip reasons feed scoring" is M8; M6 stores them. A skip is the `skipped` 
 3. **Given** skips
    **When** `GET /api/skips` is called
    **Then** it returns them with their reasons and scores (the M8 input), newest first.
+
+## Results (2026-11-08)
+
+- `skips` table (reason from OI-16's list, a note of at most 500 characters, the score as
+  shown). `POST /api/leads/{id}/skip` returns the previous status for Undo; sent again
+  while skipped, it records the reason. `GET /api/skips` lists them for M8.
+- Skipped leads leave the default view; `status=skipped` shows them.
+- Tests: `TestSkip` and Playwright "a lead is skipped with a reason, and undone". Each
+  check was broken on purpose and its test seen to fail.
 
 ## Out of scope
 
