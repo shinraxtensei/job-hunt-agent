@@ -44,6 +44,7 @@ max-args = 8
 [tool.ruff.lint.per-file-ignores]
 # ruamel.yaml values are Any until validated (ADR-0019); validation is one branch per rule.
 "src/jobhunt_agents/profile.py" = ["ANN401", "PLR0912"]
+"src/jobhunt_agents/evidence.py" = ["ANN401", "PLR0912", "PLR0915"]
 "tests/**" = ["S101","S105","S106", "S603", "S607", "PLR0913", "ANN401"]
 
 [tool.pyright]

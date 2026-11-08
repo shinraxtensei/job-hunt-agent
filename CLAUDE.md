@@ -57,13 +57,14 @@ agents/              Python 3.15 (uv, ADR-0017): src/jobhunt_agents/ (worker, qu
                      skill matcher, under the skill map's own aliases;
                      score.py (coded factors, scoring.yaml: weights, credits, bands), rescore.py (stores
                      scores, queues reasons), reason.py (reason, gaps, CV variant from the breakdown,
-                     M3-06); tailor/ comes in M4; agents/Dockerfile is the worker image
+                     M3-06); evidence.py + evidence_sync.py (the evidence bank, M4-01), numbers.py
+                     (normalised numbers, also M4-04's check); agents/Dockerfile is the worker image
 web/                 TypeScript UI (Vite + React, ADR-0013); built into web/dist/app, embedded in cmd/api
 db/migrations/       plain SQL migrations (goose), forward-only
 db/contract/         work_items.columns: the Go <-> Python queue contract, checked by both sides
 data/companies.yaml  the reviewed watch list (ADR-0005)
 data/presets/        filter presets; default.yaml is the owner's profile (ADR-0011)
-data/profile/        skill_map.yaml + search_profile.yaml: PERSONAL, git-ignored; *.example.yaml show the format (M3-05, ADR-0019)
+data/profile/        skill_map.yaml + search_profile.yaml + evidence.yaml: PERSONAL, git-ignored; *.example.yaml show the format (M3-05, M4-01, ADR-0019, ADR-0024)
 deploy/              compose.yaml, Caddyfile, scripts
 docs/                prd.md, adr/, stories/, threat-model.md
 testdata/            golden files (recorded board responses, sample postings)
@@ -171,6 +172,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0021 | Store coded scores and model reasons separately; the worker queues its own reasons | Accepted |
 | 0022 | The API's first write: request a fresh reason, refused cross-site; loopback Host names only | Accepted |
 | 0023 | Reconcile stores the default preset's matched location on jobs, for the scorer | Accepted |
+| 0024 | The evidence bank: a checked YAML file, synced by the worker into versioned tables | Accepted |
 
 ## Project skills
 

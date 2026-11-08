@@ -1,0 +1,73 @@
+# Evidence bank example (M4-01, ADR-0024). The real file is data/profile/evidence.yaml:
+# personal, git-ignored. Copy this file there and make it yours, or let Claude draft it
+# from your CV (every line checked: false until you check it). Placeholder data.
+#
+# Rules (the import checks them and names the line):
+#   - ids are unique across the whole file; drafts cite them, so never reuse one
+#   - every `skills` name resolves in your skill map (aliases count)
+#   - dates are YYYY-MM or YYYY, or `present`; project dates are optional
+#   - variants: BE PAY DIST FS AI CONS
+#   - a `learning` skill may be named only in a project line, stated as fact
+#   - every line has `checked: true`; numbers in `text` are the only numbers a draft may use
+
+person:                         # the CV header, printed as written
+  name: "Sam Example"
+  headline: "Backend Software Engineer"
+  email: "sam@example.com"
+  phone: "+212 600 000 000"
+  location: "Casablanca, Morocco"
+  links: ["https://github.com/example"]
+
+summary:                        # sentences a draft's summary may reuse
+  - id: summary-years
+    variants: [BE, FS]
+    skills: [Node.js, PostgreSQL]
+    text: "Backend engineer with 3 years building Node.js services on PostgreSQL."
+    source: "cv"                # optional: where the line came from
+    checked: true
+
+roles:                          # newest first
+  - id: example-corp
+    employer: "Example Corp"    # exactly as on your contract
+    title: "Backend Engineer"   # exactly as on your contract
+    start: 2023-05
+    end: present
+    location: "Casablanca"
+    lines:
+      - id: example-billing
+        variants: [BE, PAY]
+        skills: [Node.js, PostgreSQL]
+        text: "Rebuilt the billing service's invoice job, cutting its run time from 40 to 6 minutes."
+        checked: true
+      - id: example-deploys
+        variants: [BE, DIST]
+        skills: [Docker, CI/CD]
+        text: "Moved the services to Docker images built in CI."
+        checked: true
+
+projects:
+  - id: side-project
+    name: "Example side project"
+    stack: "Go, PostgreSQL"     # optional, as you'd print it
+    start: 2025-01
+    end: present
+    lines:
+      - id: side-project-collector
+        variants: [BE]
+        skills: [Go, PostgreSQL]  # Go is `learning`: allowed here, in a project line
+        text: "Built a job collector in Go that stores postings in PostgreSQL."
+        checked: true
+
+education:
+  - id: school
+    school: "Example School"
+    degree: "Example degree"    # exactly as on the diploma
+    location: "Rabat"
+    start: 2019
+    end: 2022
+
+certifications: []             # id, name, issuer, date (YYYY-MM)
+
+languages:                      # printed as written
+  - {name: Arabic, level: native}
+  - {name: English, level: fluent}

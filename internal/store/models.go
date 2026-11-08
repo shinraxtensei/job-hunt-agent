@@ -48,6 +48,37 @@ type Company struct {
 	Active    bool
 }
 
+type EvidenceBank struct {
+	ID       bool
+	Version  string
+	LoadedAt pgtype.Timestamptz
+}
+
+type EvidenceItem struct {
+	ID        string
+	Kind      string
+	Facts     []byte
+	Position  int32
+	Retired   bool
+	Version   string
+	UpdatedAt pgtype.Timestamptz
+}
+
+type EvidenceLine struct {
+	ID        string
+	ItemID    string
+	Kind      string
+	Text      string
+	Variants  []string
+	Skills    []byte
+	Numbers   []byte
+	Source    pgtype.Text
+	Position  int32
+	Retired   bool
+	Version   string
+	UpdatedAt pgtype.Timestamptz
+}
+
 type Extraction struct {
 	ID            int64
 	PostingID     int64

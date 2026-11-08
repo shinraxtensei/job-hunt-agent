@@ -40,6 +40,13 @@ person:                      # the CV header, printed as written
   location: "Casablanca, Morocco"
   links: ["https://github.com/you", "https://linkedin.com/in/you"]
 
+summary:                     # sentences a draft's summary may reuse (same shape as a line)
+  - id: summary-years
+    variants: [BE]
+    skills: [Node.js]
+    text: "Backend engineer with 3 years building Node.js services."
+    checked: true
+
 roles:                       # jobs, newest first
   - id: example              # short, unique, never reused
     employer: "Example Corp"           # exactly as on your contract
@@ -52,11 +59,13 @@ roles:                       # jobs, newest first
         variants: [BE, PAY]  # which CV variants may use it: BE PAY DIST FS AI CONS
         skills: [Node.js, PostgreSQL]  # names from your skill map
         text: "Rebuilt the billing service's invoice job, cutting its run time from 40 to 6 minutes."
+        source: "cv"         # optional: where the line came from (the draft fills it)
         checked: true        # you confirmed it is true as written
 
-projects:                    # personal or school projects: same shape, `name` instead of employer/title
+projects:                    # personal or school projects: `name` instead of employer/title
   - id: side-project
     name: "Example side project"
+    stack: "TypeScript, PostgreSQL"   # optional, as printed; dates optional too
     start: 2025-01
     end: present
     lines:
@@ -90,7 +99,8 @@ languages:                   # printed as written
   experience.
 - A line that names a `familiar` skill is allowed, but that skill is never presented as
   an achievement. It can appear in the skills section only.
-- Dates are `YYYY-MM` or `present`. `checked` must be `true`.
+- Dates are `YYYY-MM`, `YYYY` (when only the year is known) or `present`. Project dates are optional.
+- `checked` must be `true`. The ids `person`, `summary` and `languages` are reserved.
 
 ## OI-2: Evidence for the 9 skills set to familiar (optional)
 

@@ -1,6 +1,6 @@
 # M4-01: Evidence bank
 
-- **Status:** Ready
+- **Status:** In progress
 - **Milestone:** M4 — Evidence bank and tailoring
 - **Linear:** [HAM-49](https://linear.app/hamid-corp/issue/HAM-49/m4-01-evidence-bank)
 - **Estimate:** 1 day
@@ -33,7 +33,7 @@ seen working once OI-1 imports cleanly.
    its line number:
    - ids are unique;
    - each `skills` name resolves in the skill map (aliases included);
-   - dates are `YYYY-MM` or `present`;
+   - dates are `YYYY-MM`, `YYYY` or `present` (project dates optional);
    - every line has `checked: true`;
    - variants are among BE PAY DIST FS AI CONS;
    - a `learning` skill may be named only in a **project** line, stated as a fact

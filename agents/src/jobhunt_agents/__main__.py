@@ -12,6 +12,8 @@ import psycopg
 
 from jobhunt_agents import extract, reason
 from jobhunt_agents.db import open_pool
+from jobhunt_agents.evidence import EvidenceWatcher
+from jobhunt_agents.evidence_sync import sync as sync_evidence
 from jobhunt_agents.model import AnthropicProvider, ModelClient
 from jobhunt_agents.profile import FILES, ProfileError, ProfileWatcher
 from jobhunt_agents.queue import Handler, process_one
@@ -96,6 +98,7 @@ def run(s: Settings) -> None:
             log.info("profile loaded", extra={"version": profile.current().version[:12]})
         else:
             log.info("no profile in PROFILE_DIR; scoring stays off")
+        evidence = EvidenceWatcher(s.profile_dir / "evidence.yaml")
         paused_on: list[date] = []
 
         def iterate() -> bool:
@@ -105,6 +108,10 @@ def run(s: Settings) -> None:
                 n = rescore(pool, profile.current(), scoring)
                 if n:
                     log.info("scored", extra={"count": n})
+                # M4-01: the evidence bank, synced when the file or the skill map changes
+                bank = evidence.current(profile.current())
+                if bank is not None and sync_evidence(pool, bank):
+                    log.info("evidence synced", extra={"version": bank.version[:12]})
             # The daily budget (ADR-0018): stop claiming until the next UTC day.
             if client is not None and client.budget_exhausted():
                 today = datetime.now(UTC).date()
