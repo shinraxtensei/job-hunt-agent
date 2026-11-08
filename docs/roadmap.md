@@ -253,7 +253,7 @@ Order: M4-01 → M4-06 (in parallel) → M4-03 → M4-04 → M4-02 → M4-05.
   familiar skills, OI-4 layout (defaults). Editing bullets by hand stays out (M5 if
   needed).
 
-## M5: Documents
+## M5: Documents ✅ done 2026-11-08
 
 **Goal:** a draft becomes a ready-to-send pair of one-page PDFs, checked for unsupported
 claims.
@@ -268,6 +268,37 @@ claims.
 M5-04 Document versions (the link to applications moved to M6, which creates them)
 
 Order: M5-01 → M5-02 → M5-04 → M5-03. Owner input: `docs/stories/M5-owner-input.md`.
+
+**Wrap-up (2026-11-08).** All exit criteria are met and seen working with `make up`.
+One of the owner's real drafts was approved, and its PDFs checked: one A4 page each,
+every sentence in the selectable text, and ’ and — intact.
+
+- **Delivered:**
+  - **Cover letter:** under 250 words, made with the CV in one draft. Code writes the
+    greeting, the opening (job title and company), the sign-off and the name. The
+    letter model gets the role facts but never the posting. Letter-only `letter` lines
+    in `evidence.yaml`.
+  - **Claim checker:** an independent pass over every sentence with its cited lines,
+    with thinking on. It catches 25/25 planted cases. Real catches the code validator
+    missed: "Built" from "Helped build", invented closing wishes, a product named as
+    the employer.
+  - **Documents:** immutable rows (bytes and SHA-256), marked sent once by the owner
+    (ADR-0026).
+  - **PDF export:** fpdf2 with vendored Noto Sans (ADR-0027). Text only; no image is
+    ever parsed (ruff ban plus a test); `make vuln` scans the Python lockfile, and its
+    first run caught a vulnerable pypdf pin.
+- **Results:**
+  - `make evals-tailor` with the checker: 17/21 ready, 0 injection failures, ~$0.002
+    and ~12 s per draft.
+  - Live, lead 55: 2 drafts blocked by the checker, the third ready. A block costs one
+    more click.
+- **Method:** every M5 test was proved by breaking the code it guards (the tables are
+  in #53 to #56). Two checks turned out to be dead code or untested, and were fixed.
+- **Spend:** $1.46 in model calls so far.
+- **Open:**
+  - the checker's verdicts vary between runs (a re-check flags ~2 of 17 ready drafts);
+  - no hand edits before export (OI-9);
+  - letters are English only (OI-7; French evidence for M7-04).
 
 ## M6: Full tracker
 
@@ -285,7 +316,11 @@ Order: M5-01 → M5-02 → M5-04 → M5-03. Owner input: `docs/stories/M5-owner-
 - Skip and skip-with-reason actions stored as feedback.
 
 **Stories:** M6-01 Application status and history · M6-02 Board view · M6-03 Notes and
-contacts · M6-04 Follow-up reminders · M6-05 Skip reasons
+contacts · M6-04 Follow-up reminders · M6-05 Skip reasons · M6-06 Company merge (from the
+M2-07 note below)
+
+Order: M6-01 → M6-05 → M6-03 → M6-04 → M6-02 → M6-06; the board can slip (PRD cut
+line). Owner input: `docs/stories/M6-owner-input.md`.
 
 **Notes**
 - Company merge (from M2-07, ADR-0015): a board-less company typed with `collector add
@@ -398,3 +433,4 @@ with their own filters, without seeing anything private of the owner's.
 | 2026-11-06 | M4 stories written: M4-01…M4-05 renamed to match their scope (Guardrail tests → Draft validator and the guardrail tests), M4-06 added (CV-variant measurement, from the M3 follow-ups), order set, owner input listed with formats. | Owner's direction after M3; the validator comes before the agent so the guardrail tests exist first. |
 | 2026-11-08 | **M4 complete.** M4-01…M4-06 (#47…#51). ADR-0024, ADR-0025. Owner's evidence bank loaded; drafts validated before shown; review page in the tracker. OI-3 skipped (role-family proxy), OI-2/OI-4 optional. Next: **M5**. | Every M4 exit criterion is met and seen working locally. |
 | 2026-11-08 | M5 stories written; linking documents to applications moved from M5-04 to M6. | Applications are created in M6. |
+| 2026-11-08 | **M5 complete.** M5-01…M5-04 (#53…#56); ADR-0026, ADR-0027. M6 stories written, M6-06 Company merge added from the M2-07 note. Next: **M6**. | Every M5 exit criterion is met and seen working locally. |
