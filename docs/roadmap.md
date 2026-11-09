@@ -449,6 +449,15 @@ sites or other systems, from memory); confirm when the adapter is chosen.
 **Stories:** M8-01 Feedback report and weight tuning · M8-02 Collector benchmarks ·
 M8-03 Public README and architecture write-up · M8-04 Threat model review
 
+Order (owner, 2026-11-09): M8-02 → M8-04 → M8-03 (with the pre-publication history scan)
+→ M8-01. **M8-01 waits for real data:** it starts on or after 2026-11-30, after 2–3 weeks
+of use (at least 30 skips with a reason and 10 applications).
+
+**Progress (2026-11-09).** M8-02 done (#76): a run is 23 s, the Ashby rate-limit floor.
+M8-04 done (#77): `docs/threat-model.md`; ADR-0018 amended (what reaches the model).
+M8-03 (#78): public README, demo screenshots, `make history-scan`; the history rewrite and
+going public wait for the owner (`docs/publication-plan.md`).
+
 ## D: Deploy to a server (last)
 
 **Goal:** the finished stack, already running with `make up` on the Mac (L–M8), runs on an
