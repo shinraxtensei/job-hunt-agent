@@ -74,6 +74,8 @@
 # --- Remote boards (ADR-0029): one row per board; its jobs belong to many companies.
 # Remotive: linked and attributed as its API terms ask, fetched at most 4 times a day.
 - { name: Remotive, board_type: remotive, board_slug: remote-jobs, track: remote }
+# Remote OK: linked and named as its API terms ask; its logo is never used.
+- { name: Remote OK, board_type: remoteok, board_slug: jobs, track: remote }
 
 # --- Excluded on purpose: listed so it is never added back by accident; never collected.
 # Its Workable account lists 0 jobs (see M1-06); the board is recorded, not trusted.

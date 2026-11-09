@@ -64,3 +64,5 @@ checked by you. The `*.example.yaml` files show the format.
 - **Remotive**: public API (`remotive.com/api/remote-jobs`), software and DevOps jobs of many
   companies, fetched at most every 6 hours (≤ 4 a day, as its terms ask), each job linked
   to Remotive and shown "via Remotive" (M7-03, ADR-0029).
+- **Remote OK**: public API (`remoteok.com/api`), jobs tagged dev or engineer, linked to
+  Remote OK and shown "via Remote OK"; its logo is never used (M7-03).

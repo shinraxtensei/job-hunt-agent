@@ -382,7 +382,7 @@ func Description(source string, payload []byte) string {
 			parts = append(parts, text(d, "name"), plain(text(d, "value")))
 		}
 		return strings.Join(parts, "\n")
-	case "remotive":
+	case "remotive", "remoteok":
 		return plain(text(m, "description"))
 	}
 	return ""

@@ -53,6 +53,7 @@ import (
 	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
 	"github.com/shinraxtensei/job-hunter/internal/source/lever"
 	"github.com/shinraxtensei/job-hunter/internal/source/personio"
+	"github.com/shinraxtensei/job-hunter/internal/source/remoteok"
 	"github.com/shinraxtensei/job-hunter/internal/source/remotive"
 	"github.com/shinraxtensei/job-hunter/internal/watchlist"
 )
@@ -136,6 +137,7 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 			"ashby":      ashby.New(ashby.BaseURL),
 			"personio":   personio.New(personio.URL),
 			"remotive":   remotive.New(remotive.URL),
+			"remoteok":   remoteok.New(remoteok.URL),
 		}
 		res, err := collector.Run(ctx, pool, reg, cfg, log)
 		if err != nil {
@@ -378,6 +380,7 @@ func add(ctx context.Context, log *slog.Logger, dsn, leverURL string, args []str
 		"ashby":      ashby.New(ashby.BaseURL),
 		"personio":   personio.New(personio.URL),
 		"remotive":   remotive.New(remotive.URL),
+		"remoteok":   remoteok.New(remoteok.URL),
 	}
 	res, err := collector.Add(ctx, pool, reg, cfg.HostInterval, link, m, log)
 	if err != nil {

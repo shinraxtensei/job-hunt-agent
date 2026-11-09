@@ -227,6 +227,7 @@ describe("board postings (M7-03)", () => {
     const { place } = await import("./format");
     expect(place(lead({ origin: "board", source: "remotive", locations: ["Worldwide"] }))).toBe("Worldwide · Remote · via Remotive");
     expect(place(lead({}))).not.toContain("via");
+    expect(place(lead({ origin: "board", source: "remoteok", locations: [] }))).toBe("No location · Remote · via Remote OK");
     const el = render([lead({ origin: "board", source: "remotive", url: "https://remotive.com/remote-jobs/software-dev/x-1" })]);
     expect(el.textContent).toContain("via Remotive");
     expect(el.querySelector("a[href='https://remotive.com/remote-jobs/software-dev/x-1']")).not.toBeNull();

@@ -37,7 +37,7 @@ export function place(l: Lead): string {
 }
 
 // Boards whose terms ask to be named as the source (ADR-0029).
-const BOARDS: Record<string, string> = { remotive: "Remotive" };
+const BOARDS: Record<string, string> = { remotive: "Remotive", remoteok: "Remote OK" };
 
 // The semantic pastels (docs/design/brief.md): one meaning each, always with words.
 export type Tone = "mint" | "sand" | "salmon" | "blue" | "lilac";

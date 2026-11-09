@@ -372,7 +372,7 @@ Model spend for all of v1's building and evals: about $1.50.
   work.
 - Closing manual non-board postings is the owner's action here; they are never rechecked.
 
-## M7: Today view and more sources
+## M7: Today view and more sources ✅ done 2026-11-09
 
 **Goal:** opening the tracker shows what changed since the last visit, and coverage grows
 to Moroccan employers and remote boards, from sources whose terms allow it.
@@ -389,6 +389,16 @@ to Moroccan employers and remote boards, from sources whose terms allow it.
 M7-03 Remote boards: Remotive and RemoteOK · M1-06 Workable adapter (backlog)
 
 Order: M7-01 → M7-02 → M7-03. Owner input: `docs/stories/M7-owner-input.md`.
+
+**Done (2026-11-09).** M7-00 redesign (#70), M7-01 Today view (#71), M7-02 Personio feed
+and French drafts (#72, #73), M7-03 Remotive and Remote OK (#74, #75), ADR-0029.
+- Today shows new leads since the last visit, follow-ups due and closed postings.
+- Inyad comes in through Personio. French postings get French drafts once the owner
+  writes `text_fr` lines (OI-21); until then they get English drafts that say why.
+- Remotive and Remote OK add about 70 remote jobs of companies outside the watch list;
+  the default preset shows about 25.
+- Still open: OI-18 SmartRecruiters (default no), OI-19 other remote boards' terms,
+  M1-06 Workable (backlog).
 
 **Changed 2026-11-09 (owner):** no push digest before D. Collection is on demand on the
 Mac, so a morning email or Telegram message has nothing new to say on its own. The
@@ -497,3 +507,4 @@ with their own filters, without seeing anything private of the owner's.
 | 2026-11-08 | **M5 complete.** M5-01…M5-04 (#53…#56); ADR-0026, ADR-0027. M6 stories written, M6-06 Company merge added from the M2-07 note. Next: **M6**. | Every M5 exit criterion is met and seen working locally. |
 | 2026-11-08 | **M6 complete; v1 complete.** M6-01…M6-06 (#58…#63), ADR-0028. README: "How to use it daily". Next: **M7**, then M8, then D. | Every M6 exit criterion is met; the owner asked to mark v1 complete when M6 is done. |
 | 2026-11-09 | M7 reshaped: the digest and its channel ADR moved to D; M7 is a Today view, Moroccan employers (Personio feed, French drafts) and remote boards (Remotive, RemoteOK). Step 0 research in `docs/research/m7-sources.md`. | Owner: no push digest before the server collects on its own. Step 0 found no Moroccan job board whose terms allow automated reads. |
+| 2026-11-09 | **M7 complete.** M7-00…M7-03 (#70…#75), ADR-0029. Next: **M8**, then D. | Every M7 exit criterion is met: Today view, Moroccan employers through the one source whose terms allow it, two remote boards. |

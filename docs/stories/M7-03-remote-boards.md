@@ -1,6 +1,6 @@
 # M7-03: Remote boards: Remotive and RemoteOK
 
-- **Status:** In progress (slice 1 of 2: Remotive)
+- **Status:** Done
 - **Milestone:** M7 — Today view and more sources
 - **Linear:** [HAM-67](https://linear.app/hamid-corp/issue/HAM-67/m7-03-remote-boards-remotive-and-remoteok)
 - **Estimate:** 1 day
@@ -61,6 +61,23 @@ These are boards, not company feeds: one fetch returns many companies. ADR-0005'
 - **Live:** 5 software jobs of 4 companies; the preset shows 3 (Fluence Full-Stack
   Developer scored Strong) and hides 2 for seniority, role and location reasons. A second
   `make collect` a minute later didn't fetch Remotive.
+
+**Slice 2: Remote OK (2026-11-09).**
+- **Adapter** `internal/source/remoteok`: one GET of `remoteok.com/api`, a JSON array whose
+  first element is the legal notice (required: without it the response isn't the job
+  list, and an empty result would close every Remote OK posting). Remote OK has no
+  categories and tags loosely ("dev" on an accountant), so the adapter keeps jobs tagged
+  `dev` or `engineer` and the preset's role filter does the rest. Same six test types;
+  6-hour interval as Remotive (Remote OK states none). Its logo is never loaded.
+- **Repaired names:** Remote OK sends HTML entities ("&amp;") and UTF-8 read as Latin-1
+  ("Sothebyâs"); `job.FixText` undoes both for titles, companies and locations, and
+  leaves correct accented text alone.
+- **Live:** 65 jobs tagged dev or engineer; the preset shows 22 and hides 43 by role,
+  seniority, experience or location. 20 have an unknown role family (property manager,
+  tax manager); they are shown, as unknown roles are everywhere, and scored low.
+- **Attribution:** "via Remote OK", linked to the Remote OK job. The tracker opens links
+  with `rel="noopener noreferrer"` (the owner's privacy; a private tracker, not a site, so
+  "follow" links don't apply).
 
 ## Out of scope
 

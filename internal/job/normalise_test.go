@@ -256,6 +256,35 @@ func TestNormaliseRemotive(t *testing.T) {
 	}
 }
 
+// M7-03: a Remote OK job is remote; its location, when given, is where candidates may be.
+func TestNormaliseRemoteOK(t *testing.T) {
+	for name, c := range map[string]struct {
+		payload string
+		want    job.Record
+	}{
+		"located": {`{"id":"1","date":"2026-11-08T00:00:03+00:00","company":"Acme","position":"Senior Vue Developer","location":"Lisbon, Portugal","url":"https://remoteok.com/remote-jobs/x-1"}`,
+			job.Record{Title: "Senior Vue Developer", URL: "https://remoteok.com/remote-jobs/x-1", Locations: []string{"Lisbon, Portugal"},
+				Workplace: job.Remote, PublishedAt: time.Date(2026, 11, 8, 0, 0, 3, 0, time.UTC)}},
+		"anywhere, bad fields": {`{"id":"2","position":"Go Developer","location":"","date":5}`,
+			job.Record{Title: "Go Developer", Workplace: job.Remote}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := job.Normalise("remoteok", []byte(c.payload))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got.TitleKey = ""
+			if !got.PublishedAt.Equal(c.want.PublishedAt) {
+				t.Errorf("published %v, want %v", got.PublishedAt, c.want.PublishedAt)
+			}
+			got.PublishedAt, c.want.PublishedAt = time.Time{}, time.Time{}
+			if fmt.Sprintf("%+v", got) != fmt.Sprintf("%+v", c.want) {
+				t.Errorf("got  %+v\nwant %+v", got, c.want)
+			}
+		})
+	}
+}
+
 func TestNormaliseToleratesBadFields(t *testing.T) {
 	for source, payload := range map[string]string{
 		"lever":      `{"text": 42, "hostedUrl": null, "categories": "nope", "workplaceType": ["remote"], "country": "usa", "createdAt": "yesterday"}`,
@@ -327,7 +356,7 @@ func FuzzNormalise(f *testing.F) {
 		rec, err := job.Normalise(source, payload)
 		var obj map[string]json.RawMessage
 		isObject := json.Unmarshal(payload, &obj) == nil && obj != nil
-		known := source == "lever" || source == "greenhouse" || source == "ashby" || source == "personio" || source == "remotive"
+		known := source == "lever" || source == "greenhouse" || source == "ashby" || source == "personio" || source == "remotive" || source == "remoteok"
 		if known && isObject && err != nil {
 			t.Fatalf("Normalise(%s) failed on a JSON object: %v", source, err)
 		}

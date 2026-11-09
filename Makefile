@@ -111,6 +111,7 @@ fuzz: ## Fuzz the source parsers and the normaliser for 30s each (not part of ch
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/ashby/
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/personio/
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/remotive/
+	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/remoteok/
 	go test -run '^$$' -fuzz=FuzzNormalise -fuzztime=30s ./internal/job/
 	go test -run '^$$' -fuzz=FuzzTitleKey -fuzztime=30s ./internal/job/
 	go test -run '^$$' -fuzz=FuzzClassify -fuzztime=30s ./internal/job/

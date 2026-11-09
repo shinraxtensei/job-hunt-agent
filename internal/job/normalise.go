@@ -61,6 +61,8 @@ func Normalise(source string, payload []byte) (Record, error) {
 		r = personio(m)
 	case "remotive":
 		r = remotive(m)
+	case "remoteok":
+		r = remoteok(m)
 	case "manual":
 		r = manual(m)
 	default:
