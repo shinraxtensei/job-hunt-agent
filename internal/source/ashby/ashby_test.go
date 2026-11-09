@@ -13,9 +13,9 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
-	"github.com/shinraxtensei/job-hunter/internal/source/ashby"
-	fetchpkg "github.com/shinraxtensei/job-hunter/internal/source/fetch"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/ashby"
+	fetchpkg "github.com/shinraxtensei/job-hunt-agent/internal/source/fetch"
 )
 
 // These tests cover Ashby's URL, parsing and golden files. Retries, Retry-After, the

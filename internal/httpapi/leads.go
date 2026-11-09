@@ -17,9 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
-	"github.com/shinraxtensei/job-hunter/internal/preset"
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/preset"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // Lead is one duplicate group as the API returns it: the canonical job's record and the

@@ -34,8 +34,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/shinraxtensei/job-hunter/internal/httpapi"
-	"github.com/shinraxtensei/job-hunter/internal/webui"
+	"github.com/shinraxtensei/job-hunt-agent/internal/httpapi"
+	"github.com/shinraxtensei/job-hunt-agent/internal/webui"
 )
 
 // shutdownTimeout is how long in-flight requests get after a signal.

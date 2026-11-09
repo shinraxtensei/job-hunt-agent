@@ -14,9 +14,9 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
-	"github.com/shinraxtensei/job-hunter/internal/source/fetch"
-	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/fetch"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/greenhouse"
 )
 
 // These tests cover Greenhouse's URL, parsing and golden files. Retries, Retry-After,

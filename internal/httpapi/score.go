@@ -6,7 +6,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // FitLevels are the score bands, best first (M3-06); "unscored" is the filter value for

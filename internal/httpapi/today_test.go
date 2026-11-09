@@ -6,7 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // M7-01 AC2-AC3 (OI-20): "new" starts at the visit before the current one, or at "Mark all

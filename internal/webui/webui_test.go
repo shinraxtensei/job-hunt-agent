@@ -7,7 +7,7 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/shinraxtensei/job-hunter/internal/webui"
+	"github.com/shinraxtensei/job-hunt-agent/internal/webui"
 )
 
 var built = fstest.MapFS{

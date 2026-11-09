@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/shinraxtensei/job-hunter/internal/preset"
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/preset"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // reconcileBatch is how many postings one enqueue statement (one transaction) covers.

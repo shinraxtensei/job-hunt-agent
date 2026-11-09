@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/time/rate"
 
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // Registry maps a board type ("lever") to its adapter.

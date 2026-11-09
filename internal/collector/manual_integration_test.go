@@ -11,8 +11,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
-	"github.com/shinraxtensei/job-hunter/internal/source/lever"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/lever"
 )
 
 // postingUUID is a Lever-style id unique to a test: Lever ids are global, so two tests

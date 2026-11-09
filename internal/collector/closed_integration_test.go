@@ -18,9 +18,9 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
-	"github.com/shinraxtensei/job-hunter/internal/job"
-	"github.com/shinraxtensei/job-hunter/internal/store/storetest"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store/storetest"
 )
 
 func (e *env) closed(sourceID string) bool {

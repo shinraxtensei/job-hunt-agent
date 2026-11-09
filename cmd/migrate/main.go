@@ -14,7 +14,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib" // registers the "pgx" database/sql driver
 
-	"github.com/shinraxtensei/job-hunter/db/migrations"
+	"github.com/shinraxtensei/job-hunt-agent/db/migrations"
 )
 
 const usage = "usage: migrate up|status (connects with MIGRATIONS_DATABASE_URL, the owner role)"

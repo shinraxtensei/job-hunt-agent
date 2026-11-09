@@ -12,8 +12,8 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
-	"github.com/shinraxtensei/job-hunter/internal/source/fetch"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/fetch"
 )
 
 // BaseURL is Lever's global postings API. (EU sites use api.eu.lever.co.)

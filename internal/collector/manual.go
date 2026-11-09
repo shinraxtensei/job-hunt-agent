@@ -12,9 +12,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/time/rate"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
-	"github.com/shinraxtensei/job-hunter/internal/source/fetch"
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/fetch"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // PostingSource is a Source that can fetch one posting by board and id, from its own

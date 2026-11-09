@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/shinraxtensei/job-hunter/internal/preset"
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/preset"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // ReextractResult is what `collector enqueue --reextract` found (and re-queued unless

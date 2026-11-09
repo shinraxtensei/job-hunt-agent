@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/store/storetest"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store/storetest"
 )
 
 // workItemsColumns reads db/contract/work_items.columns: "name type nullable" per line.

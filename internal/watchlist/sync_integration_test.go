@@ -12,8 +12,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/shinraxtensei/job-hunter/internal/store/storetest"
-	"github.com/shinraxtensei/job-hunter/internal/watchlist"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store/storetest"
+	"github.com/shinraxtensei/job-hunt-agent/internal/watchlist"
 )
 
 func TestMain(m *testing.M) { storetest.Main(m) }

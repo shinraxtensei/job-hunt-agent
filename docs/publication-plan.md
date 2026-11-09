@@ -44,9 +44,9 @@ letter prompts (H3) still name it: changing a prompt needs `make evals-tailor` a
 - Publication: a **new** repository, `shinraxtensei/job-hunt-agent`, made private from
   the rewritten history and scanned; the owner makes it public after checking. The
   current private repository is left untouched (no force-push, no rewrite).
-- The Go module path stays `github.com/shinraxtensei/job-hunter`: it is a name, not a
-  URL anyone fetches; the README, the licence badge and the collector's User-Agent point
-  at the new repository.
+- The Go module path is `github.com/shinraxtensei/job-hunt-agent` (renamed after the
+  move); the README, the licence badge and the collector's User-Agent point at the new
+  repository.
 
 ## The rewrite plan (for the owner to run, or to approve)
 

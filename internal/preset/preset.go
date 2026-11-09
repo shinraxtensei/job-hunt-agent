@@ -12,7 +12,7 @@ import (
 
 	"go.yaml.in/yaml/v3"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
 )
 
 // Preset is one set of filters. A nil list or pointer, or an empty Closed, is no filter.

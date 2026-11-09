@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // VisitGap is how long a visit lasts after the page was last opened (OI-20): opening Today

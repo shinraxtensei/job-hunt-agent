@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
-	"github.com/shinraxtensei/job-hunter/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
 )
 
 type facetRow struct {
