@@ -213,5 +213,5 @@ the claim checker (M5-02) sends the draft's sentences with the lines they cite a
 employment facts (roles with employers and dates, projects, education, certifications).
 The owner's name, email and phone are still never sent; code adds them after the call.
 `docs/threat-model.md` has the table of what each call sends. The provider terms above
-apply to all of it.
+apply to all of it. **Accepted by the owner on 2026-11-09.**
 

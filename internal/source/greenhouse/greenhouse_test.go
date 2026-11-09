@@ -126,7 +126,7 @@ func TestFetchRequest(t *testing.T) {
 	if r.URL.Path != "/v1/boards/cockroachlabs/jobs" || r.URL.Query().Get("content") != "true" {
 		t.Errorf("requested %s, want /v1/boards/cockroachlabs/jobs?content=true", r.URL)
 	}
-	if ua := r.Header.Get("User-Agent"); !strings.Contains(ua, "https://github.com/shinraxtensei/job-hunter") {
+	if ua := r.Header.Get("User-Agent"); !strings.Contains(ua, "https://github.com/shinraxtensei/job-hunt-agent") {
 		t.Errorf("User-Agent %q has no contact URL", ua)
 	}
 }

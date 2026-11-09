@@ -67,7 +67,7 @@ func TestGetReturnsBodyAndIdentifiesUs(t *testing.T) {
 		t.Fatalf("Get = %q, %v; want %q", body, err, okBody)
 	}
 	r := reqs()[0]
-	if ua := r.Header.Get("User-Agent"); !strings.Contains(ua, "https://github.com/shinraxtensei/job-hunter") {
+	if ua := r.Header.Get("User-Agent"); !strings.Contains(ua, "https://github.com/shinraxtensei/job-hunt-agent") {
 		t.Errorf("User-Agent %q has no contact URL", ua)
 	}
 	if r.Header.Get("Accept") != "application/json" {

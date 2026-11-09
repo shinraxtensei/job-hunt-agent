@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	userAgent = "job-hunter/0.1 (+https://github.com/shinraxtensei/job-hunter)"
+	userAgent = "job-hunter/0.1 (+https://github.com/shinraxtensei/job-hunt-agent)"
 
 	// maxBody caps how much of a response we read: the payload is untrusted. The
 	// largest real board seen (palantir on Lever, 301 postings) is ~6 MiB.

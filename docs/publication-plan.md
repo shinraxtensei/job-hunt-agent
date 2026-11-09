@@ -35,6 +35,19 @@ M5-02 story no longer names the product, and the README uses demo screenshots on
 letter prompts (H3) still name it: changing a prompt needs `make evals-tailor` and
 `make evals-checker`, so that happens with the owner's go-ahead (a letter prompt v3).
 
+## Decisions (owner, 2026-11-09)
+
+- ADR-0018's amendment is accepted (what reaches the model).
+- H1, H2 removed from the new history; H3 replaced (letter prompt v3 in the tree, the
+  name replaced in every older version); H4 rewritten to the GitHub no-reply address;
+  H5 kept. Licence: MIT.
+- Publication: a **new** repository, `shinraxtensei/job-hunt-agent`, made private from
+  the rewritten history and scanned; the owner makes it public after checking. The
+  current private repository is left untouched (no force-push, no rewrite).
+- The Go module path stays `github.com/shinraxtensei/job-hunter`: it is a name, not a
+  URL anyone fetches; the README, the licence badge and the collector's User-Agent point
+  at the new repository.
+
 ## The rewrite plan (for the owner to run, or to approve)
 
 GitHub keeps the old commits reachable through pull-request refs (`refs/pull/*`), which a

@@ -1,5 +1,8 @@
 # Job-Hunt Agent
 
+[![CI](https://github.com/shinraxtensei/job-hunt-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/shinraxtensei/job-hunt-agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A personal job-search agent. Every day it collects postings from company career feeds and
 remote job boards, scores each one against my profile, and explains the fit. On request it
 drafts a one-page CV and cover letter, using only a bank of facts I checked myself. It
@@ -161,3 +164,7 @@ collected; their postings can be added by link. See `docs/research/m7-sources.md
 **v1 complete (2026-11-08); M7 done (2026-11-09).** Everything runs locally on a Mac.
 Next: M8 (this write-up, benchmarks, threat model, weight tuning from real outcomes), then
 deploying to a small server reachable only through Tailscale (milestone D).
+
+## Licence
+
+MIT, see [`LICENSE`](LICENSE). Clone: `git clone https://github.com/shinraxtensei/job-hunt-agent.git`.

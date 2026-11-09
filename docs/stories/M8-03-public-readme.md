@@ -65,3 +65,13 @@ security model (M8-04). Screenshots must never show the owner's data (owner, 202
   any text blob. Findings H1–H5 and the rewrite plan are in `docs/publication-plan.md`.
   Real-data screenshots and the M2-06 mockups are removed from the tree; the history
   still has them until the owner runs or approves the plan.
+
+**Publication prep (owner decisions, 2026-11-09).**
+- **Letter prompt v3:** the two examples use "Acme" instead of a name from the owner's work
+  history; nothing else changed. Evals: 20 and 19 of 21 drafts ready (v2: 15, 14, 21),
+  planted guardrail cases 25/25 in all three checker runs, 0 injection failures. False
+  blocks on a re-check: 3, 0, 0 (the checker's known run-to-run variation; its prompt
+  didn't change).
+- **MIT licence** (holder: the GitHub handle). README badges and links, and the
+  collector's User-Agent, point at the new repository `shinraxtensei/job-hunt-agent`.
+- ADR-0018's amendment is accepted by the owner.
