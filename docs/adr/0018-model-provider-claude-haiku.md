@@ -204,3 +204,14 @@ state" means 60 new or changed leads a day:
   - a bulk re-extraction would cost more than $5 (use batches for it);
   - Haiku misses an eval threshold;
   - the provider changes its prices or data terms.
+
+## Amendment (2026-11-09, M8-04 threat model review)
+
+"Never sent: CV text, evidence-bank entries" stopped being true with M4 (ADR-0024,
+ADR-0025): the tailor and letter calls send the evidence lines selected for a lead, and
+the claim checker (M5-02) sends the draft's sentences with the lines they cite and the
+employment facts (roles with employers and dates, projects, education, certifications).
+The owner's name, email and phone are still never sent; code adds them after the call.
+`docs/threat-model.md` has the table of what each call sends. The provider terms above
+apply to all of it.
+

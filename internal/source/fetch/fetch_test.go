@@ -402,3 +402,26 @@ func TestGet404IsNotFound(t *testing.T) {
 		}
 	}
 }
+
+// M8-04: a response over the 32 MiB cap is refused, not read into memory, and not retried
+// (the payload is untrusted; a board can't make the collector hold an unbounded body).
+func TestGetRefusesOversizedBody(t *testing.T) {
+	var hits atomic.Int32
+	chunk := strings.Repeat("x", 1<<20)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits.Add(1)
+		for range 33 {
+			if _, err := w.Write([]byte(chunk)); err != nil {
+				return // the client stopped reading
+			}
+		}
+	}))
+	t.Cleanup(srv.Close)
+	_, err := client().Get(t.Context(), srv.URL, noLimit())
+	if err == nil || !strings.Contains(err.Error(), "larger than") {
+		t.Fatalf("err = %v, want the size cap", err)
+	}
+	if n := hits.Load(); n != 1 {
+		t.Errorf("%d requests, want 1 (a size refusal is permanent)", n)
+	}
+}
