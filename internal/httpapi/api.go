@@ -56,6 +56,7 @@ func New(db DB, presetsDir, commit string, now func() time.Time, log *slog.Logge
 	mux.HandleFunc("DELETE /api/contacts/{id}", a.deleteContact)
 	mux.HandleFunc("GET /api/followups", a.followups)
 	mux.HandleFunc("GET /api/board", a.board)
+	mux.HandleFunc("GET /api/drafts", a.recentDrafts)
 	mux.HandleFunc("POST /api/applications/{id}/followup", a.followupAction)
 	mux.HandleFunc("GET /api/documents/{id}/pdf", a.documentPDF)
 	mux.HandleFunc("GET /api/leads/{id}/members", a.members)

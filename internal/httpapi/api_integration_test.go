@@ -244,6 +244,9 @@ func TestGolden(t *testing.T) {
 		{"lead_unknown", "/api/leads/424242", 404},
 		{"drafts", "/api/leads/9001/drafts", 200},
 		{"drafts_blocked", "/api/leads/9006/drafts", 200},
+		{"recent_drafts", "/api/drafts", 200},
+		{"followups_none", "/api/followups", 200},
+		{"board_empty", "/api/board", 200},
 		{"drafts_none", "/api/leads/9003/drafts", 200},
 		{"bad_sort", "/api/leads?sort=salary", 400},
 		{"bad_fit", "/api/leads?fit=great", 400},
@@ -1217,5 +1220,16 @@ func TestBoard(t *testing.T) {
 	if len(v.Cards) != 2 || v.Cards[0].LeadID != 9001 || v.Cards[0].Status != "interviewing" ||
 		v.Cards[1].LeadID != 9006 || !v.Cards[1].FollowupDue || v.Cards[0].FollowupDue || v.Cards[0].FitLevel == nil {
 		t.Errorf("board: %+v", v.Cards)
+	}
+}
+
+// M7-00: the Drafts page lists each lead's newest draft (no content), newest first.
+func TestRecentDrafts(t *testing.T) {
+	h := server(t)
+	var v struct{ Drafts []httpapi.DraftSummary }
+	getJSON(t, h, "/api/drafts", &v)
+	if len(v.Drafts) != 2 || v.Drafts[0].ID != 9103 || v.Drafts[0].LeadID != 9006 || v.Drafts[1].ID != 9102 ||
+		v.Drafts[1].Status != "ready_for_review" || v.Drafts[1].Company == "" || v.Drafts[1].Title == "" {
+		t.Errorf("drafts: %+v", v.Drafts)
 	}
 }

@@ -1,0 +1,23 @@
+{
+  "drafts": [
+    {
+      "id": 9103,
+      "lead_id": 9006,
+      "company": "Brick",
+      "title": "Mobile Engineer (Flutter)",
+      "status": "blocked",
+      "requested_at": "2026-11-02T09:30:00Z",
+      "made_at": "2026-11-02T09:30:00Z"
+    },
+    {
+      "id": 9102,
+      "lead_id": 9001,
+      "company": "Acme",
+      "title": "Senior Backend Engineer",
+      "status": "ready_for_review",
+      "requested_at": "2026-11-02T09:00:00Z",
+      "made_at": "2026-11-02T09:00:00Z"
+    }
+  ]
+}
+

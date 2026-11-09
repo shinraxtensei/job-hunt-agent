@@ -312,3 +312,35 @@ func (a *api) documentPDF(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(d.Pdf) // the client went away: nothing to do
 }
+
+// DraftSummary is a lead's newest draft, for the Drafts page (M7-00): no content.
+type DraftSummary struct {
+	ID          int64      `json:"id"`
+	LeadID      int64      `json:"lead_id"`
+	Company     string     `json:"company"`
+	Title       string     `json:"title"`
+	Status      string     `json:"status"`
+	RequestedAt time.Time  `json:"requested_at"`
+	MadeAt      *time.Time `json:"made_at"`
+}
+
+// recentDrafts lists each lead's newest draft, newest first.
+func (a *api) recentDrafts(w http.ResponseWriter, r *http.Request) {
+	rows, err := a.q.RecentDrafts(r.Context())
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	out := make([]DraftSummary, 0, len(rows))
+	for _, d := range rows {
+		x := DraftSummary{ID: d.ID, LeadID: d.PostingID, Company: d.Company, Title: d.Title, Status: d.Status,
+			RequestedAt: d.RequestedAt.Time.UTC()}
+		if d.MadeAt.Valid {
+			t := d.MadeAt.Time.UTC()
+			x.MadeAt = &t
+		}
+		out = append(out, x)
+	}
+	slices.SortStableFunc(out, func(x, y DraftSummary) int { return y.RequestedAt.Compare(x.RequestedAt) })
+	writeJSON(w, http.StatusOK, map[string]any{"drafts": out})
+}

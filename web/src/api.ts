@@ -116,8 +116,7 @@ export async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
 // hidden) and `q` (search). apiQuery strips what the API doesn't know.
 export function apiQuery(page: URLSearchParams, extra: Record<string, string> = {}): string {
   const q = new URLSearchParams(page);
-  q.delete("view");
-  q.delete("q");
+  for (const k of ["view", "q", "page", "lead", "tab"]) q.delete(k); // the page's own state, not filters
   for (const [k, v] of Object.entries(extra)) q.set(k, v);
   const s = q.toString();
   return s ? `?${s}` : "";

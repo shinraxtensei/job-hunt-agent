@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Lead } from "./api";
 import { label, reason } from "./labels";
-import { place } from "./LeadTable";
+import { place } from "./format";
 
 describe("facet labels (M2-08 AC3)", () => {
   it.each([

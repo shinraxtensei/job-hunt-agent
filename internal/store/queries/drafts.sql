@@ -26,3 +26,11 @@ RETURNING posting_id;
 -- The text of evidence lines a draft cites, retired ones included (ADR-0024), so the page
 -- shows what each sentence was built from.
 SELECT id, text, retired FROM evidence_lines WHERE id = ANY(@ids::text[]);
+
+-- name: RecentDrafts :many
+-- The newest draft of each lead (M7-00 Drafts page), newest first: status and lead, no content.
+SELECT DISTINCT ON (d.posting_id) d.id, d.posting_id, d.status, d.requested_at, d.made_at, j.title, c.name AS company
+FROM drafts d
+JOIN jobs j ON j.posting_id = d.posting_id
+JOIN companies c ON c.id = j.company_id
+ORDER BY d.posting_id, d.requested_at DESC, d.id DESC;

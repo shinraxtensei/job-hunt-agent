@@ -55,7 +55,8 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
       : path === "/api/leads/hidden" ? golden("hidden_default")
       : path === "/api/facets" ? golden("facets_default")
       : path === "/api/presets" ? golden("presets")
-      : path === "/api/followups" ? '{"followups":[]}'
+      : path === "/api/followups" ? golden("followups_none")
+      : path === "/api/drafts" ? golden("recent_drafts")
       : path === "/api/board" ? JSON.stringify(BOARD)
       : path.endsWith("/members") ? golden("members")
       : null;
@@ -79,16 +80,44 @@ async function noAxeViolations(page: Page) {
 
 const summary = (page: Page) => page.getByRole("status").filter({ hasText: "shown" });
 
+
+const row = (page: Page, text: string) => page.locator(".lead-row", { hasText: text });
+// select a lead the way a person does: click the row (not its title link)
+async function pick(page: Page, text: string) {
+  await row(page, text).locator(".company").click();
+  await expect(page.locator(".detail h2")).toContainText(text);
+}
+
 for (const width of [375, 1280]) {
   for (const scheme of ["light", "dark"] as const) {
     test.describe(`${width}px ${scheme}`, () => {
       test.use({ viewport: { width, height: 900 }, colorScheme: scheme });
 
-      test("lists the default leads with the hidden count and no axe violations", async ({ page }) => {
+      // M7-00: Today is the start page: stat tiles, then new leads, follow-ups, closed.
+      test("Today shows tiles and sections, and opens a lead", async ({ page }) => {
         await mockAPI(page);
         await page.goto("/");
+        await expect(page.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
+        const tiles = page.getByRole("list", { name: "At a glance" });
+        await expect(tiles.getByRole("link")).toHaveCount(4);
+        await expect(tiles.getByRole("link", { name: /Drafts ready 1/ })).toBeVisible(); // 9102 is ready
+        await expect(page.getByRole("heading", { name: /New leads/ })).toBeVisible();
+        await expect(page.getByRole("heading", { name: /Follow-ups due/ })).toBeVisible();
+        await noHorizontalScroll(page);
+        await noAxeViolations(page);
+        await tiles.getByRole("link", { name: /Drafts ready/ }).click();
+        await expect(page).toHaveURL(/page=drafts/);
+        await expect(page.getByRole("heading", { name: "Drafts", level: 1 })).toBeVisible();
+        await page.getByRole("link", { name: /Acme · Senior Backend Engineer/ }).click();
+        await expect(page).toHaveURL(/page=leads&lead=9001&tab=cv/);
+        await expect(page.getByRole("tab", { name: "CV & letter" })).toHaveAttribute("aria-selected", "true");
+      });
+
+      test("lists the default leads with the hidden count and no axe violations", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/?page=leads");
         await expect(summary(page)).toHaveText("2 shown · 3 hidden by these filters");
-        await expect(page.getByRole("link", { name: "Senior Backend Engineer" })).toHaveAttribute("rel", "noopener noreferrer");
+        await expect(page.getByRole("link", { name: "Senior Backend Engineer" }).first()).toHaveAttribute("rel", "noopener noreferrer");
         await expect(page.getByRole("button", { name: /Filters \(5\)/ })).toBeVisible();
         await noHorizontalScroll(page);
         await noAxeViolations(page);
@@ -96,14 +125,14 @@ for (const width of [375, 1280]) {
 
       test("the filter sheet lists what is applied and resets", async ({ page }) => {
         await mockAPI(page);
-        await page.goto("/?new=true");
+        await page.goto("/?page=leads&new=true");
         await page.getByRole("button", { name: /Filters/ }).click();
         const sheet = page.getByRole("dialog", { name: "Filters" });
         await expect(sheet.getByText("New: last 24 h")).toBeVisible();
         await expect(sheet.getByRole("checkbox", { name: /^Backend/ })).toBeChecked(); // from the preset, labelled
         await noAxeViolations(page);
         await sheet.getByRole("button", { name: "Reset to my defaults" }).click();
-        await expect(page).toHaveURL(/\/$/);
+        await expect(page).toHaveURL(/\?page=leads(&lead=\d+)?$/);
         await page.keyboard.press("Escape");
         await expect(sheet).toBeHidden();
         await noHorizontalScroll(page);
@@ -111,111 +140,141 @@ for (const width of [375, 1280]) {
 
       test("the hidden view says why each lead is hidden", async ({ page }) => {
         await mockAPI(page);
-        await page.goto("/");
+        await page.goto("/?page=leads");
         await page.getByRole("link", { name: "3 hidden by these filters" }).click();
         await expect(page).toHaveURL(/view=hidden/);
-        await expect(page.getByText("hidden by Role: Sales, Location")).toBeVisible();
+        await expect(page.getByText("hidden by Role: Sales, Location").first()).toBeVisible();
         await noHorizontalScroll(page);
         await noAxeViolations(page);
       });
 
-      test("a lead with several postings expands to its members", async ({ page }) => {
+      // M7-00: the row selects the lead; the detail shows beside the list on wide screens and
+      // as a full-screen sheet with Back on the phone; the title stays a link.
+      test("selecting a lead shows its detail, with Back on the phone", async ({ page }) => {
         await mockAPI(page);
-        await page.goto("/");
-        const button = page.getByRole("button", { name: "Show details and 2 postings" });
-        await button.click();
-        await expect(button).toHaveAttribute("aria-expanded", "true");
+        await page.goto("/?page=leads");
+        await pick(page, "Mobile Engineer");
+        await expect(row(page, "Mobile Engineer")).toHaveAttribute("aria-current", "true");
+        await expect(page.locator(".detail h2").getByRole("link")).toHaveAttribute("target", "_blank");
+        const back = page.getByRole("button", { name: "Back to leads" });
+        if (width === 375) {
+          await expect(back).toBeVisible();
+          await expect(page.locator(".list-pane")).toBeHidden();
+          await noHorizontalScroll(page);
+          await noAxeViolations(page);
+          await back.click();
+          await expect(page.locator(".detail")).toBeHidden();
+          await expect(row(page, "Mobile Engineer")).toBeFocused(); // back where you were
+          await pick(page, "Mobile Engineer");
+          await page.keyboard.press("Escape");
+          await expect(page.locator(".detail")).toBeHidden();
+        } else {
+          await expect(back).toBeHidden();
+          await expect(page.locator(".list-pane")).toBeVisible();
+          await noHorizontalScroll(page);
+          await noAxeViolations(page);
+        }
+      });
+
+      test("a lead with several postings lists its members", async ({ page }) => {
+        await mockAPI(page);
+        await page.goto("/?page=leads");
+        await pick(page, "Senior Backend Engineer");
         await expect(page.getByRole("list", { name: "2 postings of this role" }).getByText(/Remote - EMEA/)).toBeVisible();
         await noHorizontalScroll(page);
         await noAxeViolations(page);
       });
 
-      // M3-08 AC4: best fit first; the row's fit in words and numbers; the expanded row
-      // shows the reason, the gaps and the breakdown with numbers.
+      // M3-08 AC4 in the new design: best fit first; the row's fit in words and numbers; the
+      // Overview shows the fit, the reason, the gaps and the breakdown with numbers.
       test("a scored lead shows its fit, reason, gaps and breakdown", async ({ page }) => {
         await mockAPI(page);
-        await page.goto("/");
-        const rows = page.locator("tr.row");
+        await page.goto("/?page=leads");
+        const rows = page.locator(".lead-row");
         await expect(rows.first()).toContainText("Senior Backend Engineer"); // 60.0 before 20.0
-        await expect(rows.first().locator("td.fit-cell")).toHaveText("Strong fit, score 60.0");
-        await rows.first().getByRole("button", { name: /Show details/ }).click();
-        const fit = page.getByRole("region", { name: "Fit" });
-        await expect(fit.getByText("Strong fit · 60.0 of 100 · CV: Backend")).toBeVisible();
-        await expect(fit.getByText("Your backend stack fits. Go is missing.")).toBeVisible();
-        await expect(fit.getByRole("list", { name: "Gaps" }).getByRole("listitem")).toHaveText(["Go"]);
-        await expect(fit.getByRole("table", { name: /Score breakdown/ }).getByRole("row")).toHaveCount(6);
-        await expect(fit.getByRole("row", { name: /Required skills/ })).toContainText("22.1 of 35");
+        await expect(rows.first().locator(".tag .visually-hidden")).toHaveText("Strong fit, score ");
+        await expect(rows.first().locator(".tag")).toContainText("60.0");
+        await pick(page, "Senior Backend Engineer");
+        const fit = page.getByRole("region", { name: "Fit", exact: true });
+        await expect(fit).toContainText("60.0 / 100");
+        await expect(fit).toContainText("Strong fit · CV: Backend");
+        const why = page.getByRole("region", { name: "Why this fit" });
+        await expect(why.getByText("Your backend stack fits. Go is missing.")).toBeVisible();
+        await expect(why.getByRole("list", { name: "Gaps" }).getByRole("listitem")).toHaveText(["Go"]);
+        await expect(why.getByRole("table", { name: /Score breakdown/ }).getByRole("row")).toHaveCount(6);
+        await expect(why.getByRole("row", { name: /Required skills/ })).toContainText("22.1 of 35");
         await noHorizontalScroll(page);
         await noAxeViolations(page);
       });
 
-      // M4-05: a lead's CV draft opens in a dialog: status, sentences with their evidence,
-      // findings in place, coverage with the possible injection flagged; approve records
-      // the decision (a same-origin JSON POST); nothing is sent.
+      // M4-05, M5-01, M5-04 in the "CV & letter" tab: sentences with their evidence, findings
+      // in place, the letter, the PDFs; approve is a same-origin JSON POST; nothing is sent.
       test("a CV draft is reviewed next to its evidence", async ({ page }) => {
         await mockAPI(page);
-        await page.goto("/");
-        await page.locator("tr.row", { hasText: "Senior Backend Engineer" }).getByRole("button", { name: /Show details/ }).click();
-        await page.getByRole("button", { name: "CV draft" }).click();
-        const dialog = page.getByRole("dialog", { name: /CV draft/ });
-        await expect(dialog.getByRole("status").filter({ hasText: "Ready for review" })).toBeVisible();
-        await expect(dialog.getByText("Cut the invoice job from 40 to 6 minutes.")).toBeVisible();
-        await expect(dialog.getByText("Led <img src=x onerror=alert(1)> the move to Docker images.")).toBeVisible();
-        await expect(dialog.locator("img")).toHaveCount(0);
-        await dialog.locator("li", { hasText: "Cut the invoice job" }).getByRole("button", { name: "Evidence (1)" }).click();
-        await expect(dialog.getByText(/cutting its run time from 40 to 6 minutes/)).toBeVisible();
-        await expect(dialog.getByText(/A stronger verb than the evidence uses/)).toBeVisible();
-        await expect(dialog.getByText(/possible injection, ignored/)).toBeVisible();
-        // M5-01: the letter under the CV, its sentences with their evidence, markup as text
-        const letter = dialog.getByRole("region", { name: "Cover letter" });
+        await page.goto("/?page=leads&lead=9001&tab=cv");
+        const panel = page.getByRole("region", { name: "CV and letter" });
+        await expect(panel.getByRole("status").filter({ hasText: "Ready for review" })).toBeVisible();
+        await expect(panel.getByText("Cut the invoice job from 40 to 6 minutes.")).toBeVisible();
+        await expect(panel.getByText("Led <img src=x onerror=alert(1)> the move to Docker images.")).toBeVisible();
+        await expect(panel.locator("img")).toHaveCount(0);
+        await panel.locator("li", { hasText: "Cut the invoice job" }).getByRole("button", { name: "Evidence (1)" }).click();
+        await expect(panel.getByText(/cutting its run time from 40 to 6 minutes/)).toBeVisible();
+        await expect(panel.getByText(/A stronger verb than the evidence uses/)).toBeVisible();
+        await expect(panel.getByText(/possible injection, ignored/)).toBeVisible();
+        const letter = panel.getByRole("region", { name: "Cover letter" });
         await expect(letter.getByText("Dear Hiring Team,")).toBeVisible();
         await expect(letter.getByText("I am writing to apply for the Backend Engineer role at Example Corp.")).toBeVisible();
         await expect(letter.getByText("I am available to start <b>within</b> one month.")).toBeVisible();
         await letter.locator("li", { hasText: "available to start" }).getByRole("button", { name: "Evidence (1)" }).click();
         await expect(letter.getByText("Available to start within one month.")).toBeVisible();
-        // M5-04: the exported PDFs; the sent CV is marked, the letter can be marked sent
-        const docs = dialog.getByRole("region", { name: "Documents" });
+        const docs = panel.getByRole("region", { name: "Documents" });
         await expect(docs.locator("li", { hasText: "CV PDF" })).toContainText("Sent");
         await expect(docs.locator("li", { hasText: "CV PDF" }).getByRole("link", { name: "Download" })).toHaveAttribute("href", "/api/documents/9201/pdf");
         const sent = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/documents/9202/sent"));
         await docs.locator("li", { hasText: "Cover letter PDF" }).getByRole("button", { name: "Mark as sent" }).click();
         expect((await sent).headers()["content-type"]).toBe("application/json");
-        await expect(dialog.getByLabel("Version")).toBeVisible(); // two versions
+        await expect(panel.getByLabel("Version")).toBeVisible(); // two versions
         await noHorizontalScroll(page);
         await noAxeViolations(page);
         const approve = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/drafts/9102/approve"));
-        await dialog.getByRole("button", { name: "Approve" }).click();
+        await panel.getByRole("button", { name: "Approve" }).click();
         expect((await approve).headers()["content-type"]).toBe("application/json");
       });
 
-      // M6-01: the expanded lead shows its status (a same-origin JSON write to change it),
-      // the history with automatic changes marked, the posting as applied to, the CV sent.
-      test("a lead's status and history", async ({ page }) => {
+      // M6-01, M6-03 in the tabs: status (a same-origin JSON write), history with automatic
+      // changes marked, the posting as applied to, the CV sent; notes and contacts as text.
+      test("a lead's status, history, notes and contacts", async ({ page }) => {
         await mockAPI(page);
-        await page.goto("/");
-        await page.locator("tr.row", { hasText: "Senior Backend Engineer" }).getByRole("button", { name: /Show details/ }).click();
+        await page.goto("/?page=leads&lead=9001");
         const app = page.getByRole("region", { name: "Application" });
         await expect(app.getByLabel("Status")).toHaveValue("applied");
-        await expect(app.getByText("Senior Backend Engineer <img src=x onerror=alert(1)>")).toBeVisible();
-        await expect(app.locator("img")).toHaveCount(0);
-        await expect(app.getByRole("link", { name: "CV" })).toHaveAttribute("href", "/api/documents/9201/pdf");
-        await app.getByText("History (3)").click();
-        await expect(app.getByText(/Drafted ·.*· automatic/)).toBeVisible();
+        await page.getByRole("tab", { name: "History" }).click();
+        const history = page.getByRole("tabpanel");
+        await expect(history.getByText("Senior Backend Engineer <img src=x onerror=alert(1)>")).toBeVisible();
+        await expect(history.locator("img")).toHaveCount(0);
+        await expect(history.getByRole("link", { name: "CV" })).toHaveAttribute("href", "/api/documents/9201/pdf");
+        await expect(history.getByRole("list", { name: "History (3)" }).getByRole("listitem").nth(1)).toContainText("automatic");
         await noHorizontalScroll(page);
         await noAxeViolations(page);
-        // M6-03: notes and contacts as text (markup inert, addresses not links); adding sends JSON
-        await expect(app.getByText("Call went well <b>really</b>", { exact: false })).toBeVisible();
-        await expect(app.getByRole("region", { name: "Contacts" }).getByRole("link")).toHaveCount(0);
+        await page.getByRole("tab", { name: "Notes" }).click();
+        const notes = page.getByRole("region", { name: "Notes" });
+        await expect(notes.getByText("Call went well <b>really</b>", { exact: false })).toBeVisible();
         const note = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9001/notes"));
-        await app.getByLabel("New note").fill("Sent the take-home");
-        await app.getByRole("button", { name: "Add note" }).click();
+        await notes.getByLabel("New note").fill("Sent the take-home");
+        await notes.getByRole("button", { name: "Add note" }).click();
         expect((await note).postDataJSON()).toEqual({ body: "Sent the take-home" });
+        await page.getByRole("tab", { name: "Contacts" }).click();
+        const contacts = page.getByRole("region", { name: "Contacts" });
+        await expect(contacts.getByText("Ann Smith")).toBeVisible();
+        await expect(contacts.getByRole("link")).toHaveCount(0);
         page.once("dialog", (d) => void d.accept());
         const del = page.waitForRequest((r) => r.method() === "DELETE" && r.url().endsWith("/api/contacts/1"));
-        await app.getByRole("region", { name: "Contacts" }).getByRole("button", { name: "Delete" }).click();
+        await contacts.getByRole("button", { name: "Delete" }).click();
         await del;
+        await noAxeViolations(page);
+        await page.getByRole("tab", { name: "Overview" }).click();
         const sent = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9001/status"));
-        await app.getByLabel("Status").selectOption("interviewing");
+        await page.getByRole("region", { name: "Application" }).getByLabel("Status").selectOption("interviewing");
         const req = await sent;
         expect(req.headers()["content-type"]).toBe("application/json");
         expect(req.postDataJSON()).toEqual({ status: "interviewing" });
@@ -223,19 +282,20 @@ for (const width of [375, 1280]) {
 
       // M6-05: one click skips; the answer's previous status powers Undo; a reason can follow.
       test("a lead is skipped with a reason, and undone", async ({ page }) => {
+        // the application turns skipped only once the skip arrives (no race with the first load)
+        const skipped = JSON.stringify({
+          application: { id: 2, status: "skipped", status_at: "2026-11-08T10:00:00Z", applied_at: null, snapshot: null, history: [{ status: "skipped", at: "2026-11-08T10:00:00Z", auto: false }], documents: [], notes: [], contacts: [] },
+        });
         let app = '{"application":null}';
         await mockAPI(page);
         await page.route("**/api/leads/9006/application", (route) => route.fulfill({ contentType: "application/json", body: app }));
-        await page.route("**/api/leads/9006/skip", (route) =>
-          route.fulfill({ contentType: "application/json", body: '{"status":"skipped","previous":"new"}' }),
-        );
-        await page.goto("/");
-        await page.locator("tr.row", { hasText: "Mobile Engineer" }).getByRole("button", { name: /Show details/ }).click();
+        await page.route("**/api/leads/9006/skip", (route) => {
+          app = skipped;
+          return route.fulfill({ contentType: "application/json", body: '{"status":"skipped","previous":"new"}' });
+        });
+        await page.goto("/?page=leads&lead=9006");
         const panel = page.getByRole("region", { name: "Application" });
         const skip = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/skip"));
-        app = JSON.stringify({
-          application: { id: 2, status: "skipped", status_at: "2026-11-08T10:00:00Z", applied_at: null, snapshot: null, history: [{ status: "skipped", at: "2026-11-08T10:00:00Z", auto: false }], documents: [], notes: [], contacts: [] },
-        });
         await panel.getByRole("button", { name: "Skip" }).click();
         expect((await skip).postDataJSON()).toEqual({});
         const why = panel.getByRole("group", { name: "Why skip it?" });
@@ -251,9 +311,9 @@ for (const width of [375, 1280]) {
         expect((await undo).postDataJSON()).toEqual({ status: "new" });
       });
 
-      // M6-04: due follow-ups above the leads, with the message to copy; Done and Snooze are
-      // same-origin JSON writes; nothing is sent. The title's markup stays text.
-      test("a follow-up is due, copied and marked done", async ({ page, context }) => {
+      // M6-04: the Follow-ups page has the message to copy; Done and Snooze are same-origin
+      // JSON writes; nothing is sent. The title's markup stays text.
+      test("a follow-up is due, copied and snoozed", async ({ page, context }) => {
         await context.grantPermissions(["clipboard-read", "clipboard-write"]);
         await mockAPI(page);
         const message = "Hello Ann Smith,\n\nI applied for the Backend Engineer role at Acme on 25 October 2026 and wanted to follow up.";
@@ -265,8 +325,8 @@ for (const width of [375, 1280]) {
             }),
           }),
         );
-        await page.goto("/");
-        const due = page.getByRole("region", { name: /Follow-ups due \(1\)/ });
+        await page.goto("/?page=followups");
+        const due = page.locator(".card", { hasText: "Acme" });
         await expect(due.getByText("Backend <i>Engineer</i>", { exact: false })).toBeVisible();
         await expect(due.locator("i")).toHaveCount(0);
         await due.getByRole("button", { name: "Copy message" }).click();
@@ -283,12 +343,12 @@ for (const width of [375, 1280]) {
       // drop, both through the status endpoint; at 375 px the columns stack, no side scroll.
       test("the board moves an application", async ({ page }) => {
         await mockAPI(page);
-        await page.goto("/?view=board");
+        await page.goto("/?page=board");
         const applied = page.getByRole("region", { name: /^Applied/ });
         await expect(applied.locator(".card-title")).toHaveText("Acme · Senior Backend Engineer");
-        await expect(applied.getByText("Follow-up due", { exact: false })).toBeVisible();
+        await expect(applied.getByText("Follow-up due")).toBeVisible();
         await expect(page.getByRole("region", { name: /^Interviewing/ }).locator(".card-title")).toHaveText("Brick · Mobile <b>Engineer</b>");
-        await expect(page.getByRole("region", { name: /^Done/ }).locator(".card .cv-dates")).toContainText("Rejected");
+        await expect(page.getByRole("region", { name: /^Done/ }).locator(".card-tags")).toContainText("Rejected");
         await noHorizontalScroll(page);
         await noAxeViolations(page);
         const menu = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9001/status"));
@@ -301,31 +361,28 @@ for (const width of [375, 1280]) {
 
       test("a blocked draft can't be approved", async ({ page }) => {
         await mockAPI(page);
-        await page.goto("/");
-        await page.locator("tr.row", { hasText: "Mobile Engineer" }).getByRole("button", { name: /Show details/ }).click();
-        await page.getByRole("button", { name: "CV draft" }).click();
-        const dialog = page.getByRole("dialog", { name: /CV draft/ });
-        await expect(dialog.getByText("Blocked: a sentence breaks the evidence rules")).toBeVisible();
-        await expect(dialog.getByText(/Blocks the draft:.*A number that isn’t in the cited evidence/)).toBeVisible();
-        await expect(dialog.getByRole("button", { name: "Approve" })).toBeDisabled();
+        await page.goto("/?page=leads&lead=9006&tab=cv");
+        const panel = page.getByRole("region", { name: "CV and letter" });
+        await expect(panel.getByText("Blocked: a sentence breaks the evidence rules")).toBeVisible();
+        await expect(panel.getByText(/Blocks the draft:.*A number that isn’t in the cited evidence/)).toBeVisible();
+        await expect(panel.getByRole("button", { name: "Approve" })).toBeDisabled();
         await noHorizontalScroll(page);
         await noAxeViolations(page);
       });
 
-      // M3-08 AC4, AC5, AC6: not enough info and an older reason are said plainly; opening
-      // the lead asks for a fresh reason; an HTML payload in the reason stays text.
+      // M3-08 AC4-AC6: not enough info and an older reason are said plainly; opening the lead
+      // asks for a fresh reason; an HTML payload in the reason stays text.
       test("an older reason is marked and a fresh one requested", async ({ page }) => {
         await mockAPI(page);
-        await page.goto("/");
         const posted = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/reason"));
-        await page.locator("tr.row", { hasText: "Mobile Engineer" }).getByRole("button", { name: /Show details/ }).click();
+        await page.goto("/?page=leads&lead=9006");
         const request = await posted;
         expect(request.headers()["content-type"]).toBe("application/json");
-        const fit = page.getByRole("region", { name: "Fit" });
-        await expect(fit.getByText(/^Not enough info/)).toBeVisible();
-        await expect(fit.getByText("This reason is from older inputs. Updating…")).toBeVisible();
-        await expect(fit.locator(".reason")).toHaveText('<script>alert(1)</script> <a href="javascript:alert(1)">x</a>.');
-        await expect(fit.locator("script, a")).toHaveCount(0);
+        const why = page.getByRole("region", { name: "Why this fit" });
+        await expect(why.getByText(/^Not enough info/)).toBeVisible();
+        await expect(why.getByText("This reason is from older inputs. Updating…")).toBeVisible();
+        await expect(why.locator(".reason")).toHaveText('<script>alert(1)</script> <a href="javascript:alert(1)">x</a>.');
+        await expect(why.locator("script, a")).toHaveCount(0);
         await noHorizontalScroll(page);
         await noAxeViolations(page);
       });
@@ -337,7 +394,7 @@ for (const width of [375, 1280]) {
 test("the search placeholder fits at 375px", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await mockAPI(page);
-  await page.goto("/");
+  await page.goto("/?page=leads");
   const search = page.getByRole("searchbox");
   await expect(search).toHaveAttribute("placeholder", "Search");
   const fits = await search.evaluate((el: HTMLInputElement) => {
@@ -354,46 +411,68 @@ test("the search placeholder fits at 375px", async ({ page }) => {
 test("rows show the matched location and labelled values", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await mockAPI(page);
-  await page.goto("/");
-  await expect(page.locator("tr.row", { hasText: "Senior Backend Engineer" }).locator("td.place")).toHaveText("Remote – Morocco +1");
-  await expect(page.locator("tr.row", { hasText: "Mobile Engineer" }).locator("td.place")).toHaveText("Amsterdam · On-site");
+  await page.goto("/?page=leads");
+  await expect(row(page, "Senior Backend Engineer").locator(".place")).toHaveText("Remote – Morocco +1");
+  await expect(row(page, "Mobile Engineer").locator(".place")).toHaveText("Amsterdam · On-site");
 });
 
 test.describe("desktop behaviour", () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
+  test("pill navigation reaches every page, in the URL", async ({ page }) => {
+    await mockAPI(page);
+    await page.goto("/");
+    for (const [name, id] of [
+      ["Leads", "leads"],
+      ["Board", "board"],
+      ["Follow-ups", "followups"],
+      ["Drafts", "drafts"],
+      ["Today", "today"],
+    ]) {
+      await page.getByRole("navigation", { name: "Pages" }).getByRole("link", { name }).click();
+      await expect(page).toHaveURL(new RegExp(`page=${id}`));
+      await expect(page.getByRole("link", { name, exact: true }).first()).toHaveAttribute("aria-current", "page");
+    }
+    await page.goBack();
+    await expect(page).toHaveURL(/page=drafts/);
+  });
+
   test("chips show applied filters; removing one goes back to the preset", async ({ page }) => {
     await mockAPI(page);
-    await page.goto("/?role_family=sales");
+    await page.goto("/?page=leads&role_family=sales");
     const chips = page.getByLabel("Applied filters");
     await expect(chips.getByText("Role Sales")).toBeVisible();
     await expect(chips.getByText("Seniority Junior, Mid, Senior, Unknown")).toBeVisible(); // from the preset, labelled
     await chips.getByRole("button", { name: "Remove Role filter" }).click();
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\?page=leads(&lead=\d+)?$/);
   });
 
-  test("keyboard: j/k move, Enter opens, e expands, / searches, Esc clears, ? helps", async ({ page, context }) => {
+  test("keyboard: j/k move and the detail follows, Enter opens, / searches, Esc clears, ? helps", async ({ page, context }) => {
     await mockAPI(page);
-    await page.goto("/");
+    await page.goto("/?page=leads");
     await expect(summary(page)).toBeVisible();
-    await page.keyboard.press("j");
-    const rows = page.locator("tr.row");
-    await expect(rows.nth(0)).toBeFocused();
+    const rows = page.locator(".lead-row");
+    await expect(rows.nth(0)).toHaveAttribute("aria-current", "true"); // the first lead shows beside the list
     await page.keyboard.press("j");
     await expect(rows.nth(1)).toBeFocused();
-    await expect(rows.nth(1)).toHaveClass(/focused/);
+    await expect(rows.nth(1)).toHaveAttribute("aria-current", "true");
+    await expect(page.locator(".detail h2")).toContainText("Mobile Engineer");
+    await expect(page).toHaveURL(/lead=9006/);
     await page.keyboard.press("k");
     await expect(rows.nth(0)).toBeFocused();
+    await expect(page.locator(".detail h2")).toContainText("Senior Backend Engineer");
 
     const opened = context.waitForEvent("page");
     await page.keyboard.press("Enter");
     expect((await opened).url()).toMatch(/^https:\/\/jobs\.lever\.co\/x\//);
 
-    await page.keyboard.press("e");
-    await expect(page.locator("tr.detail")).toHaveCount(1);
-    await page.keyboard.press("Escape");
-    await expect(page.locator("tr.detail")).toHaveCount(0);
+    // the detail's tabs follow the ARIA pattern
+    await page.getByRole("tab", { name: "Overview" }).focus();
+    await page.keyboard.press("ArrowRight");
+    await expect(page.getByRole("tab", { name: "CV & letter" })).toBeFocused();
+    await expect(page.getByRole("tab", { name: "CV & letter" })).toHaveAttribute("aria-selected", "true");
 
+    await rows.nth(0).focus();
     await page.keyboard.press("/");
     await expect(page.getByRole("searchbox")).toBeFocused();
     await page.keyboard.type("backend");
@@ -416,14 +495,14 @@ test.describe("desktop behaviour", () => {
     await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeHidden();
   });
 
-  test("the sidebar collapses to a rail with [ and remembers it", async ({ page }) => {
+  test("the title link opens the posting without selecting the row", async ({ page, context }) => {
     await mockAPI(page);
-    await page.goto("/");
-    await expect(page.locator(".app")).not.toHaveClass(/rail/);
-    await page.keyboard.press("[");
-    await expect(page.locator(".app")).toHaveClass(/rail/);
-    await page.reload();
-    await expect(page.locator(".app")).toHaveClass(/rail/);
+    await page.goto("/?page=leads");
+    await expect(row(page, "Senior Backend Engineer")).toHaveAttribute("aria-current", "true");
+    const opened = context.waitForEvent("page");
+    await row(page, "Mobile Engineer").getByRole("link").click();
+    expect((await opened).url()).toMatch(/^https:\/\//);
+    await expect(row(page, "Senior Backend Engineer")).toHaveAttribute("aria-current", "true");
   });
 
   test("works when localStorage throws", async ({ page }) => {
@@ -431,18 +510,11 @@ test.describe("desktop behaviour", () => {
       Object.defineProperty(window, "localStorage", { get: () => { throw new Error("blocked"); } });
     });
     await mockAPI(page);
-    await page.goto("/");
+    await page.goto("/?page=leads");
     await expect(summary(page)).toBeVisible();
-    await page.keyboard.press("[");
-    await expect(page.locator(".app")).toHaveClass(/rail/);
+    await page.getByRole("button", { name: /^Theme/ }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
   });
-});
-
-test("the sidebar starts as a rail below 1024px", async ({ page }) => {
-  await page.setViewportSize({ width: 900, height: 800 });
-  await mockAPI(page);
-  await page.goto("/");
-  await expect(page.locator(".app")).toHaveClass(/rail/);
 });
 
 test.describe("states", () => {
@@ -454,7 +526,7 @@ test.describe("states", () => {
       calls++;
       return route.fulfill({ status: 500, contentType: "application/json", body: '{"error":{"message":"internal error"}}' });
     });
-    await page.goto("/");
+    await page.goto("/?page=leads");
     await expect(page.getByRole("alert")).toContainText("Couldn’t load leads.");
     const before = calls;
     await page.getByRole("button", { name: "Try again" }).click();
@@ -464,14 +536,22 @@ test.describe("states", () => {
 
   test("everything hidden", async ({ page }) => {
     await mockAPI(page, JSON.stringify({ total: 0, leads: [] }));
-    await page.goto("/");
+    await page.goto("/?page=leads");
     await expect(page.getByText("Your filters hide all 3 leads.")).toBeVisible();
     await noAxeViolations(page);
   });
+
+  test("links from before M7-00 still land on the right page", async ({ page }) => {
+    await mockAPI(page);
+    await page.goto("/?view=board");
+    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
+    await page.goto("/?role_family=sales");
+    await expect(page.getByLabel("Applied filters").getByText("Role Sales")).toBeVisible();
+  });
 });
 
-// WCAG AA for the token pairs used for text, in both themes (axe also checks the
-// rendered page above).
+// WCAG AA for the token pairs used for text, in both themes (axe also checks the rendered
+// pages above): text on surfaces, near-black text on every pastel, the accent at 3:1.
 test("token colours meet WCAG AA in light and dark", async ({ page }) => {
   await mockAPI(page);
   await page.goto("/");
@@ -480,7 +560,8 @@ test("token colours meet WCAG AA in light and dark", async ({ page }) => {
       document.documentElement.setAttribute("data-theme", t);
       const css = getComputedStyle(document.documentElement);
       const rgb = (name: string) => {
-        const hex = css.getPropertyValue(name).trim().slice(1);
+        let hex = css.getPropertyValue(name).trim().slice(1);
+        if (hex.length === 3) hex = [...hex].map((c) => c + c).join(""); // the minifier shortens #ffffff
         return [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
       };
       const lum = (c: number[]) => {
@@ -493,9 +574,9 @@ test("token colours meet WCAG AA in light and dark", async ({ page }) => {
       };
       const out: Record<string, number> = {};
       for (const fg of ["--text", "--muted", "--faint"])
-        for (const bg of ["--bg", "--panel", "--hover", "--row-focus"]) out[`${fg} on ${bg}`] = ratio(fg, bg);
-      out["--accent on --bg (non-text, 3:1)"] = ratio("--accent", "--bg");
-      out["--accent on --row-focus (non-text, 3:1)"] = ratio("--accent", "--row-focus");
+        for (const bg of ["--bg", "--surface", "--surface-2", "--hover"]) out[`${fg} on ${bg}`] = ratio(fg, bg);
+      for (const bg of ["--mint", "--sand", "--salmon", "--blue", "--lilac"]) out[`--on-pastel on ${bg}`] = ratio("--on-pastel", bg);
+      for (const bg of ["--bg", "--surface", "--surface-2"]) out[`--accent on ${bg} (non-text, 3:1)`] = ratio("--accent", bg);
       return out;
     }, theme);
     for (const [pair, r] of Object.entries(ratios)) {
@@ -504,7 +585,7 @@ test("token colours meet WCAG AA in light and dark", async ({ page }) => {
   }
 });
 
-// AC4: hostile posting text and URLs stay inert in the real browser.
+// AC4 (M2-06): hostile posting text and URLs stay inert in the real browser.
 test("an HTML title and a javascript: URL are inert", async ({ page }) => {
   const evil = JSON.parse(golden("leads_default"));
   evil.leads[0].title = `<img src=x onerror="alert(1)"><script>alert(2)</script>Hostile`;
@@ -515,11 +596,11 @@ test("an HTML title and a javascript: URL are inert", async ({ page }) => {
     dialogs++;
     void d.dismiss();
   });
-  await page.goto("/");
-  await expect(page.getByText(evil.leads[0].title)).toBeVisible();
-  await expect(page.locator("table img, table script")).toHaveCount(0);
+  await page.goto("/?page=leads");
+  await expect(page.getByText(evil.leads[0].title).first()).toBeVisible();
+  await expect(page.locator(".lead-list img, .lead-list script, .detail img, .detail script")).toHaveCount(0);
   await expect(page.locator('a[href^="javascript:"]')).toHaveCount(0);
-  await page.getByText(evil.leads[0].title).click();
+  await page.getByText(evil.leads[0].title).first().click();
   await page.keyboard.press("Enter"); // o/Enter must not open a javascript: URL either
   expect(dialogs).toBe(0);
 });

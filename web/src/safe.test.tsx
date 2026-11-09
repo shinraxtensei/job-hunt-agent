@@ -2,8 +2,9 @@ import { act } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 import type { Lead } from "./api";
-import { LeadTable } from "./App";
+import { LeadList } from "./App";
 import { safeHref } from "./safe";
+import { ScoreDetail } from "./Score";
 
 // React's act() needs this flag outside a test framework integration.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -45,7 +46,7 @@ const lead = (over: Partial<Lead>): Lead => ({
 function render(leads: Lead[]): HTMLElement {
   const el = document.createElement("div");
   document.body.append(el);
-  act(() => createRoot(el).render(<LeadTable leads={leads} hidden={false} />));
+  act(() => createRoot(el).render(<LeadList leads={leads} hidden={false} />));
   return el;
 }
 
@@ -88,12 +89,11 @@ describe("untrusted posting text (AC4)", () => {
 });
 
 describe("duplicate groups (AC2c)", () => {
-  it("counts postings only when a lead folds several, and offers to show them", () => {
+  it("counts postings only when a lead folds several", () => {
     const el = render([lead({ id: 1, members: 3 }), lead({ id: 2, members: 1 })]);
-    const counts = [...el.querySelectorAll("tr.row td.num:nth-of-type(6)")].map((td) => td.textContent);
-    expect(counts).toEqual(["3", ""]);
-    const labels = [...el.querySelectorAll("tr.row button")].map((b) => b.getAttribute("aria-label"));
-    expect(labels).toEqual(["Show details and 3 postings", "Show details"]);
+    const metas = [...el.querySelectorAll(".lead-row .meta")].map((p) => p.textContent);
+    expect(metas[0]).toContain("3 postings");
+    expect(metas[1]).not.toContain("postings");
   });
 });
 
@@ -113,32 +113,38 @@ const scored = (over: Partial<Lead>): Lead =>
     ...over,
   });
 
+function renderScore(l: Lead): HTMLElement {
+  const el = document.createElement("div");
+  document.body.append(el);
+  act(() => createRoot(el).render(<ScoreDetail lead={l} updating="idle" />));
+  return el;
+}
+
 describe("scores (M3-08)", () => {
   it("shows the fit level in words and the score, never colour alone", () => {
-    const cell = render([scored({})]).querySelector("td.fit-cell");
-    expect(cell?.textContent).toBe("Strong fit, score 61.0");
-    expect(cell?.querySelectorAll(".fit-mark i.on")).toHaveLength(3);
+    const tag = render([scored({})]).querySelector(".lead-row .tag");
+    expect(tag?.textContent).toBe("Strong fit, score Strong · 61.0");
+    expect(tag?.querySelector(".visually-hidden")?.textContent).toBe("Strong fit, score ");
+    expect(tag?.querySelector("[aria-hidden]")?.textContent).toBe("Strong · ");
   });
 
   it("says why a lead has no score", () => {
     const el = render([lead({ id: 1, score_status: "pending" }), lead({ id: 2, score_status: "needs_review" })]);
-    expect([...el.querySelectorAll("td.fit-cell")].map((td) => td.textContent)).toEqual(["…Being scored", "Review"]);
+    expect([...el.querySelectorAll(".lead-row .tag")].map((t) => t.textContent)).toEqual(["Scoring…", "Review"]);
   });
 
   // AC6: reason and gaps are model output derived from postings: React text only.
   it("renders an HTML or javascript: payload in a reason or gap as text", () => {
     const payload = `<img src=x onerror="window.pwned=3"><a href="javascript:alert(1)">x</a>`;
-    const el = render([scored({ reason: payload, gaps: [payload, "javascript:alert(1)"] })]);
-    act(() => el.querySelector<HTMLButtonElement>("td.more button")!.click());
-    expect(el.querySelector(".detail img, .detail a")).toBeNull();
-    expect(el.querySelector(".detail .reason")?.textContent).toBe(payload);
-    expect([...el.querySelectorAll(".detail .gaps li")].map((li) => li.textContent)).toEqual([payload, "javascript:alert(1)"]);
+    const el = renderScore(scored({ reason: payload, gaps: [payload, "javascript:alert(1)"] }));
+    expect(el.querySelector("img, a")).toBeNull();
+    expect(el.querySelector(".reason")?.textContent).toBe(payload);
+    expect([...el.querySelectorAll(".gaps li")].map((li) => li.textContent)).toEqual([payload, "javascript:alert(1)"]);
     expect((window as { pwned?: number }).pwned).toBeUndefined();
   });
 
   it("shows the breakdown as rows with numbers, the bars hidden from screen readers", () => {
-    const el = render([scored({})]);
-    act(() => el.querySelector<HTMLButtonElement>("td.more button")!.click());
+    const el = renderScore(scored({}));
     const rows = [...el.querySelectorAll(".breakdown tr")].map((tr) => [tr.querySelector("th")?.textContent, tr.querySelector(".pts")?.textContent]);
     expect(rows).toEqual([
       ["Required skills", "17.5 of 35"],
@@ -151,7 +157,7 @@ describe("scores (M3-08)", () => {
 describe("CV drafts (M4-05)", () => {
   // AC6: draft sentences, evidence and findings render as text only.
   it("renders an HTML payload in a draft bullet as text", async () => {
-    const { DraftView } = await import("./DraftDialog");
+    const { DraftView } = await import("./Drafts");
     const payload = `Led <img src=x onerror="window.pwned=4"> the move`;
     const el = document.createElement("div");
     document.body.append(el);

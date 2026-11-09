@@ -86,3 +86,66 @@ Take from it:
 Don't copy: its logo, name, icons, exact layout or colours.
 
 Not Jira: no heavy toolbars, no field-dense forms.
+
+---
+
+# Design brief: the redesign (M7-00, 2026-11-09)
+
+## Why
+
+v1 works, but it reads as a dense admin table. The owner uses it daily, often on the
+phone. The redesign keeps the keyboard-first speed of M2-06 and adds calm, colour and a
+detail view that's always at hand.
+
+## Reference (owner, 2026-11-09)
+
+The references are screenshots of a friend's site: a student-stats dashboard with a
+landing page, a corrections list, and a stats page. They are **not committed**: they show
+real people's names and photos. What we take from them is the **style, not the brand**.
+No logo, copy or layout is reproduced.
+
+Take:
+- **Surfaces:** dark-first, soft near-black backgrounds; cards one shade lighter, no
+  hard borders; large radius (~20–24 px); generous spacing.
+- **Colour:** pastel semantic colours on dark: mint, sand, salmon, powder blue, lilac.
+  They fill stat tiles and tags; text on them is near-black.
+- **Navigation:** pill buttons in one row at the top; the active pill is filled and the
+  others are quiet.
+- **Lists:** each item is a rounded card, with the main line bold, a quiet secondary
+  line, a coloured tag on the right and "time ago" under it.
+- **Stats:** coloured tiles with a small label, a very large number and a one-line
+  comparison under it.
+- **Type:** a bold modern sans; big page titles; tabular numbers.
+
+Don't take: the horse logo, the wordmark, the green radial glow, the exact
+three-column layout, any avatar or photo treatment.
+
+## Semantic palette (both themes; AA checked)
+
+| Meaning | Colour | Used for |
+|---|---|---|
+| strong / positive | mint | very strong and strong fit; offer; covered skills |
+| good / waiting | sand | good fit; drafted, waiting; follow-up due |
+| stretch / no | salmon | stretch fit; rejected, skipped, closed; blocked draft |
+| info / applied | powder blue | applied, replied, interviewing; info tiles |
+| neutral | lilac | shortlisted; tags without a meaning |
+
+## Structure
+
+- **Pills:** Today · Leads · Board · Follow-ups · Drafts. Search, filters and theme go on
+  the right.
+- **Leads:** split view, the list left and the detail right. Tabs: Overview · CV & letter
+  · Notes · Contacts · History. The whole row is selectable; the title is a real link.
+  j/k moves and the panel follows. On the phone the detail is a full-screen sheet with
+  Back.
+- **Today:** stat tiles (new since last visit, follow-ups due, applied this week, drafts
+  ready), then new leads, follow-ups due and closed postings.
+
+## Constraints (unchanged from M2-06)
+
+- Plain CSS with tokens; light and dark; WCAG AA.
+- One self-hosted variable font, its licence committed; CSP unchanged.
+- 375 px without horizontal scroll.
+- Untrusted text as text only.
+- Mockups and their screenshots use real data, so they stay out of git
+  (`docs/design/m7/private/`). Only the build script is committed.

@@ -11,6 +11,8 @@ const paths = {
   sun: "M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zM8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1",
   moon: "M12.5 9.5A5 5 0 0 1 6.5 3.5a5 5 0 1 0 6 6z",
   system: "M2.5 3.5h11v7h-11zM6 13.5h4M8 10.5v3",
+  back: "M10 3.5 5.5 8l4.5 4.5",
+  search: "M7 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM10 10l3.5 3.5",
 };
 
 export type IconName = keyof typeof paths;

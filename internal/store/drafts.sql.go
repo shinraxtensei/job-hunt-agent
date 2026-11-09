@@ -124,6 +124,53 @@ func (q *Queries) ListDrafts(ctx context.Context, postingID int64) ([]ListDrafts
 	return items, nil
 }
 
+const recentDrafts = `-- name: RecentDrafts :many
+SELECT DISTINCT ON (d.posting_id) d.id, d.posting_id, d.status, d.requested_at, d.made_at, j.title, c.name AS company
+FROM drafts d
+JOIN jobs j ON j.posting_id = d.posting_id
+JOIN companies c ON c.id = j.company_id
+ORDER BY d.posting_id, d.requested_at DESC, d.id DESC
+`
+
+type RecentDraftsRow struct {
+	ID          int64
+	PostingID   int64
+	Status      string
+	RequestedAt pgtype.Timestamptz
+	MadeAt      pgtype.Timestamptz
+	Title       string
+	Company     string
+}
+
+// The newest draft of each lead (M7-00 Drafts page), newest first: status and lead, no content.
+func (q *Queries) RecentDrafts(ctx context.Context) ([]RecentDraftsRow, error) {
+	rows, err := q.db.Query(ctx, recentDrafts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []RecentDraftsRow
+	for rows.Next() {
+		var i RecentDraftsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PostingID,
+			&i.Status,
+			&i.RequestedAt,
+			&i.MadeAt,
+			&i.Title,
+			&i.Company,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const requestDraft = `-- name: RequestDraft :one
 INSERT INTO drafts (posting_id)
 SELECT $1::bigint

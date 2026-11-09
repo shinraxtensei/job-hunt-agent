@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { get, post, type Draft, type DraftBullet, type Drafts, type Finding, type Lead } from "./api";
-import { Icon } from "./icons";
+import { ago, draftTone, inApp, leadHref } from "./format";
 import { label } from "./labels";
 
 const POLL_MS = 3000;
@@ -13,6 +13,16 @@ const STATUS: Record<Draft["status"], string> = {
   approved: "Approved",
   discarded: "Discarded",
   failed: "Couldn’t be written",
+};
+
+// The status as a short tag (Drafts page, Today).
+export const DRAFT_TAG: Record<Draft["status"], string> = {
+  requested: "Being written",
+  ready_for_review: "Ready for review",
+  blocked: "Blocked",
+  approved: "Approved",
+  discarded: "Discarded",
+  failed: "Failed",
 };
 
 const RULES: Record<string, string> = {
@@ -31,33 +41,27 @@ const RULES: Record<string, string> = {
 const dates = (s: { start: string | null; end: string | null }) =>
   [s.start, s.end === "present" ? "present" : s.end].filter(Boolean).join(" – ");
 
-// DraftDialog: ask for a tailored CV draft and review it next to its evidence (M4-05).
-// Nothing is sent or exported from here: approve and discard only record the decision.
-export function DraftDialog({ lead, open, onClose }: { lead: Lead; open: boolean; onClose: () => void }) {
-  const ref = useRef<HTMLDialogElement>(null);
+// DraftPanel: ask for a tailored CV and letter and review them next to their evidence
+// (M4-05, M5-01), in the lead's "CV & letter" tab (M7-00). Nothing is sent or exported
+// from here: approve and discard only record the decision; approving makes the PDFs.
+export function DraftPanel({ lead }: { lead: Lead }) {
   const [data, setData] = useState<Drafts | null>(null);
   const [shown, setShown] = useState(0); // index into data.drafts
   const [error, setError] = useState<string | null>(null);
   const [waiting, setWaiting] = useState(false);
 
-  useEffect(() => {
-    const d = ref.current;
-    if (!d) return;
-    if (open && !d.open) d.showModal();
-    if (!open && d.open) d.close();
-  }, [open]);
-
   const load = useCallback(() => get<Drafts>(`/api/leads/${lead.id}/drafts`).then(setData), [lead.id]);
 
   useEffect(() => {
-    if (!open) return;
+    setData(null);
+    setShown(0);
     load().catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-  }, [open, load]);
+  }, [load]);
 
   // While the newest draft is being written, poll until it's done.
   const pending = data?.drafts[0]?.status === "requested";
   useEffect(() => {
-    if (!open || !pending) return;
+    if (!pending) return;
     let n = 0;
     setWaiting(true);
     const t = setInterval(() => {
@@ -69,7 +73,7 @@ export function DraftDialog({ lead, open, onClose }: { lead: Lead; open: boolean
       clearInterval(t);
       setWaiting(false);
     };
-  }, [open, pending, load]);
+  }, [pending, load]);
 
   const act = (path: string) => {
     setError(null);
@@ -81,46 +85,23 @@ export function DraftDialog({ lead, open, onClose }: { lead: Lead; open: boolean
 
   const draft = data?.drafts[shown];
   return (
-    <dialog ref={ref} className="sheet draft-sheet" aria-labelledby={`draft-title-${lead.id}`} onClose={onClose}>
-      <div className="sheet-head">
-        <h2 id={`draft-title-${lead.id}`}>
-          CV draft <span className="draft-for">· {lead.company.name}</span>
-        </h2>
-        <button type="button" className="icon-button" aria-label="Close the draft" onClick={onClose}>
-          <Icon name="close" />
+    <section className="draft-panel" aria-label="CV and letter">
+      <div className="draft-actions">
+        <button type="button" className="button primary" disabled={pending} onClick={() => act(`/api/leads/${lead.id}/draft`)}>
+          {data?.drafts.length ? "Make a new draft" : "Make a draft"}
         </button>
-      </div>
-      <div className="sheet-body">
-        <p className="draft-lead">{lead.title}</p>
-        <div className="draft-actions">
-          <button type="button" className="button" disabled={pending} onClick={() => act(`/api/leads/${lead.id}/draft`)}>
-            {data?.drafts.length ? "Make a new draft" : "Make a draft"}
-          </button>
-          {draft && (draft.status === "ready_for_review" || draft.status === "blocked" || draft.status === "failed") && (
-            <>
-              <button type="button" className="button" disabled={draft.status !== "ready_for_review"} onClick={() => act(`/api/drafts/${draft.id}/approve`)}>
-                Approve
-              </button>
-              <button type="button" className="link-button" onClick={() => act(`/api/drafts/${draft.id}/discard`)}>
-                Discard
-              </button>
-            </>
-          )}
-        </div>
-        <p className="draft-note">Nothing is sent from here. Approving makes the PDFs; you send them and mark what you sent.</p>
-        {error && (
-          <p className="draft-error" role="alert">
-            {error}
-          </p>
+        {draft && (draft.status === "ready_for_review" || draft.status === "blocked" || draft.status === "failed") && (
+          <>
+            <button type="button" className="button" disabled={draft.status !== "ready_for_review"} onClick={() => act(`/api/drafts/${draft.id}/approve`)}>
+              Approve
+            </button>
+            <button type="button" className="link-button" onClick={() => act(`/api/drafts/${draft.id}/discard`)}>
+              Discard
+            </button>
+          </>
         )}
-        {!data && !error && (
-          <p role="status" aria-busy="true">
-            Loading drafts…
-          </p>
-        )}
-        {data && data.drafts.length === 0 && <p>No draft yet for this lead.</p>}
         {data && data.drafts.length > 1 && (
-          <div className="field">
+          <span className="input-field inline">
             <label htmlFor={`draft-version-${lead.id}`}>Version</label>
             <select id={`draft-version-${lead.id}`} name="version" value={shown} onChange={(e) => setShown(Number(e.target.value))}>
               {data.drafts.map((d, i) => (
@@ -129,23 +110,35 @@ export function DraftDialog({ lead, open, onClose }: { lead: Lead; open: boolean
                 </option>
               ))}
             </select>
-          </div>
-        )}
-        {draft && data && (
-          <DraftView
-            draft={draft}
-            evidence={data.evidence}
-            waiting={waiting && shown === 0}
-            onSent={(id) => {
-              setError(null);
-              post(`/api/documents/${id}/sent`)
-                .then(() => load())
-                .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-            }}
-          />
+          </span>
         )}
       </div>
-    </dialog>
+      <p className="quiet-note">Nothing is sent from here. Approving makes the PDFs; you send them and mark what you sent.</p>
+      {error && (
+        <p className="draft-error" role="alert">
+          {error}
+        </p>
+      )}
+      {!data && !error && (
+        <p role="status" aria-busy="true">
+          Loading drafts…
+        </p>
+      )}
+      {data && data.drafts.length === 0 && <p className="quiet-note">No draft yet for this lead.</p>}
+      {draft && data && (
+        <DraftView
+          draft={draft}
+          evidence={data.evidence}
+          waiting={waiting && shown === 0}
+          onSent={(id) => {
+            setError(null);
+            post(`/api/documents/${id}/sent`)
+              .then(() => load())
+              .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+          }}
+        />
+      )}
+    </section>
   );
 }
 
@@ -389,5 +382,54 @@ function CoverageView({ skills }: { skills: { name: string; status: string; why:
         </dd>
       </dl>
     </section>
+  );
+}
+
+export type DraftSummary = { id: number; lead_id: number; company: string; title: string; status: Draft["status"]; requested_at: string; made_at: string | null };
+
+// DraftsPage: each lead's newest CV and letter draft, newest first (M7-00); opening one
+// shows it in the lead's "CV & letter" tab.
+export function DraftsPage({ onOpen, now }: { onOpen: (lead: number) => void; now: number }) {
+  const [drafts, setDrafts] = useState<DraftSummary[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    get<{ drafts: DraftSummary[] }>("/api/drafts").then(
+      (r) => setDrafts(r.drafts),
+      (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+    );
+  }, []);
+  return (
+    <div className="page">
+      <h1>Drafts</h1>
+      <p className="page-sub">Each lead’s newest CV and letter. Ready ones wait for your review; approving makes the PDFs.</p>
+      {error && (
+        <p className="draft-error" role="alert">
+          {error}
+        </p>
+      )}
+      {!drafts && !error && <p role="status">Loading…</p>}
+      {drafts && drafts.length === 0 && <p className="empty">No drafts yet. Open a lead and ask for one in its “CV & letter” tab.</p>}
+      {drafts && drafts.length > 0 && (
+        <ul className="cards">
+          {drafts.map((d) => (
+            <li key={d.id} className="card">
+              <div className="card-main">
+                <div>
+                  <p className="card-title">
+                    <a href={leadHref(d.lead_id, "cv")} onClick={inApp(() => onOpen(d.lead_id))}>
+                      {d.company} · {d.title}
+                    </a>
+                  </p>
+                </div>
+                <div className="side">
+                  <span className={`tag ${draftTone[d.status] ?? "lilac"}`}>{DRAFT_TAG[d.status]}</span>
+                  <p className="when">{ago(d.made_at ?? d.requested_at, now)}</p>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

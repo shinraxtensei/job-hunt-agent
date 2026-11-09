@@ -62,3 +62,6 @@ node_modules/
 
 # TypeScript build info (tsc -b); type checking never emits (web/tsconfig.json noEmit)
 /web/*.tsbuildinfo
+
+# M7-00 mockups: real data (job postings, the owner's fit reasons)
+/docs/design/m7/private/
