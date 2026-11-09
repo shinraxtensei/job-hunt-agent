@@ -57,6 +57,8 @@ func Normalise(source string, payload []byte) (Record, error) {
 		r = greenhouse(m)
 	case "ashby":
 		r = ashby(m)
+	case "personio":
+		r = personio(m)
 	case "manual":
 		r = manual(m)
 	default:

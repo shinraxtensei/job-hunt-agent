@@ -52,6 +52,7 @@ import (
 	"github.com/shinraxtensei/job-hunter/internal/source/ashby"
 	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
 	"github.com/shinraxtensei/job-hunter/internal/source/lever"
+	"github.com/shinraxtensei/job-hunter/internal/source/personio"
 	"github.com/shinraxtensei/job-hunter/internal/watchlist"
 )
 
@@ -132,6 +133,7 @@ func run(ctx context.Context, log *slog.Logger, args []string, getenv func(strin
 			"lever":      lever.New(leverURL),
 			"greenhouse": greenhouse.New(greenhouse.BaseURL),
 			"ashby":      ashby.New(ashby.BaseURL),
+			"personio":   personio.New(personio.URL),
 		}
 		res, err := collector.Run(ctx, pool, reg, cfg, log)
 		if err != nil {
@@ -372,6 +374,7 @@ func add(ctx context.Context, log *slog.Logger, dsn, leverURL string, args []str
 		"lever":      lever.New(leverURL),
 		"greenhouse": greenhouse.New(greenhouse.BaseURL),
 		"ashby":      ashby.New(ashby.BaseURL),
+		"personio":   personio.New(personio.URL),
 	}
 	res, err := collector.Add(ctx, pool, reg, cfg.HostInterval, link, m, log)
 	if err != nil {

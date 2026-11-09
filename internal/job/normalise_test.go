@@ -2,6 +2,7 @@ package job_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -196,6 +197,36 @@ func jsonString(s string) string {
 
 // AC3: missing, null or wrongly typed fields become empty / unknown; the record is
 // still produced.
+// M7-02: a Personio position (as the adapter stores it) normalises from its fields; an
+// office named Remote means a remote job.
+func TestNormalisePersonio(t *testing.T) {
+	for name, c := range map[string]struct {
+		payload string
+		want    job.Record
+	}{
+		"inyad android": {`{"id":"578189","office":"Casablanca","department":"Tech","name":"Android Software Engineer","employmentType":"permanent","createdAt":"2022-02-01T16:33:49+00:00","url":"https://inyad.jobs.personio.de/job/578189"}`,
+			job.Record{Title: "Android Software Engineer", URL: "https://inyad.jobs.personio.de/job/578189", Locations: []string{"Casablanca"},
+				Workplace: job.Unknown, Department: "Tech", EmploymentType: "permanent", PublishedAt: time.Date(2022, 2, 1, 16, 33, 49, 0, time.UTC)}},
+		"remote and more offices": {`{"id":"1","name":"Backend Engineer","office":"Remote","additionalOffices":["Rabat","Remote",5],"url":"https://x.jobs.personio.de/job/1"}`,
+			job.Record{Title: "Backend Engineer", URL: "https://x.jobs.personio.de/job/1", Locations: []string{"Remote", "Rabat"}, Workplace: job.Remote}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := job.Normalise("personio", []byte(c.payload))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got.TitleKey = ""
+			if !got.PublishedAt.Equal(c.want.PublishedAt) {
+				t.Errorf("published %v, want %v", got.PublishedAt, c.want.PublishedAt)
+			}
+			got.PublishedAt, c.want.PublishedAt = time.Time{}, time.Time{}
+			if fmt.Sprintf("%+v", got) != fmt.Sprintf("%+v", c.want) {
+				t.Errorf("got  %+v\nwant %+v", got, c.want)
+			}
+		})
+	}
+}
+
 func TestNormaliseToleratesBadFields(t *testing.T) {
 	for source, payload := range map[string]string{
 		"lever":      `{"text": 42, "hostedUrl": null, "categories": "nope", "workplaceType": ["remote"], "country": "usa", "createdAt": "yesterday"}`,
@@ -267,7 +298,7 @@ func FuzzNormalise(f *testing.F) {
 		rec, err := job.Normalise(source, payload)
 		var obj map[string]json.RawMessage
 		isObject := json.Unmarshal(payload, &obj) == nil && obj != nil
-		known := source == "lever" || source == "greenhouse" || source == "ashby"
+		known := source == "lever" || source == "greenhouse" || source == "ashby" || source == "personio"
 		if known && isObject && err != nil {
 			t.Fatalf("Normalise(%s) failed on a JSON object: %v", source, err)
 		}

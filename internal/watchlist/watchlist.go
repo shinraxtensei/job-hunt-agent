@@ -25,7 +25,7 @@ type Entry struct {
 
 // Allowed values; the database CHECK constraints say the same (ADR-0005).
 var (
-	boardTypes = map[string]bool{"lever": true, "greenhouse": true, "ashby": true, "workable": true}
+	boardTypes = map[string]bool{"lever": true, "greenhouse": true, "ashby": true, "workable": true, "personio": true}
 	tracks     = map[string]bool{"morocco": true, "remote": true, "relocation": true, "consulting": true}
 	fields     = map[string]bool{"name": true, "board_type": true, "board_slug": true, "track": true, "excluded": true}
 )

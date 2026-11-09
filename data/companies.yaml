@@ -10,6 +10,7 @@
 
 # --- Morocco-based
 - { name: Jumia, board_type: greenhouse, board_slug: jumia, track: morocco }  # 23
+- { name: Inyad, board_type: personio, board_slug: inyad, track: morocco }  # 25 (22 in Casablanca), M7-02
 
 # --- Consulting firms with Moroccan offices
 - { name: Theodo, board_type: lever, board_slug: theodo, track: consulting }  # 135

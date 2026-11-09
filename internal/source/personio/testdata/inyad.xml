@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<workzag-jobs>
+
+<position>
+    <id>932351</id>
+    <office>Casablanca</office>
+    <department>Business</department>
+    <name>Administrative &amp; HR Assistant</name>
+    <jobDescriptions>
+        <jobDescription>
+            <name>What you will do</name>
+            <value>
+                <![CDATA[This is an exciting opportunity for a talented Admin-focused professional, who is looking for their next challenge in a fast paced and high growth tech scale-up!<br>Our business and team are growing extremely quickly and we’re looking for someone to help taking our Admin operations to the next level]]>
+            </value>
+        </jobDescription>
+        <jobDescription>
+            <name>You will be responsible for</name>
+            <value>
+                <![CDATA[<ul><li>Assist in the preparation of accounting documents</li><li>Own the Collection, processing and filing of administrative documents</li><li>Manage sales administration, invoicing and quotations</li><li>Manage day-to-day office operations</li><li>Maintain an orderly, safe, and healthy work enviro]]>
+            </value>
+        </jobDescription>
+        <jobDescription>
+            <name>Your qualifications</name>
+            <value>
+                <![CDATA[<ul><li>Bachelor’s degree or equivalent experience</li><li>3+ years experience in office coordinator, administrative assistant, HR assistant or receptionist role</li><li>Experience supporting teams and peers in a fast-paced environment</li><li>Strong written and oral communication skills</li><li>Str]]>
+            </value>
+        </jobDescription>
+    </jobDescriptions>
+    <employmentType>permanent</employmentType>
+    <seniority>experienced</seniority>
+    <schedule>full-time</schedule>
+    <yearsOfExperience>2-5</yearsOfExperience>
+    <keywords>Admin,Accounting,HR,Payroll,Sales administration</keywords>
+    <occupation>executive_support</occupation>
+    <occupationCategory>administrative_and_clerical</occupationCategory>
+    <createdAt>2022-12-21T09:52:06+00:00</createdAt>
+</position>
+<position>
+    <id>2472375</id>
+    <office>Casablanca</office>
+    <department>Sales</department>
+    <name>Administrative &amp; Sales Assistant</name>
+    <jobDescriptions>
+        <jobDescription>
+            <name>What you will do</name>
+            <value>
+                <![CDATA[<p>As a <strong>Junior Admin &amp; Sales Assistant</strong>, you will play a key role in supporting the Sales team and ensuring smooth administrative operations related to sales and client management.</p><p>This position is ideal for a <strong>recent graduate or a candidate with up to 1 year of expe]]>
+            </value>
+        </jobDescription>
+        <jobDescription>
+            <name>You will be responsible for</name>
+            <value>
+                <![CDATA[<ul><li>Prepare, issue, and follow up on <strong>quotations and invoices</strong></li><li>Create, update, and maintain <strong>client records</strong></li><li>Manage <strong>sales administrative follow-up</strong> (quotation status, invoicing, basic payment reminders)</li><li>Update <strong>client d]]>
+            </value>
+        </jobDescription>
+        <jobDescription>
+            <name>Your qualifications</name>
+            <value>
+                <![CDATA[<ul><li>Bachelor’s degree (or equivalent) in administration, business, or a related field</li><li><strong>0–1 year of experience</strong> (internship, apprenticeship, or first role)</li><li>Strong interest in startups and digital solutions</li><li>Comfortable working with numbers and administrative ]]>
+            </value>
+        </jobDescription>
+    </jobDescriptions>
+    <employmentType>permanent</employmentType>
+    <seniority>entry-level</seniority>
+    <schedule>full-time</schedule>
+    <yearsOfExperience>lt-1</yearsOfExperience>
+    <keywords>Administrative &amp; Sales Assistant</keywords>
+    <occupation>administrative</occupation>
+    <occupationCategory>administrative_and_clerical</occupationCategory>
+    <createdAt>2025-12-25T12:07:11+00:00</createdAt>
+</position>
+<position>
+    <id>578189</id>
+    <office>Casablanca</office>
+    <department>Engineering</department>
+    <recruitingCategory>Full-time employee</recruitingCategory>
+    <name>Android Software Engineer</name>
+    <jobDescriptions>
+        <jobDescription>
+            <name>You will be responsible for</name>
+            <value>
+                <![CDATA[<ul><li><strong>Architecture &amp; design:</strong><ul><li>Ensure best-in-class mobile application performance, stability and overall quality across devices</li><li>Seek to mitigate shortcomings in the path taken to implement old and new features and help to improve the direction through pull reques]]>
+            </value>
+        </jobDescription>
+        <jobDescription>
+            <name>Your qualifications</name>
+            <value>
+                <![CDATA[<ul><li>1 to 5 years of industry experience in engineering</li><li>Degree in Computer Science or equivalent experience</li><li>Proficiency using Java</li><li>Experience with Android</li><li>Previous exposure to architectural patterns of web applications (e.g., well-designed APIs, micro services, hig]]>
+            </value>
+        </jobDescription>
+    </jobDescriptions>
+    <employmentType>permanent</employmentType>
+    <seniority>experienced</seniority>
+    <schedule>full-time</schedule>
+    <yearsOfExperience>2-5</yearsOfExperience>
+    <keywords>android ,mobile,java</keywords>
+    <occupation>general_and_other_engineering</occupation>
+    <occupationCategory>engineering</occupationCategory>
+    <createdAt>2022-02-01T16:33:49+00:00</createdAt>
+</position>
+</workzag-jobs>

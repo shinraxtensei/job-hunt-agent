@@ -1,6 +1,6 @@
 # M7-02: Moroccan employers: Personio feed and French drafts
 
-- **Status:** Ready
+- **Status:** In progress
 - **Milestone:** M7 — Today view and more sources
 - **Linear:** [HAM-66](https://linear.app/hamid-corp/issue/HAM-66/m7-02-moroccan-employers-personio-feed-and-french-drafts)
 - **Estimate:** 1 day (split if SmartRecruiters is accepted: M7-02b)
@@ -68,6 +68,25 @@ checked by the owner, never machine-translated (owner, 2026-11-08).
    **When** `make evals-tailor` and `make evals-checker` run
    **Then** French drafts for the French eval postings are reported separately, and the
    guardrail cases stay at 100% in both languages.
+
+## Results
+
+**Slice 1: Personio (2026-11-09).**
+- **Adapter:** `internal/source/personio` reads `https://{slug}.jobs.personio.de/xml`
+  with Go's XML decoder (no external entities), the shared fetch client (size cap,
+  retries, Retry-After) and one limiter for all of Personio's subdomains. The slug is
+  checked before any request (it becomes a host name). Each position is stored as a JSON
+  object of its fields.
+- **Tests:** golden file (Inyad, 2026-11-09, trimmed to 3 positions), empty feed,
+  malformed positions skipped and counted, not-a-feed errors, bad slugs refused, HTTP
+  errors naming the company, and a fuzz test (seeded with an external-entity document).
+- **Normaliser:** `job.Normalise("personio", …)`: title, URL, offices, department,
+  employment type, created date; an office named Remote means remote. Description text
+  goes to the classifier.
+- **Watch list:** `personio` is a board type (migration, watch-list loader, collector
+  registry); Inyad is on the watch list (track: morocco).
+- **Live:** 25 Inyad postings collected; the default preset shows the 2 engineering roles
+  in Casablanca and hides the rest for role reasons.
 
 ## Out of scope
 

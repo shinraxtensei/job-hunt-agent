@@ -375,6 +375,13 @@ func Description(source string, payload []byte) string {
 		return plain(plain(text(m, "content")))
 	case "ashby":
 		return text(m, "descriptionPlain")
+	case "personio":
+		var parts []string
+		for _, e := range m.arr("jobDescriptions") {
+			d := elemObj(e)
+			parts = append(parts, text(d, "name"), plain(text(d, "value")))
+		}
+		return strings.Join(parts, "\n")
 	}
 	return ""
 }
