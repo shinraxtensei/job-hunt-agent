@@ -64,14 +64,17 @@ func run(m *testing.M) (int, error) {
 		}),
 		postgres.BasicWaitStrategies(),
 	)
-	if err != nil {
-		return 0, fmt.Errorf("starting postgres: %w", err)
-	}
+	// Terminated by us, not only by Ryuk (disabled in CI): deferred before the error
+	// check, because Run returns the container it created even when its wait failed.
+	// TerminateContainer accepts a nil container.
 	defer func() {
 		if err := testcontainers.TerminateContainer(ctr); err != nil {
 			fmt.Fprintln(os.Stderr, "terminating postgres:", err)
 		}
 	}()
+	if err != nil {
+		return 0, fmt.Errorf("starting postgres: %w", err)
+	}
 	SuperURL, err = ctr.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
 		return 0, fmt.Errorf("connection string: %w", err)

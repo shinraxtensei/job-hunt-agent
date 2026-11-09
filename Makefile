@@ -59,6 +59,10 @@ test-py: ## Python tests, including integration tests against a real Postgres (t
 EVALS := cd agents && uv run python -m jobhunt_agents.evals
 WITH_ENV := set -a && . ./.env && set +a &&
 
+# Testcontainers' reaper (Ryuk) is slow to start on Docker Desktop: give it a minute.
+# CI turns Ryuk off instead (its runners are thrown away; tests terminate their own).
+export TESTCONTAINERS_RYUK_CONNECTION_TIMEOUT ?= 60s
+
 evals: ## Extraction over the eval set, real model, recorded and reported: make evals SET=dev|heldout|all PROMPT=N
 	@$(WITH_ENV) $(EVALS) run $(or $(SET),dev) $(or $(PROMPT),1)
 
