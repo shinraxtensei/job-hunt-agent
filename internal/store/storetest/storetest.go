@@ -119,7 +119,7 @@ func withUser(rawURL, user, password string) (string, error) {
 
 // Migrate applies all migrations to dsn, the way cmd/migrate does, and returns the
 // versions it applied.
-func Migrate(t *testing.T, dsn string) []int64 {
+func Migrate(t testing.TB, dsn string) []int64 {
 	t.Helper()
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {

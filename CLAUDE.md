@@ -95,6 +95,7 @@ testdata/            golden files (recorded board responses, sample postings)
 | New migration | `make migration name=<snake_case>` |
 | Vulnerability scan (fails on any Go finding, and on Python ones with a fix) | `make vuln` → govulncheck; `uv audit` over `agents/uv.lock` |
 | Fuzz the source parsers (30s each) | `make fuzz` |
+| Collector benchmarks: parsers, normaliser, store path on Postgres (results: `docs/benchmarks.md`) | `make bench` |
 | Whole stack on the Mac (Postgres, migrations, API + tracker on http://127.0.0.1:8080, Python worker) | `make up` / `make down` |
 | Collect now, inside the stack (no schedule until D) | `make collect` |
 | Back up / restore the database and the personal files (`JOBHUNT_BACKUP_DIR`, default ~/job-hunter-backups, keeps 14) | `make backup` / `make restore FILE=…` |
