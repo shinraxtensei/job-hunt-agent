@@ -285,6 +285,13 @@ type Skip struct {
 	At            pgtype.Timestamptz
 }
 
+type Visit struct {
+	ID         int64
+	StartedAt  pgtype.Timestamptz
+	LastSeenAt pgtype.Timestamptz
+	MarkedAt   pgtype.Timestamptz
+}
+
 type WorkItem struct {
 	ID          int64
 	PostingID   int64

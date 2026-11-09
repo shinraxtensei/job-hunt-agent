@@ -41,7 +41,7 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
     if (route.request().method() === "POST" && /^\/api\/leads\/\d+\/reason$/.test(path)) {
       return route.fulfill({ status: 202, contentType: "application/json", body: '{"requested":true}' });
     }
-    if (["POST", "DELETE"].includes(route.request().method()) && /^\/api\/(leads\/\d+\/(draft|status|skip|notes|contacts)|notes\/\d+|contacts\/\d+|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent|applications\/\d+\/followup)$/.test(path)) {
+    if (["POST", "DELETE"].includes(route.request().method()) && /^\/api\/(leads\/\d+\/(draft|status|skip|notes|contacts)|notes\/\d+|contacts\/\d+|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent|applications\/\d+\/followup|visits(\/seen)?)$/.test(path)) {
       return route.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' });
     }
     const body =
@@ -57,6 +57,7 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
       : path === "/api/presets" ? golden("presets")
       : path === "/api/followups" ? golden("followups_none")
       : path === "/api/drafts" ? golden("recent_drafts")
+      : path === "/api/today" ? golden("today_first_visit")
       : path === "/api/board" ? JSON.stringify(BOARD)
       : path.endsWith("/members") ? golden("members")
       : null;
@@ -101,7 +102,13 @@ for (const width of [375, 1280]) {
         const tiles = page.getByRole("list", { name: "At a glance" });
         await expect(tiles.getByRole("link")).toHaveCount(4);
         await expect(tiles.getByRole("link", { name: /Drafts ready 1/ })).toBeVisible(); // 9102 is ready
+        // M7-01: opening Today records the visit; "new" is since the last one (the golden: first visit)
+        await expect(tiles.getByRole("link", { name: /New since your last visit 1/ })).toBeVisible();
         await expect(page.getByRole("heading", { name: /New leads/ })).toBeVisible();
+        await expect(page.locator(".lead-card")).toContainText("Mobile Engineer (Flutter)");
+        const seen = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/visits/seen"));
+        await page.getByRole("button", { name: "Mark all seen" }).click();
+        expect((await seen).headers()["content-type"]).toBe("application/json");
         await expect(page.getByRole("heading", { name: /Follow-ups due/ })).toBeVisible();
         await noHorizontalScroll(page);
         await noAxeViolations(page);

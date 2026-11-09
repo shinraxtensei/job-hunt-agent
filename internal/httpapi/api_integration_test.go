@@ -247,6 +247,7 @@ func TestGolden(t *testing.T) {
 		{"recent_drafts", "/api/drafts", 200},
 		{"followups_none", "/api/followups", 200},
 		{"board_empty", "/api/board", 200},
+		{"today_first_visit", "/api/today", 200},
 		{"drafts_none", "/api/leads/9003/drafts", 200},
 		{"bad_sort", "/api/leads?sort=salary", 400},
 		{"bad_fit", "/api/leads?fit=great", 400},
@@ -1231,5 +1232,79 @@ func TestRecentDrafts(t *testing.T) {
 	if len(v.Drafts) != 2 || v.Drafts[0].ID != 9103 || v.Drafts[0].LeadID != 9006 || v.Drafts[1].ID != 9102 ||
 		v.Drafts[1].Status != "ready_for_review" || v.Drafts[1].Company == "" || v.Drafts[1].Title == "" {
 		t.Errorf("drafts: %+v", v.Drafts)
+	}
+}
+
+// M7-01 AC1-AC3: Today lists leads new since the last visit and closed postings of leads
+// you acted on; a visit lasts while Today is opened again within 30 minutes; "Mark all
+// seen" moves the start to now.
+func TestToday(t *testing.T) {
+	db := world(t)
+	clock := now
+	h := httpapi.New(db, "../../data/presets", "test-sha", func() time.Time { return clock }, quiet())
+	t.Cleanup(func() {
+		ctx := context.Background()
+		for _, q := range []string{`DELETE FROM visits`, forgetApplications, `UPDATE postings SET closed_at = NULL WHERE id = 9001`} {
+			if _, err := db.Exec(ctx, q); err != nil {
+				t.Error(err)
+			}
+		}
+	})
+	type today struct {
+		Since    time.Time `json:"since"`
+		NewTotal int       `json:"new_total"`
+		New      []struct {
+			ID int64 `json:"id"`
+		} `json:"new"`
+		Closed []struct {
+			ID       int64     `json:"id"`
+			ClosedAt time.Time `json:"closed_at"`
+		} `json:"closed"`
+	}
+	get := func() today {
+		var v today
+		getJSON(t, h, "/api/today", &v)
+		return v
+	}
+	visit := func() time.Time {
+		t.Helper()
+		rec := postJSON(h, "/api/visits", "", "")
+		var v struct{ Since time.Time }
+		if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &v) != nil {
+			t.Fatalf("visit: %d %s", rec.Code, rec.Body)
+		}
+		return v.Since
+	}
+	// no visit: the last 24 hours (9006 was first seen 23.5 h before now; 9001 days before)
+	if v := get(); !v.Since.Equal(now.Add(-24*time.Hour)) || v.NewTotal != 1 || v.New[0].ID != 9006 {
+		t.Fatalf("no visit: %+v", v)
+	}
+	if rec := postJSON(h, "/api/visits", "", "cross-site"); rec.Code != http.StatusForbidden {
+		t.Errorf("cross-site visit: %d", rec.Code)
+	}
+	t0 := now
+	visit()
+	clock = t0.Add(10 * time.Minute)
+	if s := visit(); !s.Equal(clock.Add(-24 * time.Hour)) {
+		t.Errorf("same visit: since %v, want 24 h before now (no earlier visit)", s)
+	}
+	// a lead you applied to closes, then you come back two hours later
+	postJSON(h, "/api/leads/9001/status", `{"status":"applied"}`, "")
+	if _, err := db.Exec(t.Context(), `UPDATE postings SET closed_at = $1 WHERE id = 9001`, t0.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	clock = t0.Add(2 * time.Hour)
+	if s := visit(); !s.Equal(t0) {
+		t.Errorf("new visit: since %v, want the previous visit's start %v", s, t0)
+	}
+	v := get()
+	if !v.Since.Equal(t0) || v.NewTotal != 0 || len(v.Closed) != 1 || !v.Closed[0].ClosedAt.Equal(t0.Add(time.Hour)) {
+		t.Errorf("after two hours: %+v", v)
+	}
+	if rec := postJSON(h, "/api/visits/seen", "", ""); rec.Code != http.StatusOK {
+		t.Fatalf("mark seen: %d", rec.Code)
+	}
+	if v := get(); !v.Since.Equal(clock) || len(v.Closed) != 0 {
+		t.Errorf("after mark all seen: %+v", v)
 	}
 }
