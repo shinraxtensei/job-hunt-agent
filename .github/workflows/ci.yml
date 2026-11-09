@@ -90,4 +90,18 @@ jobs:
           cache-dependency-glob: agents/uv.lock
 
       - name: make check
+        # No Ryuk on a throwaway runner: it was the source of flaky "wait for reaper"
+        # failures. Every test terminates its own containers; the next step proves it.
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true"
         run: make check
+
+      - name: no test containers left behind
+        if: success() || failure()
+        run: |
+          left="$(docker ps -aq --filter label=org.testcontainers.lang)"
+          if [ -n "$left" ]; then
+            docker ps -a --filter label=org.testcontainers.lang
+            echo "test containers were not terminated" >&2
+            exit 1
+          fi
