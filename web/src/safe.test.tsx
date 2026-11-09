@@ -27,6 +27,7 @@ const lead = (over: Partial<Lead>): Lead => ({
   published_at: null,
   first_seen_at: "2026-11-02T08:00:00Z",
   origin: "collected",
+  source: "lever",
   members: 1,
   members_url: "/api/leads/1/members",
   score: null,
@@ -217,5 +218,17 @@ describe("CV drafts (M4-05)", () => {
     const note = "English: no French text for example-deploys.";
     act(() => root.render(<DraftView draft={{ ...base, content: { ...content, language: "en", language_note: note } }} evidence={{}} waiting={false} />));
     expect(el.textContent).toContain(note);
+  });
+});
+
+describe("board postings (M7-03)", () => {
+  // AC2: a board's posting names the board, as its terms ask; the title links to it.
+  it("says which board a lead came from", async () => {
+    const { place } = await import("./format");
+    expect(place(lead({ origin: "board", source: "remotive", locations: ["Worldwide"] }))).toBe("Worldwide · Remote · via Remotive");
+    expect(place(lead({}))).not.toContain("via");
+    const el = render([lead({ origin: "board", source: "remotive", url: "https://remotive.com/remote-jobs/software-dev/x-1" })]);
+    expect(el.textContent).toContain("via Remotive");
+    expect(el.querySelector("a[href='https://remotive.com/remote-jobs/software-dev/x-1']")).not.toBeNull();
   });
 });

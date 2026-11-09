@@ -45,6 +45,25 @@ func (q *Queries) CloseRechecked(ctx context.Context, id int64) (int64, error) {
 	return result.RowsAffected(), nil
 }
 
+const closeSourcePostingsNotIn = `-- name: CloseSourcePostingsNotIn :execrows
+UPDATE postings SET closed_at = now()
+WHERE source = $1 AND closed_at IS NULL AND source_posting_id <> ALL ($2::text[])
+`
+
+type CloseSourcePostingsNotInParams struct {
+	Source  string
+	SeenIds []string
+}
+
+// ClosePostingsNotIn for a board-wide source: what its fetch no longer lists, any company.
+func (q *Queries) CloseSourcePostingsNotIn(ctx context.Context, arg CloseSourcePostingsNotInParams) (int64, error) {
+	result, err := q.db.Exec(ctx, closeSourcePostingsNotIn, arg.Source, arg.SeenIds)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const countOpenPostings = `-- name: CountOpenPostings :one
 SELECT count(*) FROM postings
 WHERE company_id = $1 AND source = $2 AND closed_at IS NULL
@@ -57,6 +76,18 @@ type CountOpenPostingsParams struct {
 
 func (q *Queries) CountOpenPostings(ctx context.Context, arg CountOpenPostingsParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countOpenPostings, arg.CompanyID, arg.Source)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countOpenSourcePostings = `-- name: CountOpenSourcePostings :one
+SELECT count(*) FROM postings WHERE source = $1 AND closed_at IS NULL
+`
+
+// A board-wide source's open postings, across companies (ADR-0029).
+func (q *Queries) CountOpenSourcePostings(ctx context.Context, source string) (int64, error) {
+	row := q.db.QueryRow(ctx, countOpenSourcePostings, source)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -77,6 +108,23 @@ type CountPostingsNotInParams struct {
 // How many of the company's open postings from this source ClosePostingsNotIn would close.
 func (q *Queries) CountPostingsNotIn(ctx context.Context, arg CountPostingsNotInParams) (int64, error) {
 	row := q.db.QueryRow(ctx, countPostingsNotIn, arg.CompanyID, arg.Source, arg.SeenIds)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countSourcePostingsNotIn = `-- name: CountSourcePostingsNotIn :one
+SELECT count(*) FROM postings
+WHERE source = $1 AND closed_at IS NULL AND source_posting_id <> ALL ($2::text[])
+`
+
+type CountSourcePostingsNotInParams struct {
+	Source  string
+	SeenIds []string
+}
+
+func (q *Queries) CountSourcePostingsNotIn(ctx context.Context, arg CountSourcePostingsNotInParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countSourcePostingsNotIn, arg.Source, arg.SeenIds)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -143,6 +191,16 @@ func (q *Queries) ListManualToRecheck(ctx context.Context) ([]ListManualToRechec
 		return nil, err
 	}
 	return items, nil
+}
+
+const markBoard = `-- name: MarkBoard :exec
+UPDATE postings SET origin = 'board' WHERE id = $1 AND origin = 'collected'
+`
+
+// A posting from a board-wide source (ADR-0029). A manual add of the same posting stays manual.
+func (q *Queries) MarkBoard(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, markBoard, id)
+	return err
 }
 
 const markManual = `-- name: MarkManual :exec

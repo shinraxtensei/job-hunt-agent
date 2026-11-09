@@ -52,3 +52,15 @@ INSERT INTO companies (name, active)
 VALUES (@name, false)
 ON CONFLICT (lower(name)) WHERE board_type IS NULL DO UPDATE SET name = companies.name
 RETURNING id;
+
+-- name: FindCompanyByName :one
+-- A board posting's company (ADR-0029): by name, whatever the case, a watch-list row
+-- (one with a board) first, so a company's own feed and the board group together. Never
+-- the board's own row.
+SELECT id FROM companies
+WHERE lower(name) = lower(@name) AND board_type IS DISTINCT FROM sqlc.arg(board_type)::text
+ORDER BY (board_type IS NULL), active DESC, id
+LIMIT 1;
+
+-- name: SetFetchedAt :exec
+UPDATE companies SET fetched_at = now() WHERE id = @id;

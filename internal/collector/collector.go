@@ -3,8 +3,10 @@ package collector
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -26,6 +28,18 @@ type Source interface {
 	// before every HTTP request it makes, retries included: limit is shared by every
 	// company on Host.
 	Fetch(ctx context.Context, slug string, limit *rate.Limiter) ([]job.Raw, job.Skipped, error)
+}
+
+// boardWide is a Source whose postings belong to many companies (ADR-0029): each Raw
+// names its company, and closing is scoped to the source, not one company.
+type boardWide interface{ BoardWide() bool }
+
+// minInterval is a Source fetched at most once per interval (Remotive: 4 a day).
+type minInterval interface{ MinInterval() time.Duration }
+
+func isBoardWide(src Source) bool {
+	b, ok := src.(boardWide)
+	return ok && b.BoardWide()
 }
 
 // beginner opens transactions: *pgx.Conn and *pgxpool.Pool both are.
@@ -71,6 +85,7 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 	}
 	res := Result{Fetched: len(raws), Skipped: skipped.Total()}
 	var newIDs, reopenedIDs []string
+	board := isBoardWide(src)
 
 	err = pgx.BeginFunc(ctx, db, func(tx pgx.Tx) error {
 		q := store.New(tx)
@@ -79,7 +94,7 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 			return err
 		}
 		if len(raws) == 0 {
-			open, err := q.CountOpenPostings(ctx, store.CountOpenPostingsParams{CompanyID: co, Source: src.Name()})
+			open, err := countOpen(ctx, q, board, co, src.Name())
 			if err != nil {
 				return fmt.Errorf("counting open postings: %w", err)
 			}
@@ -89,10 +104,17 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 		}
 		// Skipped entries with a readable ID are still on the board: never close them.
 		seen := append(make([]string, 0, len(raws)+len(skipped.IDs)), skipped.IDs...)
+		owners := map[string]int64{} // a board's company names, resolved once per fetch
 		for _, r := range raws {
 			seen = append(seen, r.SourceID)
+			owner := co
+			if board {
+				if owner, err = boardCompany(ctx, q, owners, src.Name(), r.Company); err != nil {
+					return err
+				}
+			}
 			r2, err := q.UpsertPosting(ctx, store.UpsertPostingParams{
-				CompanyID:       co,
+				CompanyID:       owner,
 				Source:          r.Source,
 				SourcePostingID: r.SourceID,
 				Url:             r.URL,
@@ -101,6 +123,11 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 			})
 			if err != nil {
 				return fmt.Errorf("storing posting %s: %w", r.SourceID, err)
+			}
+			if board && r2.Inserted {
+				if err := q.MarkBoard(ctx, r2.ID); err != nil {
+					return fmt.Errorf("marking posting %s: %w", r.SourceID, err)
+				}
 			}
 			if r2.Reopened {
 				reopenedIDs = append(reopenedIDs, r.SourceID)
@@ -114,7 +141,7 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 				continue // unchanged: its job record is current, leave it alone
 			}
 			// New or changed: (re)write its job record in this same transaction.
-			ok, err := writeJob(ctx, q, r2.ID, co, r.Source, r.Payload, r2.ContentHash, log)
+			ok, err := writeJob(ctx, q, r2.ID, owner, r.Source, r.Payload, r2.ContentHash, log)
 			if err != nil {
 				return err
 			}
@@ -124,12 +151,12 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 		}
 		// The fetch succeeded (we are here), so whatever the board no longer lists is gone,
 		// unless that is most of the board, which looks like a partial outage.
-		toClose, err := q.CountPostingsNotIn(ctx, store.CountPostingsNotInParams{CompanyID: co, Source: src.Name(), SeenIds: seen})
+		toClose, err := countNotIn(ctx, q, board, co, src.Name(), seen)
 		if err != nil {
 			return fmt.Errorf("counting postings to close: %w", err)
 		}
 		if toClose >= CloseRatioGuardMin {
-			open, err := q.CountOpenPostings(ctx, store.CountOpenPostingsParams{CompanyID: co, Source: src.Name()})
+			open, err := countOpen(ctx, q, board, co, src.Name())
 			if err != nil {
 				return fmt.Errorf("counting open postings: %w", err)
 			}
@@ -137,11 +164,19 @@ func collect(ctx context.Context, db beginner, src Source, slug string, limit *r
 				return fmt.Errorf("refusing to close %d of %d postings", toClose, open)
 			}
 		}
-		closed, err := q.ClosePostingsNotIn(ctx, store.ClosePostingsNotInParams{CompanyID: co, Source: src.Name(), SeenIds: seen})
+		var closed int64
+		if board {
+			closed, err = q.CloseSourcePostingsNotIn(ctx, store.CloseSourcePostingsNotInParams{Source: src.Name(), SeenIds: seen})
+		} else {
+			closed, err = q.ClosePostingsNotIn(ctx, store.ClosePostingsNotInParams{CompanyID: co, Source: src.Name(), SeenIds: seen})
+		}
 		if err != nil {
 			return fmt.Errorf("closing missing postings: %w", err)
 		}
 		res.Closed = int(closed)
+		if err := q.SetFetchedAt(ctx, co); err != nil {
+			return fmt.Errorf("recording the fetch: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
@@ -171,5 +206,44 @@ func companyID(ctx context.Context, q *store.Queries, boardType, slug string) (i
 	if err != nil {
 		return 0, fmt.Errorf("upserting company: %w", err)
 	}
+	return id, nil
+}
+
+// countOpen counts the open postings a fetch could close: the company's from this source,
+// or a board-wide source's across companies (ADR-0029).
+func countOpen(ctx context.Context, q *store.Queries, board bool, co int64, source string) (int64, error) {
+	if board {
+		return q.CountOpenSourcePostings(ctx, source)
+	}
+	return q.CountOpenPostings(ctx, store.CountOpenPostingsParams{CompanyID: co, Source: source})
+}
+
+func countNotIn(ctx context.Context, q *store.Queries, board bool, co int64, source string, seen []string) (int64, error) {
+	if board {
+		return q.CountSourcePostingsNotIn(ctx, store.CountSourcePostingsNotInParams{Source: source, SeenIds: seen})
+	}
+	return q.CountPostingsNotIn(ctx, store.CountPostingsNotInParams{CompanyID: co, Source: source, SeenIds: seen})
+}
+
+// boardCompany is a board posting's company (ADR-0029): a company of that name, a
+// watch-list one first, else a new board-less one. Names are untrusted: trimmed, and only
+// compared and stored, as manual adds' are.
+func boardCompany(ctx context.Context, q *store.Queries, cache map[string]int64, boardType, name string) (int64, error) {
+	name = strings.Join(strings.Fields(name), " ")
+	if name == "" {
+		return 0, errors.New("board posting without a company")
+	}
+	key := strings.ToLower(name)
+	if id, ok := cache[key]; ok {
+		return id, nil
+	}
+	id, err := q.FindCompanyByName(ctx, store.FindCompanyByNameParams{Name: name, BoardType: boardType})
+	if errors.Is(err, pgx.ErrNoRows) {
+		id, err = q.EnsureBoardlessCompany(ctx, name)
+	}
+	if err != nil {
+		return 0, fmt.Errorf("company %q: %w", name, err)
+	}
+	cache[key] = id
 	return id, nil
 }

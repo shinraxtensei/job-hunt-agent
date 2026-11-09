@@ -60,3 +60,7 @@ checked by you. The `*.example.yaml` files show the format.
   descriptions included, same politeness (M1-04).
 - **Ashby**: public job posting API (`api.ashbyhq.com/posting-api/job-board/<board>`),
   listed jobs only, descriptions and compensation included, same politeness (M1-05).
+- **Personio**: public XML career feed (`<company>.jobs.personio.de/xml`), e.g. Inyad (M7-02).
+- **Remotive**: public API (`remotive.com/api/remote-jobs`), software and DevOps jobs of many
+  companies, fetched at most every 6 hours (≤ 4 a day, as its terms ask), each job linked
+  to Remotive and shown "via Remotive" (M7-03, ADR-0029).

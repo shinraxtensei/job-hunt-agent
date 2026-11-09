@@ -48,7 +48,8 @@ export type Lead = {
   url: string;
   published_at: string | null;
   first_seen_at: string;
-  origin: "collected" | "manual"; // manual: added by link (shown in M6)
+  origin: "collected" | "manual" | "board"; // manual: added by link; board: a remote board (ADR-0029)
+  source: string; // the canonical posting's source ("lever", "remotive")
   members: number;
   members_url: string;
   hidden_by?: string[];

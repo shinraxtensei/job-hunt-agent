@@ -71,7 +71,7 @@ func (q *Queries) FinishRun(ctx context.Context, arg FinishRunParams) error {
 }
 
 const listCollectableCompanies = `-- name: ListCollectableCompanies :many
-SELECT id, name, board_type::text AS board_type, board_slug::text AS board_slug FROM companies
+SELECT id, name, board_type::text AS board_type, board_slug::text AS board_slug, fetched_at FROM companies
 WHERE active AND NOT excluded AND board_type IS NOT NULL
 ORDER BY id
 `
@@ -81,6 +81,7 @@ type ListCollectableCompaniesRow struct {
 	Name      string
 	BoardType string
 	BoardSlug string
+	FetchedAt pgtype.Timestamptz
 }
 
 // Companies a run fetches: on the watch list (active) and not excluded.
@@ -98,6 +99,7 @@ func (q *Queries) ListCollectableCompanies(ctx context.Context) ([]ListCollectab
 			&i.Name,
 			&i.BoardType,
 			&i.BoardSlug,
+			&i.FetchedAt,
 		); err != nil {
 			return nil, err
 		}

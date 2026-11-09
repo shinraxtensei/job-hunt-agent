@@ -227,6 +227,35 @@ func TestNormalisePersonio(t *testing.T) {
 	}
 }
 
+// M7-03: a Remotive job is remote; its required location names where candidates may be.
+func TestNormaliseRemotive(t *testing.T) {
+	for name, c := range map[string]struct {
+		payload string
+		want    job.Record
+	}{
+		"regions": {`{"id":"2","url":"https://remotive.com/remote-jobs/software-dev/x-2","title":"Senior Back-end Developer","company_name":"Acme","category":"Software Development","job_type":"full_time","publication_date":"2026-11-07T01:10:55","candidate_required_location":"Europe, USA, Canada"}`,
+			job.Record{Title: "Senior Back-end Developer", URL: "https://remotive.com/remote-jobs/software-dev/x-2", Locations: []string{"Europe", "USA", "Canada"},
+				Workplace: job.Remote, Department: "Software Development", EmploymentType: "full_time", PublishedAt: time.Date(2026, 11, 7, 1, 10, 55, 0, time.UTC)}},
+		"worldwide, bad fields": {`{"id":"3","title":"Go Developer","candidate_required_location":"Worldwide","publication_date":7,"category":null}`,
+			job.Record{Title: "Go Developer", Locations: []string{"Worldwide"}, Workplace: job.Remote}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := job.Normalise("remotive", []byte(c.payload))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got.TitleKey = ""
+			if !got.PublishedAt.Equal(c.want.PublishedAt) {
+				t.Errorf("published %v, want %v", got.PublishedAt, c.want.PublishedAt)
+			}
+			got.PublishedAt, c.want.PublishedAt = time.Time{}, time.Time{}
+			if fmt.Sprintf("%+v", got) != fmt.Sprintf("%+v", c.want) {
+				t.Errorf("got  %+v\nwant %+v", got, c.want)
+			}
+		})
+	}
+}
+
 func TestNormaliseToleratesBadFields(t *testing.T) {
 	for source, payload := range map[string]string{
 		"lever":      `{"text": 42, "hostedUrl": null, "categories": "nope", "workplaceType": ["remote"], "country": "usa", "createdAt": "yesterday"}`,
@@ -298,7 +327,7 @@ func FuzzNormalise(f *testing.F) {
 		rec, err := job.Normalise(source, payload)
 		var obj map[string]json.RawMessage
 		isObject := json.Unmarshal(payload, &obj) == nil && obj != nil
-		known := source == "lever" || source == "greenhouse" || source == "ashby" || source == "personio"
+		known := source == "lever" || source == "greenhouse" || source == "ashby" || source == "personio" || source == "remotive"
 		if known && isObject && err != nil {
 			t.Fatalf("Normalise(%s) failed on a JSON object: %v", source, err)
 		}

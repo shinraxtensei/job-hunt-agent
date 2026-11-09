@@ -14,7 +14,7 @@ import (
 const createCompany = `-- name: CreateCompany :one
 INSERT INTO companies (name, board_type, board_slug)
 VALUES ($1, $2::text, $3::text)
-RETURNING id, name, board_type, board_slug, excluded, created_at, track, active
+RETURNING id, name, board_type, board_slug, excluded, created_at, track, active, fetched_at
 `
 
 type CreateCompanyParams struct {
@@ -35,6 +35,7 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		&i.CreatedAt,
 		&i.Track,
 		&i.Active,
+		&i.FetchedAt,
 	)
 	return i, err
 }
@@ -91,8 +92,30 @@ func (q *Queries) EnsureManualBoardCompany(ctx context.Context, arg EnsureManual
 	return id, err
 }
 
+const findCompanyByName = `-- name: FindCompanyByName :one
+SELECT id FROM companies
+WHERE lower(name) = lower($1) AND board_type IS DISTINCT FROM $2::text
+ORDER BY (board_type IS NULL), active DESC, id
+LIMIT 1
+`
+
+type FindCompanyByNameParams struct {
+	Name      string
+	BoardType string
+}
+
+// A board posting's company (ADR-0029): by name, whatever the case, a watch-list row
+// (one with a board) first, so a company's own feed and the board group together. Never
+// the board's own row.
+func (q *Queries) FindCompanyByName(ctx context.Context, arg FindCompanyByNameParams) (int64, error) {
+	row := q.db.QueryRow(ctx, findCompanyByName, arg.Name, arg.BoardType)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getCompany = `-- name: GetCompany :one
-SELECT id, name, board_type, board_slug, excluded, created_at, track, active FROM companies WHERE id = $1
+SELECT id, name, board_type, board_slug, excluded, created_at, track, active, fetched_at FROM companies WHERE id = $1
 `
 
 func (q *Queries) GetCompany(ctx context.Context, id int64) (Company, error) {
@@ -107,6 +130,7 @@ func (q *Queries) GetCompany(ctx context.Context, id int64) (Company, error) {
 		&i.CreatedAt,
 		&i.Track,
 		&i.Active,
+		&i.FetchedAt,
 	)
 	return i, err
 }
@@ -154,6 +178,15 @@ func (q *Queries) ListCompanies(ctx context.Context) ([]ListCompaniesRow, error)
 		return nil, err
 	}
 	return items, nil
+}
+
+const setFetchedAt = `-- name: SetFetchedAt :exec
+UPDATE companies SET fetched_at = now() WHERE id = $1
+`
+
+func (q *Queries) SetFetchedAt(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, setFetchedAt, id)
+	return err
 }
 
 const upsertCompanyID = `-- name: UpsertCompanyID :one

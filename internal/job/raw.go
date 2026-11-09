@@ -12,6 +12,7 @@ type Raw struct {
 	URL      string          // public posting page
 	Title    string          // posting title as published
 	Payload  json.RawMessage // the posting's original JSON, byte for byte
+	Company  string          // board-wide sources only (ADR-0029): the posting's company
 }
 
 // Skipped describes the entries a source dropped as malformed or unstorable. IDs lists

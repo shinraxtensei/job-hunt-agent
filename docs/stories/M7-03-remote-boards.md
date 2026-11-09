@@ -1,6 +1,6 @@
 # M7-03: Remote boards: Remotive and RemoteOK
 
-- **Status:** Ready
+- **Status:** In progress (slice 1 of 2: Remotive)
 - **Milestone:** M7 — Today view and more sources
 - **Linear:** [HAM-67](https://linear.app/hamid-corp/issue/HAM-67/m7-03-remote-boards-remotive-and-remoteok)
 - **Estimate:** 1 day
@@ -40,6 +40,27 @@ These are boards, not company feeds: one fetch returns many companies. ADR-0005'
    **When** board postings arrive
    **Then** they are classified and filtered like any other (remote scope, seniority,
    role family). Nothing is shown that the preset would hide.
+
+## Results
+
+**Slice 1: Remotive and the board-wide plumbing (2026-11-09).** ADR-0029.
+- **Adapter** `internal/source/remotive`: one GET of `remotive.com/api/remote-jobs`. The
+  API ignores its `category` parameter (checked live), so the adapter keeps "Software
+  Development" and "DevOps / Sysadmin" itself. A job without id, title, company or a
+  `https://remotive.com/` URL is skipped and counted. Golden file (2026-11-09, 4 jobs),
+  empty, malformed, not-a-list, HTTP error, cancellation and fuzz tests.
+- **At most 4 fetches a day:** `MinInterval()` 6 h; the collector records
+  `companies.fetched_at` and skips a board fetched more recently (logged, not a failure).
+- **Companies:** each job is stored under the company of that name, a watch-list row
+  first, else board-less (`FindCompanyByName`); origin `board`. Closing is by source.
+- **Groups:** a board posting groups with the company's own feed (same company row and
+  title key); the company's posting is canonical (`job_groups` orders board postings last).
+- **Shown and attributed:** board groups are listed like manual ones (unless the company is
+  excluded) and filtered by the preset; the leads API returns `source`; rows say "via
+  Remotive" and the title links to the Remotive job.
+- **Live:** 5 software jobs of 4 companies; the preset shows 3 (Fluence Full-Stack
+  Developer scored Strong) and hides 2 for seniority, role and location reasons. A second
+  `make collect` a minute later didn't fetch Remotive.
 
 ## Out of scope
 

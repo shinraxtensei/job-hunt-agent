@@ -59,6 +59,8 @@ func Normalise(source string, payload []byte) (Record, error) {
 		r = ashby(m)
 	case "personio":
 		r = personio(m)
+	case "remotive":
+		r = remotive(m)
 	case "manual":
 		r = manual(m)
 	default:

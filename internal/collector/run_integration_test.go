@@ -26,6 +26,7 @@ import (
 // per slug: fail returns an error, block waits for the context to be cancelled.
 type fakeSource struct {
 	name, host string
+	title      string // when set, the posting's title in a Lever-shaped payload
 	delay      time.Duration
 	fail       map[string]bool
 	block      map[string]bool
@@ -80,9 +81,13 @@ func (f *fakeSource) Fetch(ctx context.Context, slug string, limit *rate.Limiter
 		return nil, job.Skipped{}, fmt.Errorf("%s: fetch %s: unexpected status 500 Internal Server Error", f.name, slug)
 	}
 	id := fmt.Sprintf("%s-%d", slug, time.Now().UnixNano())
+	payload := fmt.Sprintf(`{"id":%q}`, id)
+	if f.title != "" {
+		payload = fmt.Sprintf(`{"id":%q,"text":%q}`, id, f.title)
+	}
 	return []job.Raw{{
 		Source: f.name, SourceID: id, URL: "https://example.test/" + id, Title: "Engineer",
-		Payload: []byte(fmt.Sprintf(`{"id":%q}`, id)),
+		Payload: []byte(payload),
 	}}, job.Skipped{}, nil
 }
 

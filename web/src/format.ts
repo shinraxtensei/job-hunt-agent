@@ -32,8 +32,12 @@ export function place(l: Lead): string {
     .filter((w) => w !== "unknown" && !(workplaceWords[w] ?? []).some((word) => said.includes(` ${word} `)))
     .map((w) => label("workplace", w))
     .join(", ");
-  return wp ? `${loc} · ${wp}` : loc;
+  const where = wp ? `${loc} · ${wp}` : loc;
+  return l.origin === "board" ? `${where} · via ${BOARDS[l.source] ?? l.source}` : where;
 }
+
+// Boards whose terms ask to be named as the source (ADR-0029).
+const BOARDS: Record<string, string> = { remotive: "Remotive" };
 
 // The semantic pastels (docs/design/brief.md): one meaning each, always with words.
 export type Tone = "mint" | "sand" | "salmon" | "blue" | "lilac";

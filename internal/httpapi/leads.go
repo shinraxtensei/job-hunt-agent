@@ -41,7 +41,8 @@ type Lead struct {
 	URL                string     `json:"url"`
 	PublishedAt        *time.Time `json:"published_at"`
 	FirstSeenAt        time.Time  `json:"first_seen_at"` // the group's earliest member
-	Origin             string     `json:"origin"`        // collected | manual (added by link, ADR-0015)
+	Origin             string     `json:"origin"`        // collected | manual (ADR-0015) | board (ADR-0029)
+	Source             string     `json:"source"`        // the canonical posting's source: "via Remotive"
 	Members            int32      `json:"members"`
 	MembersURL         string     `json:"members_url"`
 	HiddenBy           []string   `json:"hidden_by,omitempty"` // /api/leads/hidden only
@@ -117,7 +118,7 @@ func (a *api) load(ctx context.Context) ([]Lead, error) {
 			RoleFamily: r.RoleFamily, Seniority: r.Seniority, Workplaces: r.Workplaces,
 			RemoteScopes: []string{}, Countries: []string{}, Locations: r.Locations,
 			Closed: r.Closed, Team: r.Team, URL: r.Url, FirstSeenAt: r.FirstSeenAt.Time.UTC(),
-			Origin: r.Origin, Members: r.Members, MembersURL: fmt.Sprintf("/api/leads/%d/members", r.PostingID),
+			Origin: r.Origin, Source: r.Source, Members: r.Members, MembersURL: fmt.Sprintf("/api/leads/%d/members", r.PostingID),
 			companyID: r.CompanyID, titleKey: r.TitleKey, Status: "new",
 		}
 		if ap, ok := byGroup[key{r.CompanyID, r.TitleKey}]; ok {

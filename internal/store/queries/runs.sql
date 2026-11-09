@@ -1,6 +1,6 @@
 -- name: ListCollectableCompanies :many
 -- Companies a run fetches: on the watch list (active) and not excluded.
-SELECT id, name, board_type::text AS board_type, board_slug::text AS board_slug FROM companies
+SELECT id, name, board_type::text AS board_type, board_slug::text AS board_slug, fetched_at FROM companies
 WHERE active AND NOT excluded AND board_type IS NOT NULL
 ORDER BY id;
 

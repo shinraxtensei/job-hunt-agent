@@ -107,7 +107,8 @@ JOIN jobs j ON j.posting_id = g.canonical_posting_id
 JOIN postings cp ON cp.id = g.canonical_posting_id
 WHERE c.active OR EXISTS (
 	SELECT 1 FROM jobs m JOIN postings mp ON mp.id = m.posting_id
-	WHERE m.company_id = g.company_id AND m.title_key = g.title_key AND mp.origin = 'manual'
+	WHERE m.company_id = g.company_id AND m.title_key = g.title_key
+		AND (mp.origin = 'manual' OR (mp.origin = 'board' AND NOT c.excluded))
 )
 ORDER BY g.company_id, g.title_key
 `
@@ -252,14 +253,15 @@ SELECT g.company_id, g.title_key, g.members, g.closed, g.locations::text[] AS lo
 	j.posting_id, j.title, j.team, j.url, j.published_at, j.role_family, j.seniority, j.experience_min_years,
 	(SELECT min(mp.first_seen_at) FROM jobs m JOIN postings mp ON mp.id = m.posting_id
 	 WHERE m.company_id = g.company_id AND m.title_key = g.title_key)::timestamptz AS first_seen_at,
-	cp.origin
+	cp.origin, cp.source
 FROM job_groups g
 JOIN companies c ON c.id = g.company_id
 JOIN jobs j ON j.posting_id = g.canonical_posting_id
 JOIN postings cp ON cp.id = g.canonical_posting_id
 WHERE c.active OR EXISTS (
 	SELECT 1 FROM jobs m JOIN postings mp ON mp.id = m.posting_id
-	WHERE m.company_id = g.company_id AND m.title_key = g.title_key AND mp.origin = 'manual'
+	WHERE m.company_id = g.company_id AND m.title_key = g.title_key
+		AND (mp.origin = 'manual' OR (mp.origin = 'board' AND NOT c.excluded))
 )
 `
 
@@ -282,10 +284,11 @@ type ListLeadsRow struct {
 	ExperienceMinYears pgtype.Int4
 	FirstSeenAt        pgtype.Timestamptz
 	Origin             string
+	Source             string
 }
 
 // Every duplicate group of an active company, or with a manually added member
-// (ADR-0015), with its canonical job, for the leads API (ADR-0012). first_seen_at is the
+// (ADR-0015) or a board member (ADR-0029), with its canonical job, for the leads API (ADR-0012). first_seen_at is the
 // group's: its earliest member's.
 func (q *Queries) ListLeads(ctx context.Context) ([]ListLeadsRow, error) {
 	rows, err := q.db.Query(ctx, listLeads)
@@ -315,6 +318,7 @@ func (q *Queries) ListLeads(ctx context.Context) ([]ListLeadsRow, error) {
 			&i.ExperienceMinYears,
 			&i.FirstSeenAt,
 			&i.Origin,
+			&i.Source,
 		); err != nil {
 			return nil, err
 		}

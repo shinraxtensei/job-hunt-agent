@@ -69,6 +69,7 @@ type Company struct {
 	CreatedAt pgtype.Timestamptz
 	Track     pgtype.Text
 	Active    bool
+	FetchedAt pgtype.Timestamptz
 }
 
 type Contact struct {

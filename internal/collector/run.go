@@ -78,6 +78,7 @@ func Run(ctx context.Context, db DB, reg Registry, cfg Config, log *slog.Logger)
 		return res, errors.Join(fmt.Errorf("listing companies: %w", err), finish(ctx, db, &res, nil))
 	}
 
+	companies = recentlyFetched(companies, reg, log)
 	todo, skipped, limiters := plan(companies, reg, cfg.HostInterval)
 	skippedN := 0
 	for boardType, names := range skipped {
@@ -235,4 +236,21 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return strings.ToValidUTF8(s[:n], "")
+}
+
+// recentlyFetched drops companies whose source has a minimum fetch interval and was
+// fetched within it (ADR-0029: Remotive at most 4 times a day). Not a failure.
+func recentlyFetched(companies []store.ListCollectableCompaniesRow, reg Registry, log *slog.Logger) []store.ListCollectableCompaniesRow {
+	out := companies[:0:0]
+	for _, co := range companies {
+		if m, ok := reg[co.BoardType].(minInterval); ok && co.FetchedAt.Valid {
+			if since := time.Since(co.FetchedAt.Time); since < m.MinInterval() {
+				log.Info("fetched recently; not fetching again yet", "board_type", co.BoardType,
+					"company", co.BoardSlug, "since", since.Round(time.Minute).String())
+				continue
+			}
+		}
+		out = append(out, co)
+	}
+	return out
 }

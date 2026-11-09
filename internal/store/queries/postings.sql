@@ -67,3 +67,20 @@ WHERE p.origin = 'manual' AND p.source IN ('lever', 'greenhouse', 'ashby')
 	AND c.board_slug IS NOT NULL
 	AND (p.last_rechecked_at IS NULL OR p.last_rechecked_at < now() - interval '2 days')
 ORDER BY p.id;
+
+-- name: MarkBoard :exec
+-- A posting from a board-wide source (ADR-0029). A manual add of the same posting stays manual.
+UPDATE postings SET origin = 'board' WHERE id = @id AND origin = 'collected';
+
+-- name: CountOpenSourcePostings :one
+-- A board-wide source's open postings, across companies (ADR-0029).
+SELECT count(*) FROM postings WHERE source = @source AND closed_at IS NULL;
+
+-- name: CountSourcePostingsNotIn :one
+SELECT count(*) FROM postings
+WHERE source = @source AND closed_at IS NULL AND source_posting_id <> ALL (@seen_ids::text[]);
+
+-- name: CloseSourcePostingsNotIn :execrows
+-- ClosePostingsNotIn for a board-wide source: what its fetch no longer lists, any company.
+UPDATE postings SET closed_at = now()
+WHERE source = @source AND closed_at IS NULL AND source_posting_id <> ALL (@seen_ids::text[]);
