@@ -23,9 +23,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
-	"github.com/shinraxtensei/job-hunter/internal/httpapi"
-	"github.com/shinraxtensei/job-hunter/internal/store/storetest"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/httpapi"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store/storetest"
 )
 
 var update = flag.Bool("update", false, "rewrite the golden files")

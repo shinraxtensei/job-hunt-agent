@@ -17,9 +17,9 @@ import (
 	"go.uber.org/goleak"
 	"golang.org/x/time/rate"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
-	"github.com/shinraxtensei/job-hunter/internal/job"
-	"github.com/shinraxtensei/job-hunter/internal/store/storetest"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store/storetest"
 )
 
 // fakeSource records every Fetch: which slug, when, and how many ran at once. Behaviour

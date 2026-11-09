@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
 )
 
 // M2-09: every ISO 3166-1 alpha-2 code is known, and its English name in a location

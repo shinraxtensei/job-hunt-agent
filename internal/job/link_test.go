@@ -3,7 +3,7 @@ package job_test
 import (
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
 )
 
 const (

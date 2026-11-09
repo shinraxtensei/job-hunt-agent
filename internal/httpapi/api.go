@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shinraxtensei/job-hunter/internal/queue"
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/queue"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // DB is what the API reads from: the app role's pool.

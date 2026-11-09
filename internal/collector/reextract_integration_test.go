@@ -5,8 +5,8 @@ package collector_test
 import (
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
-	"github.com/shinraxtensei/job-hunter/internal/queue"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/queue"
 )
 
 // extracted stores an extraction of the posting's current content with this prompt

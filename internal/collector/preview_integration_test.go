@@ -6,8 +6,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
-	"github.com/shinraxtensei/job-hunter/internal/preset"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/preset"
 )
 
 // AC5 (ADR-0011): a preset is evaluated on duplicate groups: facets from the canonical

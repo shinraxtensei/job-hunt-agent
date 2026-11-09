@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/time/rate"
 
-	"github.com/shinraxtensei/job-hunter/internal/source/fetch"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/fetch"
 )
 
 // These tests cover what every adapter inherits through fetch.Client.Get: the

@@ -12,8 +12,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/time/rate"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // Source is one job board's adapter. Defined here, where it is used; adapters live in

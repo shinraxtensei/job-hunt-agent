@@ -46,16 +46,16 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
-	"github.com/shinraxtensei/job-hunter/internal/preset"
-	"github.com/shinraxtensei/job-hunter/internal/queue"
-	"github.com/shinraxtensei/job-hunter/internal/source/ashby"
-	"github.com/shinraxtensei/job-hunter/internal/source/greenhouse"
-	"github.com/shinraxtensei/job-hunter/internal/source/lever"
-	"github.com/shinraxtensei/job-hunter/internal/source/personio"
-	"github.com/shinraxtensei/job-hunter/internal/source/remoteok"
-	"github.com/shinraxtensei/job-hunter/internal/source/remotive"
-	"github.com/shinraxtensei/job-hunter/internal/watchlist"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/preset"
+	"github.com/shinraxtensei/job-hunt-agent/internal/queue"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/ashby"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/greenhouse"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/lever"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/personio"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/remoteok"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/remotive"
+	"github.com/shinraxtensei/job-hunt-agent/internal/watchlist"
 )
 
 const (

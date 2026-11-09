@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
-	"github.com/shinraxtensei/job-hunter/internal/preset"
-	"github.com/shinraxtensei/job-hunter/internal/queue"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/preset"
+	"github.com/shinraxtensei/job-hunt-agent/internal/queue"
 )
 
 // backendOnly shows backend jobs and hides the rest (a hidden job must never be queued).

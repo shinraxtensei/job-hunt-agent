@@ -7,8 +7,8 @@ import (
 	"math/rand/v2"
 	"strings"
 
-	"github.com/shinraxtensei/job-hunter/internal/preset"
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/preset"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // GroupRow is one duplicate group ready for preset evaluation, with its canonical title

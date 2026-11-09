@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/source/fetch"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/fetch"
 )
 
 // AC4: parse never panics, and whatever it returns is storable: every record has an

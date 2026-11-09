@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
 )
 
 // payloads returns each posting in an adapter's golden file, keyed by its board ID. The

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
 )
 
 // M6-06 AC1-AC3: a company added by hand merges into its watch-list twin: postings, jobs

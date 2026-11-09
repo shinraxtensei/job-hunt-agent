@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/preset"
+	"github.com/shinraxtensei/job-hunt-agent/internal/preset"
 )
 
 // AC3: every invalid entry is reported with its line before anything runs.

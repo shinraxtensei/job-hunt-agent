@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/shinraxtensei/job-hunter/internal/store"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
 // Counts is the queue by state.

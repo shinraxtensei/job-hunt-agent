@@ -1,4 +1,4 @@
-module github.com/shinraxtensei/job-hunter
+module github.com/shinraxtensei/job-hunt-agent
 
 go 1.27.3
 

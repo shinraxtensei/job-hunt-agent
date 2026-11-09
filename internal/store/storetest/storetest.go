@@ -23,7 +23,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 
-	"github.com/shinraxtensei/job-hunter/db/migrations"
+	"github.com/shinraxtensei/job-hunt-agent/db/migrations"
 )
 
 // URLs for the shared test database, one per role. Set by Main before tests run.

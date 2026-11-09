@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/watchlist"
+	"github.com/shinraxtensei/job-hunt-agent/internal/watchlist"
 )
 
 func TestParseValidFile(t *testing.T) {

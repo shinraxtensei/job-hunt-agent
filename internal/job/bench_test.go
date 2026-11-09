@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
 )
 
 // benchPayloads are the recorded Greenhouse jobs (descriptions included): the biggest payloads

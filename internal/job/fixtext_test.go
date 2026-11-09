@@ -3,7 +3,7 @@ package job_test
 import (
 	"testing"
 
-	"github.com/shinraxtensei/job-hunter/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
 )
 
 // M7-03: Remote OK sends names HTML-escaped and as UTF-8 read as Latin-1; both are undone.

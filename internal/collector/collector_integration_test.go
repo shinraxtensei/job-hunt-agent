@@ -20,10 +20,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/time/rate"
 
-	"github.com/shinraxtensei/job-hunter/internal/collector"
-	"github.com/shinraxtensei/job-hunter/internal/job"
-	"github.com/shinraxtensei/job-hunter/internal/source/lever"
-	"github.com/shinraxtensei/job-hunter/internal/store/storetest"
+	"github.com/shinraxtensei/job-hunt-agent/internal/collector"
+	"github.com/shinraxtensei/job-hunt-agent/internal/job"
+	"github.com/shinraxtensei/job-hunt-agent/internal/source/lever"
+	"github.com/shinraxtensei/job-hunt-agent/internal/store/storetest"
 )
 
 func TestMain(m *testing.M) { storetest.Main(m) }
