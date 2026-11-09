@@ -53,6 +53,8 @@ max-args = 8
 "src/jobhunt_agents/profile.py" = ["ANN401", "PLR0912"]
 "src/jobhunt_agents/evidence.py" = ["ANN401", "PLR0912", "PLR0915"]
 "tests/**" = ["S101","S105","S106", "S603", "S607", "PLR0913", "ANN401"]
+# git with fixed arguments, from the repository root (M8-03).
+"tools/history_scan.py" = ["S603"]
 
 # ADR-0027: no image is ever parsed. Pillow comes with fpdf2 but is never used; fpdf2's
 # HTML and SVG parsers would fetch and decode images. tests/test_no_images.py also bans

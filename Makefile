@@ -17,7 +17,7 @@ COMPOSE := docker compose -f deploy/compose.yaml --env-file .env
 # sqlc's PostgreSQL parser needs cgo, so it runs from a pinned image (ADR-0004).
 SQLC_IMAGE := sqlc/sqlc:1.31.1@sha256:70f53171d27b2424e9358869975455a6e955a5aa8e58a998a270a6e34e525537
 
-.PHONY: bench help check fmt fmt-check vet lint test-go test-integration test-py evals \
+.PHONY: bench history-scan help check fmt fmt-check vet lint test-go test-integration test-py evals \
 	sqlc sqlc-check migration vuln up down collect backup restore smoke fuzz \
 	web-install web-check web-build web-dev evals-replay evals-sample evals-label evals-fit evals-reasons evals-variants evals-tailor evals-checker
 
@@ -108,6 +108,10 @@ migration: ## New goose migration: make migration name=<snake_case>
 bench: ## Collector benchmarks (M8-02): parsers, normaliser, classifier, and the store path on a real Postgres
 	go test -run '^$$' -bench . -benchmem ./internal/job/ ./internal/source/...
 	go test -tags integration -run '^$$' -bench Store -benchtime 5x ./internal/collector/
+
+history-scan: ## Before publishing: gitleaks over all history, then the owner's personal values (agents/tools/history_scan.py)
+	docker run --rm --network none -v "$(CURDIR)":/repo:ro zricethezav/gitleaks:v8.18.4 detect --source /repo --log-opts=--all --redact --no-banner
+	@$(WITH_ENV) cd agents && uv run python tools/history_scan.py
 
 fuzz: ## Fuzz the source parsers and the normaliser for 30s each (not part of check; CI runs the seeds)
 	go test -run '^$$' -fuzz=FuzzParse -fuzztime=30s ./internal/source/lever/

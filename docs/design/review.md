@@ -67,7 +67,7 @@ rules.md "deep-link all stateful UI" → filters, view and search are in the URL
 
 Run on 2026-11-06 against the M3-08 changes (`web/src/Score.tsx`, `LeadTable.tsx`,
 `FilterSheet.tsx`, `styles/app.css`), with the same vendored skills (ADR-0014).
-Screenshots: `docs/design/screens/m3-08/` (live stack, 509 scored leads).
+Screenshots of the live stack (509 scored leads) were removed before publication: they showed real fit reasons (M8-03).
 
 ## 1. frontend-design self-check
 
