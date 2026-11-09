@@ -20,7 +20,7 @@ from psycopg_pool import ConnectionPool
 
 log = logging.getLogger(__name__)
 
-RENDERER_VERSION = 2  # 2: left-aligned text, no blank lines (after the first real export)
+RENDERER_VERSION = 3  # 2: left-aligned, no blank lines; 3: French headings (M7-02)
 FONTS = Path(__file__).parent / "fonts"
 MARGIN = 15  # mm
 BODY = 9.5  # pt
@@ -65,23 +65,45 @@ class _Doc(FPDF):
         self.ln(0.6)
 
 
-def _dates(x: dict[str, Any]) -> str:
-    return " \u2013 ".join(str(v) for v in (x.get("start"), x.get("end")) if v)  # en dash
+# Headings by the draft's language (M7-02); English when none is stored.
+_LABELS = {
+    "fr": {
+        "Summary": "Profil",
+        "Experience": "Expérience",
+        "Projects": "Projets",
+        "Skills": "Compétences",
+        "Education": "Formation",
+        "Certifications": "Certifications",
+        "Languages": "Langues",
+        "present": "aujourd\u2019hui",
+    }
+}
+
+
+def _dates(x: dict[str, Any], t: dict[str, str] | None = None) -> str:
+    t = t or {}
+    parts = (x.get("start"), x.get("end"))
+    return " \u2013 ".join(t.get(str(v), str(v)) for v in parts if v)  # en dash
 
 
 def _cv(c: dict[str, Any]) -> _Doc:
     d = _Doc()
+    t = _LABELS.get(c.get("language", "en"), {})
+
+    def tr(s: str) -> str:
+        return t.get(s, s)
+
     p = c["person"]
     d.para(p["name"], 18, "B", 0.5)
     d.para(" · ".join(v for v in (p.get("headline"), p.get("location")) if v), BODY, "", 0)
     d.para(" · ".join(v for v in (p.get("email"), p.get("phone"), *p.get("links", [])) if v))
     if c["summary"]:
-        d.heading("Summary")
+        d.heading(tr("Summary"))
         d.para(" ".join(b["text"] for b in c["summary"]))
     for kind, title in (("roles", "Experience"), ("projects", "Projects")):
         if not c[kind]:
             continue
-        d.heading(title)
+        d.heading(tr(title))
         for sec in c[kind]:
             head = " · ".join(
                 v
@@ -94,25 +116,25 @@ def _cv(c: dict[str, Any]) -> _Doc:
             )
             d.para(head, BODY + 0.5, "B", 0)
             d.para(
-                " · ".join(v for v in (sec.get("location"), _dates(sec)) if v), BODY - 1, "", 0.8
+                " · ".join(v for v in (sec.get("location"), _dates(sec, t)) if v), BODY - 1, "", 0.8
             )
             for b in sec["bullets"]:
                 d.bullet(b["text"])
             d.ln(1)
     if c["skills"]:
-        d.heading("Skills")
+        d.heading(tr("Skills"))
         d.para(" · ".join(c["skills"]))
     if c.get("education"):
-        d.heading("Education")
+        d.heading(tr("Education"))
         for e in c["education"]:
             d.para(f"{e['degree']} · {e['school']}", BODY, "B", 0)
-            d.para(" · ".join(v for v in (e.get("location"), _dates(e)) if v), BODY - 1)
+            d.para(" · ".join(v for v in (e.get("location"), _dates(e, t)) if v), BODY - 1)
     if c.get("certifications"):
-        d.heading("Certifications")
+        d.heading(tr("Certifications"))
         for x in c["certifications"]:
             d.para(f"{x['name']} · {x['issuer']} · {x.get('date', '')}")
     if c.get("languages"):
-        d.heading("Languages")
+        d.heading(tr("Languages"))
         d.para(" · ".join(f"{x['name']} ({x['level']})" for x in c["languages"]))
     return d
 

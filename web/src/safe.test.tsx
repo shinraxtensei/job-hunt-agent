@@ -193,5 +193,29 @@ describe("CV drafts (M4-05)", () => {
     expect(el.querySelectorAll("section[aria-label='Cover letter'] li").length).toBeGreaterThan(0);
     expect(el.textContent).toContain("“<b>evidence</b>”");
     expect((window as { pwned?: number }).pwned).toBeUndefined();
+    expect(el.textContent).not.toContain("French");
+  });
+
+  // M7-02: the draft says its language, and why a French posting got an English one.
+  it("shows the draft's language and the reason it isn't French", async () => {
+    const { DraftView } = await import("./Drafts");
+    const content = {
+      person: { name: "Sam", headline: "", email: "", phone: "", location: "", links: [] },
+      summary: [],
+      roles: [],
+      projects: [],
+      skills: [],
+      education: [],
+      languages: [],
+    };
+    const base = { id: 2, status: "ready_for_review" as const, variant: "BE", letter: null, coverage: null, findings: null, evidence_version: null, prompt_version: 1, model: "m", error: null, requested_at: "2026-11-08T00:00:00Z", made_at: null, decided_at: null, documents: [] };
+    const el = document.createElement("div");
+    document.body.append(el);
+    const root = createRoot(el);
+    act(() => root.render(<DraftView draft={{ ...base, content: { ...content, language: "fr", language_note: "" } }} evidence={{}} waiting={false} />));
+    expect(el.querySelector(".draft-status")?.textContent).toContain("French");
+    const note = "English: no French text for example-deploys.";
+    act(() => root.render(<DraftView draft={{ ...base, content: { ...content, language: "en", language_note: note } }} evidence={{}} waiting={false} />));
+    expect(el.textContent).toContain(note);
   });
 });

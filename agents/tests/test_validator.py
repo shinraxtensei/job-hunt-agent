@@ -275,3 +275,33 @@ def test_findings_carry_sentence_and_closest_line(profile: Profile, bank: Bank) 
     assert f.closest == "example-billing"
     assert f.where == "roles[example-corp].bullets[0]"
     assert r.status == "blocked"
+
+
+# M7-02: the guardrails hold in French: against the owner's French text, an inflated
+# title, number or year is blocked; the French lines as written pass.
+@pytest.mark.parametrize(
+    ("text", "rule"),
+    [
+        ("En tant qu'ingénieur logiciel senior, de 40 à 6 minutes.", "altered_fact"),
+        ("Développeur backend principal : factures de 40 à 6 minutes.", "altered_fact"),
+        ("En 2022, factures ramenées de 40 à 6 minutes.", "altered_fact"),
+        ("Factures ramenées de 40 à 4 minutes.", "inflated_number"),
+        ("Factures traitées 10 fois plus vite.", "inflated_number"),
+    ],
+)
+def test_french_guardrails(profile: Profile, bank: Bank, text: str, rule: str) -> None:
+    assert rules(draft(role=[b(text, "example-billing")]), profile, bank.french()) == [rule]
+
+
+def test_french_lines_pass(profile: Profile, bank: Bank) -> None:
+    fr = bank.french()
+    ok(
+        draft(
+            summary=[
+                b("Ingénieur backend, 3 ans de services Node.js sur PostgreSQL.", "summary-years")
+            ],
+            role=[b("Traitement des factures ramené de 40 à 6 minutes.", "example-billing")],
+        ),
+        profile,
+        fr,
+    )

@@ -74,6 +74,13 @@ def posting_text(source: str, payload: dict[str, Any], *, title: str, location: 
             _str(payload.get("descriptionPlain"))
             or clean_html(_str(payload.get("descriptionHtml")))
         )
+    elif source == "personio":  # named sections (M7-02)
+        sections: list[object] = payload.get("jobDescriptions") or []
+        for entry in sections:
+            if isinstance(entry, dict):
+                item = cast(dict[str, object], entry)
+                body.append(_str(item.get("name")))
+                body.append(clean_html(_str(item.get("value"))))
     else:  # manual postings and anything new: whatever description there is
         body.append(clean_html(_str(payload.get("description"))))
     text = "\n".join(b.strip() for b in body if b.strip())

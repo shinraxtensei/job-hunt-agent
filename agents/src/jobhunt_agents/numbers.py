@@ -56,8 +56,29 @@ _WORD_UNITS = {
     "seconds": "second",
     "ms": "ms",
     "times": "x",
+    # French (M7-02): the owner's text_fr lines and French drafts
+    "%": "%",
+    "pour cent": "%",
+    "an": "year",
+    "ans": "year",
+    "année": "year",
+    "années": "year",
+    "mois": "month",
+    "semaine": "week",
+    "semaines": "week",
+    "jour": "day",
+    "jours": "day",
+    "heure": "hour",
+    "heures": "hour",
+    "seconde": "second",
+    "secondes": "second",
+    "fois": "x",
 }
-_NEXT_WORD = re.compile(r"\s*([A-Za-z]+(?: cent)?)")
+# the next word, or "%" after a space ("53 %", French typography)
+_NEXT_WORD = re.compile(r"\s*(%|[^\W\d_]+(?: cent)?)")
+_APPROX = re.compile(
+    r"\b(about|around|roughly|approximately|nearly|environ|près de|presque)\s*$", re.I
+)
 
 
 def numbers(text: str, names: Iterable[str] = ()) -> list[Number]:
@@ -81,6 +102,6 @@ def numbers(text: str, names: Iterable[str] = ()) -> list[Number]:
             nxt = _NEXT_WORD.match(text, m.end())
             if nxt and nxt.group(1).lower() in _WORD_UNITS:
                 unit = _WORD_UNITS[nxt.group(1).lower()]
-        approx_word = re.search(r"\b(about|around|roughly|approximately|nearly)\s*$", before, re.I)
+        approx_word = _APPROX.search(before)
         out.append(Number(value, unit, approx=bool(approx) or bool(approx_word), plus=bool(plus)))
     return out

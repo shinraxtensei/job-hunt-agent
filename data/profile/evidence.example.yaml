@@ -9,10 +9,14 @@
 #   - variants: BE PAY DIST FS AI CONS
 #   - a `learning` skill may be named only in a project line, stated as fact
 #   - every line has `checked: true`; numbers in `text` are the only numbers a draft may use
+#   - optional `text_fr` (M7-02): the same line in French, written and checked by you, never
+#     machine-translated; it must state the same numbers as `text`. French postings get a
+#     French draft only when every line it uses has `text_fr`; otherwise English, with why
 
 person:                         # the CV header, printed as written
   name: "Sam Example"
   headline: "Backend Software Engineer"
+  headline_fr: "Ingénieur logiciel backend"   # optional (M7-02)
   email: "sam@example.com"
   phone: "+212 600 000 000"
   location: "Casablanca, Morocco"
@@ -23,6 +27,7 @@ summary:                        # sentences a draft's summary may reuse
     variants: [BE, FS]
     skills: [Node.js, PostgreSQL]
     text: "Backend engineer with 3 years building Node.js services on PostgreSQL."
+    text_fr: "Ingénieur backend, 3 ans de services Node.js sur PostgreSQL."
     source: "cv"                # optional: where the line came from
     checked: true
 
@@ -38,11 +43,13 @@ roles:                          # newest first
         variants: [BE, PAY]
         skills: [Node.js, PostgreSQL]
         text: "Rebuilt the billing service's invoice job, cutting its run time from 40 to 6 minutes."
+        text_fr: "Refonte du traitement des factures du service de facturation : de 40 à 6 minutes."
         checked: true
       - id: example-deploys
         variants: [BE, DIST]
         skills: [Docker, CI/CD]
         text: "Moved the services to Docker images built in CI."
+        text_fr: "Migration des services vers des images Docker construites en CI."
         checked: true
 
 projects:
@@ -56,6 +63,7 @@ projects:
         variants: [BE]
         skills: [Go, PostgreSQL]  # Go is `learning`: allowed here, in a project line
         text: "Built a job collector in Go that stores postings in PostgreSQL."
+        text_fr: "Création d'un collecteur d'offres en Go qui les stocke dans PostgreSQL."
         checked: true
 
 education:
@@ -76,4 +84,5 @@ letter:                         # optional (M5-01): your own lines for the cover
                                 # never the CV; no variants or skills
   - id: letter-availability
     text: "Available to start within one month."
+    text_fr: "Disponible sous un mois."
     checked: true

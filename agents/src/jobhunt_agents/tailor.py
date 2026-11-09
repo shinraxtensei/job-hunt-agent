@@ -15,6 +15,10 @@ evidence bank only (evidence-bank-guardrails).
 The cover letter (M5-01) is made in the same draft, from a second call with the same
 selected lines plus the bank's `letter` lines. Code adds the greeting, the opening (the
 lead's job title and company), the sign-off and the name; the model writes none of them.
+
+French postings (M7-02, OI-21) get a French draft from the owner's own French text
+(`text_fr`, never machine-translated) when every line the draft may use has one; otherwise
+the draft is English and says which lines lack it.
 """
 
 import logging
@@ -35,6 +39,7 @@ from jobhunt_agents.extraction import Extraction, drop_company
 from jobhunt_agents.model import MODEL, ModelClient, Prompt
 from jobhunt_agents.profile import Profile, ProfileWatcher
 from jobhunt_agents.queue import Handler, Item, ItemError, NeedsReview
+from jobhunt_agents.text import language, posting_text
 from jobhunt_agents.validator import Finding, Report, validate
 
 log = logging.getLogger(__name__)
@@ -43,10 +48,12 @@ AGENT = "tailor"
 PROMPT_VERSION = 1
 MAX_TOKENS = 2000
 LETTER_AGENT = "letter"
-LETTER_PROMPT_VERSION = 1
+LETTER_PROMPT_VERSION = 2  # v2: the evidence lines' language (M7-02)
 MAX_WORDS = 250  # the whole letter, greeting and sign-off included (PRD)
 GREETING = "Dear Hiring Team,"  # OI-10
 SIGN_OFF = "Best regards,"
+# greeting and sign-off by language, written by code (M7-02)
+FIXED = {"en": (GREETING, SIGN_OFF), "fr": ("Madame, Monsieur,", "Cordialement,")}
 
 
 class Layout(BaseModel):
@@ -247,14 +254,33 @@ def checked(rendered: dict[str, Any]) -> DraftContent:
     )
 
 
-def opening(title: str, company: str) -> str:
+def opening(title: str, company: str, lang: str = "en") -> str:
     """The letter's first sentence, by code. The title comes from the posting (untrusted):
     one line, and replaced when it looks like an instruction (suspicious() also catches
     anything over 60 characters)."""
     title, company = " ".join(title.split()), " ".join(company.split())[:80]
-    if not title or suspicious(title):
+    known = bool(title) and not suspicious(title)
+    if lang == "fr":
+        if not known:
+            return f"Je vous écris pour postuler à un poste ouvert chez {company}."
+        return f"Je vous écris pour postuler au poste de {title} chez {company}."
+    if not known:
         return f"I am writing to apply for the open role at {company}."
     return f"I am writing to apply for the {title} role at {company}."
+
+
+def language_plan(posting_lang: str, bank: Bank, sel: Selection) -> tuple[str, Bank, str]:
+    """The draft's language, the bank to draft from and a note. French only when every line
+    the CV or letter may use (and the headline) has the owner's French text (OI-21)."""
+    if posting_lang != "fr":
+        return "en", bank, ""
+    used = [*sel.summary, *(x for p in (*sel.roles, *sel.projects) for x in p.lines)]
+    missing = [x.id for x in (*used, *bank.letter) if not x.text_fr]
+    if bank.person.headline and not bank.person.headline_fr:
+        missing.append("headline")
+    if missing:
+        return "en", bank, f"English: no French text for {', '.join(dict.fromkeys(missing))}."
+    return "fr", bank.french(), ""
 
 
 def for_letter(sel: Selection) -> Selection:
@@ -284,16 +310,20 @@ def _words(text: str) -> int:
     return len(text.split())
 
 
-def render_letter(content: LetterContent, bank: Bank, title: str, company: str) -> dict[str, Any]:
-    first = opening(title, company)
+def render_letter(
+    content: LetterContent, bank: Bank, title: str, company: str, lang: str = "en"
+) -> dict[str, Any]:
+    first = opening(title, company, lang)
+    greeting, sign_off = FIXED[lang]
     paragraphs = [[b.model_dump() for b in p.sentences] for p in content.paragraphs]
-    fixed = (GREETING, first, SIGN_OFF, bank.person.name)
+    fixed = (greeting, first, sign_off, bank.person.name)
     words = sum(map(_words, fixed)) + sum(_words(b["text"]) for p in paragraphs for b in p)
     return {
-        "greeting": GREETING,
+        "language": lang,
+        "greeting": greeting,
         "opening": first,
         "paragraphs": paragraphs,
-        "closing": SIGN_OFF,
+        "closing": sign_off,
         "name": bank.person.name,
         "words": words,
     }
@@ -306,7 +336,7 @@ class Made:
     report: Report
 
 
-def make(
+def make(  # noqa: PLR0913 - the lead's parts, kept apart for the tests
     tailorer: Tailorer,
     bank: Bank,
     profile: Profile,
@@ -314,22 +344,29 @@ def make(
     layout: Layout,
     title: str,
     company: str,
+    *,
     posting_id: int | None = None,
+    posting_lang: str = "en",
 ) -> Made:
     """CV and letter for one lead, validated together, then, if the code checks pass, by
-    the independent claim checker (M5-02). NeedsReview propagates."""
+    the independent claim checker (M5-02). NeedsReview propagates. A French draft is
+    drafted, validated and checked against the French bank: the same ids and numbers."""
+    lang, bank, lang_note = language_plan(posting_lang, bank, select(bank, cov, layout))
     sel = select(bank, cov, layout)
     data = prompt_data(cov, sel, layout, profile)
     content = render(tailorer.draft(data, posting_id), bank, sel, layout, profile)
-    fixed = sum(map(_words, (GREETING, opening(title, company), SIGN_OFF, bank.person.name)))
+    content |= {"language": lang, "language_note": lang_note}
+    greeting, sign_off = FIXED[lang]
+    first = opening(title, company, lang)
+    fixed = sum(map(_words, (greeting, first, sign_off, bank.person.name)))
     budget = MAX_WORDS - fixed
     ldata = letter_data(prompt_data(cov, for_letter(sel), layout, profile), bank, budget)
     raw = tailorer.letter(ldata, posting_id)
-    letter = render_letter(raw, bank, title, company)
+    letter = render_letter(raw, bank, title, company, lang)
     if letter["words"] > MAX_WORDS:  # one retry, told how long it was
         note = f"\nPrevious attempt: {letter['words'] - fixed} words, over the budget."
         raw = tailorer.letter(ldata + note, posting_id)
-        letter = render_letter(raw, bank, title, company)
+        letter = render_letter(raw, bank, title, company, lang)
     letter["prompt_version"] = tailorer.letter_prompt.version
     report = validate(checked(content), bank, profile, coverage=cov, letter=raw)
     if letter["words"] > MAX_WORDS:
@@ -354,7 +391,8 @@ WHERE work_items.state IN ('done', 'failed')
 """
 
 _LEAD = """
-SELECT p.content_hash, e.data, c.name, coalesce(s.cv_variant, 'BE'), j.title
+SELECT p.content_hash, e.data, c.name, coalesce(s.cv_variant, 'BE'), j.title, p.source,
+    p.raw_payload
 FROM postings p
 JOIN jobs j ON j.posting_id = p.id
 JOIN companies c ON c.id = j.company_id
@@ -407,13 +445,25 @@ def handler(
             return  # nothing requested (already made)
         if lead is None:
             raise ItemError("no score or extraction for this posting")
-        content_hash, data, company, variant, title = lead
+        content_hash, data, company, variant, title, source, payload = lead
+        # only code reads the posting's text, to tell its language; no model sees it
+        lang = language(posting_text(source, payload, title=title, location=""))
         layout = Layout.load(layout_path) if layout_path else Layout()
         cov = coverage(
             drop_company(Extraction.model_validate(data), company), profile, bank, variant
         )
         try:
-            made = make(tailorer, bank, profile, cov, layout, title, company, item.posting_id)
+            made = make(
+                tailorer,
+                bank,
+                profile,
+                cov,
+                layout,
+                title,
+                company,
+                posting_id=item.posting_id,
+                posting_lang=lang,
+            )
         except NeedsReview as e:
             with pool.connection() as conn:
                 conn.execute(_FAIL, (f"{type(e).__name__}: {e}"[:500], item.posting_id))

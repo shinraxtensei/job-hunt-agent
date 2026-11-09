@@ -1,6 +1,6 @@
 """M3-04 AC6: preparing posting text for the prompt within a length bound."""
 
-from jobhunt_agents.text import bound
+from jobhunt_agents.text import bound, language, posting_text
 
 FILLER = "We are a great place to work with many lovely people. " * 40
 
@@ -58,3 +58,20 @@ def test_bound_cuts_the_end_when_nothing_is_boilerplate() -> None:
     got = bound(text, 300)
     assert len(got) <= 300
     assert got.startswith("Title: X")
+
+
+# M7-02: Personio postings carry their description as named sections (jobDescriptions).
+def test_personio_text_reads_job_descriptions() -> None:
+    payload = {
+        "name": "Ingénieur Backend",
+        "jobDescriptions": [
+            {"name": "Vos missions", "value": "<p>Concevoir des <b>API</b> en Java.</p>"},
+            {"name": "Votre profil", "value": "<ul><li>3 ans d'expérience</li></ul>"},
+        ],
+    }
+    text = posting_text("personio", payload, title="Ingénieur Backend", location="Casablanca")
+    assert "Vos missions" in text
+    assert "Concevoir des API en Java." in text
+    assert "3 ans d'expérience" in text
+    assert "<" not in text
+    assert language(text) == "fr"

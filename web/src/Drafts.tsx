@@ -153,7 +153,9 @@ export function DraftView(props: { draft: Draft; evidence: Drafts["evidence"]; w
         {STATUS[d.status]}
         {waiting && " This takes a few seconds."}
         {d.variant && <> · CV: {label("cv_variant", d.variant)}</>}
+        {c?.language === "fr" && " · French"}
       </p>
+      {c?.language_note && <p className="quiet-note">{c.language_note}</p>}
       {d.error && <p className="draft-error">{d.error}</p>}
       {findings.some((f) => f.where === "draft") && (
         <ul className="findings">

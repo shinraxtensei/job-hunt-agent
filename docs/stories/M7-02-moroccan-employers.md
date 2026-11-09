@@ -1,6 +1,6 @@
 # M7-02: Moroccan employers: Personio feed and French drafts
 
-- **Status:** In progress
+- **Status:** Done (French eval report runs once your `text_fr` lines exist, OI-21)
 - **Milestone:** M7 — Today view and more sources
 - **Linear:** [HAM-66](https://linear.app/hamid-corp/issue/HAM-66/m7-02-moroccan-employers-personio-feed-and-french-drafts)
 - **Estimate:** 1 day (split if SmartRecruiters is accepted: M7-02b)
@@ -87,6 +87,34 @@ checked by the owner, never machine-translated (owner, 2026-11-08).
   registry); Inyad is on the watch list (track: morocco).
 - **Live:** 25 Inyad postings collected; the default preset shows the 2 engineering roles
   in Casablanca and hides the rest for role reasons.
+
+**Slice 2: French drafts (2026-11-09).**
+- **Evidence:** optional `text_fr` on any line (letter lines included, so no separate
+  `letter_fr` list) and `person.headline_fr`. `checked: true` covers both texts. At load,
+  a `text_fr` that states other numbers than its `text` is refused, naming the line
+  (`numbers.py` now reads French units: ans, mois, fois, "53 %", "pour cent", environ).
+- **Language:** code tells the posting's language from its text (`text.language()`); no
+  model sees the posting. French only when every line the CV or letter may use, every
+  letter line and the headline have French text; then the bank's French view is drafted,
+  validated and claim-checked (same ids, same numbers). Otherwise English, and the draft
+  says which lines lack French text (`content.language_note`, shown in the tracker).
+- **Fixed text by code:** "Madame, Monsieur," / "Je vous écris pour postuler au poste de
+  {title} chez {company}." / "Cordialement,". Exact facts (titles, employers, degrees)
+  are never translated.
+- **Prompts:** the tailor prompt v1 already says "write in the language of the evidence
+  lines", so no tailor v2; letter prompt v2 replaces "Write in English" with the same rule.
+- **Validator:** French title inflation ("ingénieur logiciel senior") is an altered fact;
+  French guardrail cases (title, year, number, "10 fois") are tested.
+- **PDF:** French headings and "aujourd’hui" for a French draft (renderer v3).
+- **Fix found on the way:** the Personio description (`jobDescriptions`) wasn't read into
+  the posting text, so the two Inyad leads were extracted from title and location only.
+  They are re-extracted when their content changes, or by hand.
+- **Evals (2026-11-09, letter prompt v2, owner's bank):** planted guardrail cases 25/25
+  caught in both checker runs, 0 injection failures. Ready drafts vary run to run with the
+  checker: 15, 14 and 21 of 21 with v2; 13 of 21 with v1 the same day, so v2 lowers
+  nothing. Last run: 21/21 ready, 0 false blocks, ~$0.04 a run. All drafts are English:
+  the owner's bank has no `text_fr` yet, so AC4's French report waits for OI-21. The
+  French guardrail cases are unit tests (`test_french_guardrails`) until then.
 
 ## Out of scope
 

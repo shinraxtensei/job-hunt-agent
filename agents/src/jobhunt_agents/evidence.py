@@ -12,6 +12,7 @@ logged beyond ids and counts.
 import hashlib
 import logging
 import re
+from collections import Counter
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -39,6 +40,7 @@ class _Frozen(BaseModel):
 class Person(_Frozen):
     name: str
     headline: str = ""
+    headline_fr: str = ""  # the owner's French headline (M7-02)
     email: str = ""
     phone: str = ""
     location: str = ""
@@ -60,6 +62,7 @@ class Line(_Frozen):
     text: str
     source: str | None
     numbers: tuple[Number, ...]
+    text_fr: str = ""  # the owner's own French text, same numbers (M7-02, OI-21)
 
 
 class Role(_Frozen):
@@ -121,6 +124,27 @@ class Bank(_Frozen):
             yield from p.lines
         yield from self.letter
 
+    def french(self) -> Bank:
+        """The bank in French: each line's text_fr and the French headline in place of the
+        English. Numbers stay: load checked that text_fr states the same ones (M7-02)."""
+
+        def fr(ls: tuple[Line, ...]) -> tuple[Line, ...]:
+            return tuple(x.model_copy(update={"text": x.text_fr or x.text}) for x in ls)
+
+        return self.model_copy(
+            update={
+                "person": self.person.model_copy(
+                    update={"headline": self.person.headline_fr or self.person.headline}
+                ),
+                "summary": fr(self.summary),
+                "roles": tuple(r.model_copy(update={"lines": fr(r.lines)}) for r in self.roles),
+                "projects": tuple(
+                    p.model_copy(update={"lines": fr(p.lines)}) for p in self.projects
+                ),
+                "letter": fr(self.letter),
+            }
+        )
+
     def line(self, line_id: str) -> Line:
         return next(x for x in self.lines() if x.id == line_id)
 
@@ -139,6 +163,7 @@ class _Reader:
         self.problems: list[tuple[int, str]] = []
         self.ids: dict[str, int] = {}
         self.names: set[str] = set()  # employer, school, project names: not numbers
+        self.fr_lines: dict[str, int] = {}  # line id -> file line of its text_fr
 
     def add(self, line: int, msg: str) -> None:
         self.problems.append((line, f"evidence.yaml line {line}: {msg}"))
@@ -204,7 +229,9 @@ class _Reader:
                 continue
             m = cast(Any, raw)
             if not self.keys(
-                m, ("id", "variants", "skills", "text", "source", "checked"), ("id", "text")
+                m,
+                ("id", "variants", "skills", "text", "text_fr", "source", "checked"),
+                ("id", "text"),
             ):
                 continue
             line_id = self.text(m, "id")
@@ -230,6 +257,8 @@ class _Reader:
             if kind == "letter" and (variants or refs):
                 self.add(self.at(m), "a letter line has no variants or skills")
             text = self.text(m, "text")
+            if "text_fr" in m:
+                self.fr_lines[line_id] = self.at(m, "text_fr")
             out.append(
                 Line(
                     id=line_id,
@@ -240,6 +269,7 @@ class _Reader:
                     text=text,
                     source=self.text(m, "source") or None,
                     numbers=(),  # filled once every name in the file is known
+                    text_fr=self.text(m, "text_fr"),
                 )
             )
         return out
@@ -274,10 +304,13 @@ def _parse(raw: bytes, profile: Profile) -> Bank:
     )
     r.keys(d, top, ("person",))
     pm = d.get("person") or {}
-    r.keys(pm, ("name", "headline", "email", "phone", "location", "links"), ("name",))
+    r.keys(
+        pm, ("name", "headline", "headline_fr", "email", "phone", "location", "links"), ("name",)
+    )
     person = Person(
         name=r.text(pm, "name"),
         headline=r.text(pm, "headline"),
+        headline_fr=r.text(pm, "headline_fr"),
         email=r.text(pm, "email"),
         phone=r.text(pm, "phone"),
         location=r.text(pm, "location"),
@@ -361,6 +394,14 @@ def _parse(raw: bytes, profile: Profile) -> Bank:
     if r.problems:
         raise EvidenceError([msg for _, msg in sorted(r.problems)])
     names = _known_names(profile) | r.names
+    every = [*summary, *letter, *(x for ro in roles for x in ro.lines)]
+    every += [x for p in projects for x in p.lines]
+    for x in every:
+        # a translation never adds, drops or changes a number (guardrail rule 1)
+        if x.text_fr and Counter(numbers(x.text, names)) != Counter(numbers(x.text_fr, names)):
+            r.add(r.fr_lines[x.id], f"{x.id}: text_fr states other numbers than text")
+    if r.problems:
+        raise EvidenceError([msg for _, msg in sorted(r.problems)])
 
     def counted(ls: list[Line] | tuple[Line, ...]) -> tuple[Line, ...]:
         return tuple(x.model_copy(update={"numbers": tuple(numbers(x.text, names))}) for x in ls)

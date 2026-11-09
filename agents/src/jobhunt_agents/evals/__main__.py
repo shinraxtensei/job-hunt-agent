@@ -366,7 +366,7 @@ def cmd_variants(s: EvalSet, *, init: bool) -> int:
     return 0
 
 
-def _draft_one(
+def _draft_one(  # noqa: PLR0913, PLR0917 - one eval draft's inputs
     tailorer: Tailorer,
     bank: Bank,
     profile: Profile,
@@ -375,10 +375,11 @@ def _draft_one(
     variant: str,
     title: str,
     company: str,
+    lang: str = "en",
 ) -> dict[str, Any]:
     began = time.monotonic()
     try:
-        made = make(tailorer, bank, profile, cov, layout, title, company)
+        made = make(tailorer, bank, profile, cov, layout, title, company, posting_lang=lang)
     except NeedsReview as err:
         return {"status": "failed", "error": type(err).__name__}
     report_ = made.report
@@ -471,7 +472,7 @@ def cmd_tailor(s: EvalSet) -> int:  # noqa: PLR0915
             sel = select(bank, cov, layout)
             selections[i.id] = sel
             out[i.id] = _draft_one(
-                tailorer, bank, profile, cov, layout, variant, job.title, i.company
+                tailorer, bank, profile, cov, layout, variant, job.title, i.company, i.language
             )
     finally:
         cost = client.spent_today() - spent

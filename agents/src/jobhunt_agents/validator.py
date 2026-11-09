@@ -62,6 +62,13 @@ _TITLE = re.compile(
     r"consultant|scientist|lead)\b",
     re.I,
 )
+# French titles put the noun first; a seniority word after it is the inflation to catch
+# ("ingénieur logiciel senior"), M7-02. ponytail: seniority words only, not every adjective.
+_TITLE_FR = re.compile(
+    r"\b(?:ingénieur|ingenieur|développeur|developpeur|architecte|consultant|chef de projet)"
+    r"(?:\s+[\w-]+){0,2}?\s+(?:senior|principal|confirmé|expérimenté|lead|staff|junior|en chef)\b",
+    re.I,
+)
 _LEADING = {"as", "a", "an", "the", "our", "my", "former", "previously", "then", "now", "while"}
 _YEAR = re.compile(r"\b(19|20)\d{2}\b")
 # Ownership and leadership verbs by strength (M4-04 AC7), with French equivalents.
@@ -219,6 +226,9 @@ class _Validator:
                 words = words[1:]
             if len(words) > 1 and normalize(" ".join(words)) not in c.allowed:
                 return "altered_fact", f"title {' '.join(words)!r} isn't in the evidence"
+        for m in _TITLE_FR.finditer(text):
+            if normalize(m.group(0)) not in c.allowed:
+                return "altered_fact", f"title {m.group(0)!r} isn't in the evidence"
         for m in _YEAR.finditer(text):
             if m.group(0) not in c.years:
                 return "altered_fact", f"year {m.group(0)} isn't in the evidence"

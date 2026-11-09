@@ -64,8 +64,8 @@ def test_letter_lines_take_no_skills(tmp_path: Path, profile: Profile) -> None:
         ("skills: [Docker, CI/CD]", "skills: [Docker, Cobol]", "'Cobol' is not in your skill map"),
         ("start: 2023-05", "start: May 2023", "want YYYY-MM, YYYY or present"),
         (
-            'text: "Moved the services to Docker images built in CI."\n        checked: true',
-            'text: "Moved the services to Docker images built in CI."\n        checked: false',
+            'construites en CI."\n        checked: true',
+            'construites en CI."\n        checked: false',
             "not checked",
         ),
         ("variants: [BE, DIST]", "variants: [BE, OPS]", "variant 'OPS'"),
@@ -172,3 +172,54 @@ def test_broken_file_warns_once(
     for _ in range(3):
         assert w.current(profile) is None
     assert sum("evidence not loaded" in r.message for r in caplog.records) == 1
+
+
+# M7-02 (OI-21): French numbers read like English ones, so a line and its French text can be
+# compared and a French draft checked.
+@pytest.mark.parametrize(
+    ("text", "want"),
+    [
+        ("3 ans de production", [Number(3, "year")]),
+        ("environ 3 ans", [Number(3, "year", approx=True)]),
+        ("5+ années", [Number(5, "year", plus=True)]),
+        ("réduit de ~53 %", [Number(53, "%", approx=True)]),
+        ("40 pour cent", [Number(40, "%")]),
+        ("de 40 à 6 minutes", [Number(40, ""), Number(6, "minute")]),
+        ("6 mois", [Number(6, "month")]),
+        ("10 fois plus rapide", [Number(10, "x")]),
+    ],
+)
+def test_french_numbers(text: str, want: list[Number]) -> None:
+    assert numbers(text) == want
+
+
+# M7-02 AC: the owner's French text sits beside each line, checked with it.
+def test_french_text_loads(profile: Profile) -> None:
+    bank = load_evidence(EXAMPLE, profile)
+    assert bank.person.headline_fr == "Ingénieur logiciel backend"
+    assert all(x.text_fr for x in bank.lines())
+    assert bank.line("letter-availability").text_fr == "Disponible sous un mois."
+
+
+# M7-02 AC: a French text that states other numbers than its line is refused at load,
+# naming the line, so a translation can't add or change a number.
+@pytest.mark.parametrize(
+    ("old", "new"),
+    [
+        ("3 ans de services", "5 ans de services"),
+        ("de 40 à 6 minutes", "de 40 à 5 minutes"),
+        ("images Docker construites en CI", "images Docker construites en CI, 30 % plus vite"),
+        ("3 ans de services", "plusieurs années de services"),
+    ],
+)
+def test_french_numbers_must_match(tmp_path: Path, profile: Profile, old: str, new: str) -> None:
+    text = EXAMPLE.read_text()
+    assert old in text
+    broken = text.replace(old, new, 1)
+    with pytest.raises(EvidenceError) as err:
+        load_evidence(write(tmp_path, broken), profile)
+    want_line = broken[: broken.index(new)].count("\n") + 1
+    assert any(
+        "text_fr states other numbers than text" in p and f"line {want_line}" in p
+        for p in err.value.problems
+    ), err.value.problems

@@ -241,3 +241,13 @@ def test_unexportable_draft_records_why(app_dsn: str, go: Go, profile_dir: Path)
     assert err
     assert err[0].startswith("export:")
     assert n == (0,)
+
+
+# M7-02: a French draft's CV has French headings and dates; the content is as stored.
+def test_french_cv_headings() -> None:
+    _, text = text_of(cv_pdf(CONTENT | {"language": "fr"}))
+    t = flat(text)
+    for want in ("PROFIL", "EXPÉRIENCE", "COMPÉTENCES", "FORMATION", "LANGUES"):
+        assert want in t, want
+    assert "2023-05 \u2013 aujourd\u2019hui" in t
+    assert "EXPERIENCE" not in t

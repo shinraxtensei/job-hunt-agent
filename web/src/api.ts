@@ -151,6 +151,8 @@ export type DraftContent = {
   skills: string[];
   education: { id: string; school: string; degree: string; location: string; start: string; end: string }[];
   languages: { name: string; level: string }[];
+  language?: "en" | "fr"; // M7-02; drafts made before have none (English)
+  language_note?: string; // why a French posting's draft is English
 };
 export type Finding = { rule: string; where: string; sentence: string; closest: string | null; detail: string };
 export type SkillCoverage = {
