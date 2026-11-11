@@ -41,6 +41,10 @@ stop and ask the owner.
   for each one. It does not see the posting text, so a malicious posting cannot steer it.
 - **Blocking:** any `unsupported` or `altered_fact` sentence blocks the draft from being
   marked ready. The UI shows the sentence and the closest evidence line.
+  The checker is a model and varies run to run (owner, 2026-11-11, M9-06): an
+  `altered_fact` blocks on one run; an `unsupported` sentence blocks when a second run
+  flags it too. The code validator's rules block on their own; the planted guardrail
+  cases must stay at 100%.
 - **Extraction isolation:** the extraction agent has no tools and returns only a
   schema-validated object. Fields outside the schema are dropped.
 
