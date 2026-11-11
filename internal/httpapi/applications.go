@@ -96,16 +96,74 @@ type SentDocument struct {
 	SentAt time.Time `json:"sent_at"`
 }
 
+// Previous is an earlier application of the lead, set aside to apply again (ADR-0032).
+type Previous struct {
+	ID         int64      `json:"id"`
+	Status     string     `json:"status"`
+	StatusAt   time.Time  `json:"status_at"`
+	AppliedAt  *time.Time `json:"applied_at"`
+	ArchivedAt time.Time  `json:"archived_at"`
+}
+
+// reapply sets aside the lead's ended application (rejected or closed), so its next status
+// starts a new one (M9-05, ADR-0032). 409 when it is still active or there is none.
+func (a *api) reapply(w http.ResponseWriter, r *http.Request) {
+	if !guardWrite(w, r) {
+		return
+	}
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	var body struct{}
+	if !readJSON(w, r, &body) {
+		return
+	}
+	_, err := a.q.ArchiveApplication(r.Context(), id)
+	if err == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "new"})
+		return
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		a.fail(w, r, err)
+		return
+	}
+	exists, err := a.q.LeadExists(r.Context(), id)
+	switch {
+	case err != nil:
+		a.fail(w, r, err)
+	case !exists:
+		writeError(w, http.StatusNotFound, "id", "no such lead")
+	default:
+		writeError(w, http.StatusConflict, "id", "only a rejected or closed application can be set aside")
+	}
+}
+
 // application answers a lead's application: status, history (newest first), the posting
-// as applied to, and the documents sent. null when the lead never left `new`.
+// as applied to, and the documents sent; null when the lead never left `new` or its last
+// application was set aside. previous lists those set aside (ADR-0032).
 func (a *api) application(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(w, r)
 	if !ok {
 		return
 	}
+	prev, err := a.q.PreviousApplications(r.Context(), id)
+	if err != nil {
+		a.fail(w, r, err)
+		return
+	}
+	previous := make([]Previous, 0, len(prev))
+	for _, p := range prev {
+		x := Previous{ID: p.ID, Status: p.Status, StatusAt: p.StatusAt.Time.UTC(), ArchivedAt: p.ArchivedAt.Time.UTC()}
+		if p.AppliedAt.Valid {
+			t := p.AppliedAt.Time.UTC()
+			x.AppliedAt = &t
+		}
+		previous = append(previous, x)
+	}
 	app, err := a.q.GetApplication(r.Context(), id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		writeJSON(w, http.StatusOK, map[string]any{"application": nil})
+		writeJSON(w, http.StatusOK, map[string]any{"application": nil, "previous": previous})
 		return
 	}
 	if err != nil {
@@ -149,7 +207,7 @@ func (a *api) application(w http.ResponseWriter, r *http.Request) {
 	for _, d := range docs {
 		out.Documents = append(out.Documents, SentDocument{d.ID, d.Kind, d.SentAt.Time.UTC()})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"application": out})
+	writeJSON(w, http.StatusOK, map[string]any{"application": out, "previous": previous})
 }
 
 // Card is one application on the board (M6-02).

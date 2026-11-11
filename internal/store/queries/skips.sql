@@ -3,7 +3,7 @@
 INSERT INTO skips (application_id, reason, note, score)
 SELECT a.id, sqlc.narg('reason')::text, sqlc.narg('note')::text, @score::jsonb
 FROM applications a JOIN jobs j ON j.company_id = a.company_id AND j.title_key = a.title_key
-WHERE j.posting_id = @posting_id::bigint
+WHERE j.posting_id = @posting_id::bigint AND a.archived_at IS NULL
 RETURNING id;
 
 -- name: SetSkipReason :execrows
@@ -13,7 +13,7 @@ WHERE id = (
 	SELECT s.id FROM skips s
 	JOIN applications a ON a.id = s.application_id
 	JOIN jobs j ON j.company_id = a.company_id AND j.title_key = a.title_key
-	WHERE j.posting_id = @posting_id::bigint AND a.status = 'skipped'
+	WHERE j.posting_id = @posting_id::bigint AND a.status = 'skipped' AND a.archived_at IS NULL
 	ORDER BY s.at DESC, s.id DESC LIMIT 1
 );
 

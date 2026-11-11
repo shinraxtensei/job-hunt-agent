@@ -41,7 +41,7 @@ async function mockAPI(page: Page, leads = golden("leads_default")) {
     if (route.request().method() === "POST" && /^\/api\/leads\/\d+\/reason$/.test(path)) {
       return route.fulfill({ status: 202, contentType: "application/json", body: '{"requested":true}' });
     }
-    if (["POST", "DELETE"].includes(route.request().method()) && /^\/api\/(leads\/\d+\/(draft|status|skip|notes|contacts)|notes\/\d+|contacts\/\d+|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent|applications\/\d+\/followup|visits(\/seen)?)$/.test(path)) {
+    if (["POST", "DELETE"].includes(route.request().method()) && /^\/api\/(leads\/\d+\/(draft|status|skip|reapply|notes|contacts)|notes\/\d+|contacts\/\d+|drafts\/\d+\/(approve|discard)|documents\/\d+\/sent|applications\/\d+\/followup|visits(\/seen)?)$/.test(path)) {
       return route.fulfill({ status: 200, contentType: "application/json", body: '{"status":"ok"}' });
     }
     const body =
@@ -394,6 +394,26 @@ for (const width of [375, 1280]) {
         const skipped = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/skip"));
         await ask.getByRole("button", { name: "Skipped" }).click();
         await skipped;
+      // M9-05: a rejected or closed application can be set aside to apply again; earlier
+      // ones are listed in History.
+      test("apply again after a rejection", async ({ page }) => {
+        await mockAPI(page);
+        await page.route("**/api/leads/9001/application", (route) =>
+          route.fulfill({
+            contentType: "application/json",
+            body: JSON.stringify({
+              application: { ...APPLICATION.application, status: "rejected", status_at: "2026-11-05T09:00:00Z" },
+              previous: [{ id: 3, status: "closed", status_at: "2026-06-01T09:00:00Z", applied_at: "2026-05-20T09:00:00Z", archived_at: "2026-06-02T09:00:00Z" }],
+            }),
+          }),
+        );
+        await page.goto("/?page=leads&lead=9001");
+        const again = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9001/reapply"));
+        await page.getByRole("button", { name: "Apply again" }).click();
+        await again;
+        await page.getByRole("tab", { name: "History" }).click();
+        await expect(page.getByText(/Earlier application: Closed/)).toBeVisible();
+        await noAxeViolations(page);
       });
 
       test("a blocked draft can't be approved", async ({ page }) => {

@@ -17,6 +17,7 @@ FROM postings p
 JOIN jobs j ON j.posting_id = p.id
 JOIN applications a ON a.company_id = j.company_id AND a.title_key = j.title_key
 WHERE p.closed_at > $1::timestamptz AND a.status NOT IN ('new', 'skipped')
+	AND a.archived_at IS NULL
 GROUP BY a.company_id, a.title_key
 `
 

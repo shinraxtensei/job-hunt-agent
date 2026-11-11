@@ -53,7 +53,8 @@ func (q *Queries) FindCompanies(ctx context.Context, arg string) ([]FindCompanie
 const mergeConflicts = `-- name: MergeConflicts :many
 SELECT f.title_key FROM applications f
 JOIN applications t ON t.company_id = $1::bigint AND t.title_key = f.title_key
-WHERE f.company_id = $2::bigint ORDER BY f.title_key
+	AND t.archived_at IS NULL
+WHERE f.company_id = $2::bigint AND f.archived_at IS NULL ORDER BY f.title_key
 `
 
 type MergeConflictsParams struct {
@@ -61,7 +62,8 @@ type MergeConflictsParams struct {
 	FromID int64
 }
 
-// Title keys both companies have an application for: they can't both move into one.
+// Title keys both companies have a current application for: they can't both move into one
+// (earlier, set-aside applications can: ADR-0032).
 func (q *Queries) MergeConflicts(ctx context.Context, arg MergeConflictsParams) ([]string, error) {
 	rows, err := q.db.Query(ctx, mergeConflicts, arg.IntoID, arg.FromID)
 	if err != nil {

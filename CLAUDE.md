@@ -190,6 +190,8 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0028 | Applications: one per lead group, an append-only status history, a snapshot when applied | Accepted |
 | 0029 | Board-wide sources: postings of many companies, origin `board`, closed by source, a minimum fetch interval | Accepted |
 | 0030 | The location factor scores the group member that passed the preset (amends 0023) | Accepted |
+| 0032 | One current application per lead group; a rejected or closed one can be set aside to apply again (amends 0028) | Accepted |
+| 0032 | One current application per lead group; a rejected or closed one can be set aside to apply again (amends 0028) | Accepted |
 
 ## Project skills
 

@@ -23,7 +23,7 @@ export type Tab = (typeof TABS)[number][0];
 export function LeadDetail(props: { lead: Lead; now: number; tab: Tab; onTab: (t: Tab) => void; onBack: () => void; onStatus?: (s: Status) => void }) {
   const { now, tab, onTab, onBack, onStatus } = props;
   const [l, updating] = useFreshReason(props.lead, true);
-  const { app, load } = useApplication(l.id);
+  const { app, previous, load } = useApplication(l.id);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const heading = useRef<HTMLHeadingElement>(null);
 
@@ -97,7 +97,7 @@ export function LeadDetail(props: { lead: Lead; now: number; tab: Tab; onTab: (t
         {tab === "cv" && <DraftPanel lead={l} />}
         {tab === "notes" && (app === undefined ? <p role="status">Loading…</p> : <NotesPanel leadId={l.id} notes={app?.notes ?? []} reload={load} />)}
         {tab === "contacts" && (app === undefined ? <p role="status">Loading…</p> : <ContactsPanel leadId={l.id} contacts={app?.contacts ?? []} reload={load} />)}
-        {tab === "history" && <HistoryPanel app={app} />}
+        {tab === "history" && <HistoryPanel app={app} previous={previous} />}
       </div>
     </article>
   );

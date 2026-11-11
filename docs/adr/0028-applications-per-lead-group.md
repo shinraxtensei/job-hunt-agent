@@ -1,6 +1,6 @@
 # 0028. Applications: one per lead group, an append-only status history, a snapshot when applied
 
-- **Status:** Accepted (follows ADR-0009 and ADR-0026; recorded under the owner's working
+- **Status:** Accepted; amended by ADR-0032 (one current application, ended ones set aside) (follows ADR-0009 and ADR-0026; recorded under the owner's working
   mode of 2026-11-08)
 - **Date:** 2026-11-08
 - **Story:** docs/stories/M6-01-application-status.md
