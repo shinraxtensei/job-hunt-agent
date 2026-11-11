@@ -295,8 +295,9 @@ func TestJobGroups(t *testing.T) {
 	if g.members != 2 || g.canonical != postingID(t, e, berlin) {
 		t.Errorf("group = %+v, want 2 members with the Berlin posting (seen first) canonical", g)
 	}
-	if strings.Join(g.locations, ",") != "Berlin,Remote" || strings.Join(g.workplaces, ",") != "hybrid,remote" {
-		t.Errorf("group locations %v, workplaces %v; want [Berlin Remote] and [hybrid remote]", g.locations, g.workplaces)
+	// A bare "Remote" is a workplace, not a place (M9-01).
+	if strings.Join(g.locations, ",") != "Berlin" || strings.Join(g.workplaces, ",") != "hybrid,remote" {
+		t.Errorf("group locations %v, workplaces %v; want [Berlin] and [hybrid remote]", g.locations, g.workplaces)
 	}
 	if s, ok := groupOf(t, e, slug, "senior backend engineer"); !ok || s.members != 1 {
 		t.Errorf("senior group = %+v (found %v), want its own group of 1", s, ok)

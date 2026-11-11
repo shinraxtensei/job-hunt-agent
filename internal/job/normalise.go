@@ -21,7 +21,7 @@ const (
 
 // NormaliserVersion is stored on every jobs row. Bump it whenever Normalise's output
 // for the same payload changes; `collector normalise` then rebuilds older rows.
-const NormaliserVersion = 2 // 2: title_key (M2-02, ADR-0009)
+const NormaliserVersion = 3 // 2: title_key (M2-02, ADR-0009); 3: placeholder locations dropped (M9-01)
 
 // maxField caps every string copied from a payload (Security notes: untrusted input).
 const maxField = 500
@@ -124,9 +124,23 @@ func clean(s string) string {
 	return s
 }
 
-// addLocation appends loc unless it is empty or already present.
+// placeholders are location values that name no place (M9-01): "not applicable" and
+// "to be decided" in their usual spellings, and a work mode on its own. The work mode is
+// still read from the raw value by each board's normaliser. "NA" in capitals is left
+// alone: on remote boards it means North America.
+var placeholders = map[string]bool{
+	"n/a": true, "n.a.": true, "-": true, "--": true, "–": true, "—": true, "tbd": true, "tba": true,
+	"none": true, "null": true, "remote": true, "hybrid": true, "on-site": true, "onsite": true, "on site": true,
+}
+
+// isPlaceholder reports whether loc names no place.
+func isPlaceholder(loc string) bool {
+	return loc == "na" || placeholders[strings.ToLower(loc)]
+}
+
+// addLocation appends loc unless it is empty, a placeholder or already present.
 func addLocation(locs []string, loc string) []string {
-	if loc == "" {
+	if loc == "" || isPlaceholder(loc) {
 		return locs
 	}
 	for _, l := range locs {

@@ -18,16 +18,17 @@ func personio(m fields) Record {
 		PublishedAt:    m.time("createdAt"),
 		Workplace:      Unknown,
 	}
-	r.Locations = addLocation(r.Locations, m.str("office"))
+	offices := []string{m.str("office")}
 	for _, e := range m.arr("additionalOffices") {
 		var s string
 		_ = json.Unmarshal(e, &s) // not a string: skipped
-		r.Locations = addLocation(r.Locations, clean(s))
+		offices = append(offices, clean(s))
 	}
-	for _, l := range r.Locations {
-		if strings.Contains(strings.ToLower(l), "remote") {
+	for _, o := range offices { // the raw values: "Remote" is dropped as a place below
+		if strings.Contains(strings.ToLower(o), "remote") {
 			r.Workplace = Remote
 		}
+		r.Locations = addLocation(r.Locations, o)
 	}
 	return r
 }
