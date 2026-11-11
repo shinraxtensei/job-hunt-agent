@@ -366,6 +366,36 @@ for (const width of [375, 1280]) {
         expect((await dragged).postDataJSON()).toEqual({ status: "offer" });
       });
 
+      // M9-04: Done holds three statuses, so dropping on it asks which; Cancel moves nothing,
+      // Skipped goes through the skip endpoint (it records the score, M6-05).
+      test("dropping on Done asks rejected, skipped or closed", async ({ page }) => {
+        // Drag and drop is a pointer interaction: on a phone a card moves with its menu.
+        test.skip((page.viewportSize()?.width ?? 0) < 768, "no drag and drop on a phone");
+        await mockAPI(page);
+        await page.goto("/?page=board");
+        const done = page.getByRole("region", { name: /^Done/ });
+        const acme = page.locator(".card", { hasText: "Acme" });
+        const posts: string[] = [];
+        page.on("request", (r) => {
+          if (r.method() === "POST") posts.push(r.url());
+        });
+        await acme.dragTo(done);
+        const ask = page.getByRole("dialog", { name: "Why is it done?" });
+        await expect(ask).toBeVisible();
+        await noAxeViolations(page);
+        await ask.getByRole("button", { name: "Cancel" }).click();
+        await expect(ask).toBeHidden();
+        expect(posts).toEqual([]);
+        await acme.dragTo(done);
+        const rejected = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9001/status"));
+        await ask.getByRole("button", { name: "Rejected" }).click();
+        expect((await rejected).postDataJSON()).toEqual({ status: "rejected" });
+        await page.locator(".card", { hasText: "Brick" }).dragTo(done);
+        const skipped = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/skip"));
+        await ask.getByRole("button", { name: "Skipped" }).click();
+        await skipped;
+      });
+
       test("a blocked draft can't be approved", async ({ page }) => {
         await mockAPI(page);
         await page.goto("/?page=leads&lead=9006&tab=cv");

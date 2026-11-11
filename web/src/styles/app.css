@@ -1191,6 +1191,22 @@ dialog[open] {
   margin: 0;
   color: var(--muted);
 }
+/* M9-04: dropped on Done, which status? */
+.ask-done {
+  width: min(420px, calc(100vw - 32px));
+  padding: var(--space-5);
+}
+.ask-done h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xl);
+}
+.ask-done .row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
 
 /* Narrower screens: fewer columns. Phone: one column; the lead opens as a full-screen
    sheet with Back. */
