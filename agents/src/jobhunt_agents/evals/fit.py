@@ -4,6 +4,7 @@ as configured; only the cut-offs are fitted. No model call."""
 
 from collections.abc import Sequence
 from itertools import combinations, pairwise
+from typing import cast
 
 from jobhunt_agents.score import FIT_LEVELS, Bands, FitLevel, fit_level
 
@@ -11,9 +12,14 @@ _SHORT = {
     "very_strong": "v.strong",
     "strong": "strong",
     "good": "good",
-    "stretch": "stretch",
     "no": "no",
 }
+
+
+def four_levels(labels: Sequence[str]) -> list[FitLevel]:
+    """M9-03: the blind labels used five levels. Leads labelled "stretch" scored like "no"
+    (17-32 points on 2026-11-11), so they count as no; the stretch flag says the rest."""
+    return [cast(FitLevel, "no" if x == "stretch" else x) for x in labels]
 
 
 class Agreement:
@@ -55,8 +61,10 @@ def fit_bands(points: Sequence[float], labels: Sequence[FitLevel]) -> Bands:
     mids = [(a + b) / 2 for a, b in pairwise(s)]
     cands = sorted({round(c * 2) / 2 for c in [s[0] - 1, *mids, s[-1] + 1]}, reverse=True)
     best: tuple[tuple[float, float, int], Bands] | None = None
-    for vs, st, gd, sr in combinations(cands, 4):  # descending, so always valid bands
-        b = Bands(very_strong=vs, strong=st, good=gd, stretch=sr, location_gate=0)
+    for vs, st, gd in combinations(cands, 3):  # descending, so always valid bands
+        if gd <= 0:
+            continue
+        b = Bands(very_strong=vs, strong=st, good=gd, location_gate=0)
         a = Agreement(points, labels, b)
         key = (a.exact, a.within_one, -a.distance)
         if best is None or key > best[0]:

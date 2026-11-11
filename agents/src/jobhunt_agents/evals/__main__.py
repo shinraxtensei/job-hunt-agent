@@ -45,7 +45,7 @@ from jobhunt_agents.checker import Checker, Sentence, sentences
 from jobhunt_agents.coverage import Coverage, coverage
 from jobhunt_agents.db import open_pool
 from jobhunt_agents.evals.data import EvalSet, Item, Lead, sample
-from jobhunt_agents.evals.fit import Agreement, fit_bands
+from jobhunt_agents.evals.fit import Agreement, fit_bands, four_levels
 from jobhunt_agents.evals.label import label_extraction, label_fit, prefill_all
 from jobhunt_agents.evals.report import format_report, load_thresholds, replay, run_live, score_run
 from jobhunt_agents.evals.variants import init_file, load_labels, model_choices, report
@@ -68,7 +68,6 @@ from jobhunt_agents.reason import PROMPT_VERSION, Reasoner
 from jobhunt_agents.score import (
     JOB_SQL,
     Config,
-    FitLevel,
     Job,
     band,
     fit_level,
@@ -211,6 +210,7 @@ def cmd_fit(s: EvalSet, subset: str, source: str) -> int:
     items = [i for i in s.items() if i.id in s.scored(subset) and i.fit is not None]
     now = datetime.now(UTC)
     points: list[float] = []
+    flags: list[bool] = []  # M9-03: the stretch flag of each
     locs: list[float] = []  # location points, for the M3-09 gate
     with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
         for i in items:
@@ -228,7 +228,8 @@ def cmd_fit(s: EvalSet, subset: str, source: str) -> int:
             sc = score(drop_company(e, i.company), job, profile, cfg)  # as the worker scores
             points.append(total(sc, job.published_at, now, cfg))
             locs.append(sc.factors["location"].value * cfg.weights.location)
-    labels: list[FitLevel] = [i.fit for i in items if i.fit is not None]
+            flags.append(sc.stretch)
+    labels = four_levels([i.fit for i in items if i.fit is not None])  # M9-03
     bands = fit_bands(points, labels) if subset == "dev" else cfg.bands
     print(f"{subset}: {len(items)} postings, extractions from {source}, at {now:%Y-%m-%d}")
     print(f"bands: {bands.model_dump()}" + (" (fitted)" if subset == "dev" else " (scoring.yaml)"))
@@ -237,12 +238,20 @@ def cmd_fit(s: EvalSet, subset: str, source: str) -> int:
         print(Agreement(points, labels, bands).format())
         print(f"with the location gate (< {bands.location_gate:g} of {cfg.weights.location:g}):")
     print(Agreement(points, labels, bands, locs).format())
-    for i, p, loc in sorted(zip(items, points, locs, strict=True), key=lambda x: -x[1]):
+    rows = sorted(zip(items, points, locs, flags, strict=True), key=lambda x: -x[1])
+    for i, p, loc, flag in rows:
         lv = fit_level(p, loc, bands)
         print(
             f"  {p:5.1f}  {lv:<11} owner {i.fit:<11} {i.id}"
+            + ("  stretch" if flag else "")
             + ("  (capped)" if lv != band(p, bands) else "")
         )
+    owner = [flag for i, _, _, flag in rows if i.fit == "stretch"]
+    others = [flag for i, _, _, flag in rows if i.fit != "stretch"]
+    print(
+        f"stretch flag: on {sum(owner)} of the owner's {len(owner)} stretch labels,"
+        f" on {sum(others)} of the other {len(others)}"
+    )
     return 0
 
 

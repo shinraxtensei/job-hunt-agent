@@ -13,16 +13,15 @@ from collections.abc import Callable
 from decimal import Decimal
 
 from jobhunt_agents.aliases import normalize
-from jobhunt_agents.evals.data import EvalSet, Item
+from jobhunt_agents.evals.data import LABEL_LEVELS, EvalSet, Item
 from jobhunt_agents.extraction import FIELDS, LIST_FIELDS, Extraction, Salary
-from jobhunt_agents.score import FIT_LEVELS
 from jobhunt_agents.text import terminal_safe
 
 Ask = Callable[[str], str]
 Show = Callable[[str], None]
 
 PREFILL_LIMIT_USD = Decimal("0.10")
-_FIT_KEYS = {str(i + 1): level for i, level in enumerate(FIT_LEVELS)}
+_FIT_KEYS = {str(i + 1): level for i, level in enumerate(LABEL_LEVELS)}  # five, as labelled
 _FIT_PROMPT = "fit? 1 very strong · 2 strong · 3 good · 4 stretch · 5 no · s skip · q quit: "
 
 

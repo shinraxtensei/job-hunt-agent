@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { get, requestReason, type Lead } from "./api";
 import { fitTone, one } from "./format";
 import { label } from "./labels";
+import { STRETCH } from "./LeadList";
 
 const POLL_MS = 4000;
 const POLL_TRIES = 15;
@@ -73,6 +74,7 @@ export function FitTile({ lead: l }: { lead: Lead }) {
       <p className="tile-note">
         {label("fit", l.fit_level)} fit{l.cv_variant && <> · CV: {label("cv_variant", l.cv_variant)}</>}
       </p>
+      {l.stretch && <p className="tile-note">{STRETCH}</p>}
     </section>
   );
 }

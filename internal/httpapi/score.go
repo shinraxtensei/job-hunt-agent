@@ -9,9 +9,9 @@ import (
 	"github.com/shinraxtensei/job-hunt-agent/internal/store"
 )
 
-// FitLevels are the score bands, best first (M3-06); "unscored" is the filter value for
-// leads without a score.
-var FitLevels = []string{"very_strong", "strong", "good", "stretch", "no"}
+// FitLevels are the score bands, best first (M3-06; four since M9-03, "stretch" is a flag);
+// "unscored" is the filter value for leads without a score.
+var FitLevels = []string{"very_strong", "strong", "good", "no"}
 
 // factorOrder is the breakdown's order: the stored factors, then freshness (added when
 // read, never stored: ADR-0021).
@@ -38,8 +38,7 @@ type bands struct {
 	VeryStrong float64 `json:"very_strong"`
 	Strong     float64 `json:"strong"`
 	Good       float64 `json:"good"`
-	Stretch    float64 `json:"stretch"`
-	// M3-09: location/remote/visa points below this cap the level at stretch.
+	// M3-09: location/remote/visa points below this cap the level at good (M9-03).
 	LocationGate float64 `json:"location_gate"`
 }
 
@@ -56,13 +55,13 @@ func freshness(published *time.Time, now time.Time, p freshnessParams) float64 {
 	return math.Max(0, (p.StaleDays-age)/(p.StaleDays-p.FreshDays))
 }
 
-// fitLevel is the band of total, capped at stretch when the location points are below
-// the gate (M3-09, as score.py's fit_level). The total itself is never changed.
+// fitLevel is the band of total, capped at good when the location points are below the
+// gate (M3-09, M9-03, as score.py's fit_level). The total itself is never changed.
 func fitLevel(total, location float64, b bands) string {
-	for i, cut := range []float64{b.VeryStrong, b.Strong, b.Good, b.Stretch} {
+	for i, cut := range []float64{b.VeryStrong, b.Strong, b.Good} {
 		if total >= cut {
-			if location < b.LocationGate && i < 3 {
-				return "stretch"
+			if location < b.LocationGate && i < 2 {
+				return "good"
 			}
 			return FitLevels[i]
 		}
@@ -101,6 +100,7 @@ func applyScore(l *Lead, r store.ListLeadScoresRow, now time.Time) error {
 	loc := factors["location"]
 	l.FitLevel = new(fitLevel(round1(total), loc.Weight*loc.Value, b)) // the level of the score shown
 	l.NotEnoughInfo = r.NotEnoughInfo.Bool
+	l.Stretch = r.Stretch.Bool
 	l.Breakdown = []Factor{}
 	for _, k := range factorOrder {
 		x := factors[k]

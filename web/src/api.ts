@@ -59,6 +59,7 @@ export type Lead = {
   score: number | null;
   fit_level: FitLevel | null;
   not_enough_info: boolean;
+  stretch: boolean; // M9-03: the job asks for a higher level or more years than the profile
   breakdown: Factor[] | null;
   reason: string | null;
   gaps: string[] | null;
@@ -69,7 +70,7 @@ export type Lead = {
   status_at: string | null;
 };
 
-export const FIT_LEVELS = ["very_strong", "strong", "good", "stretch", "no"] as const;
+export const FIT_LEVELS = ["very_strong", "strong", "good", "no"] as const; // M9-03: stretch is a flag
 export type FitLevel = (typeof FIT_LEVELS)[number];
 
 export type Factor = { factor: string; weight: number; value: number; points: number; detail: string };

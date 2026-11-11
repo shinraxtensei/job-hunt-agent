@@ -49,10 +49,10 @@ WHERE w.kind = 'extract'
 _UPSERT = """
 INSERT INTO scores (posting_id, content_hash, extraction_id, extraction_prompt_version,
     points, factors, not_enough_info, freshness, bands, weights_version, bands_version,
-    profile_version, reason_inputs, cv_variant)
+    profile_version, reason_inputs, cv_variant, stretch)
 VALUES (%(posting)s, %(hash)s, %(extraction)s, %(prompt)s, %(points)s, %(factors)s,
     %(nei)s, %(freshness)s, %(bands_json)s, %(weights)s, %(bands)s, %(profile)s, %(inputs)s,
-    %(variant)s)
+    %(variant)s, %(stretch)s)
 ON CONFLICT (posting_id) DO UPDATE SET
     content_hash = excluded.content_hash, extraction_id = excluded.extraction_id,
     extraction_prompt_version = excluded.extraction_prompt_version,
@@ -60,7 +60,8 @@ ON CONFLICT (posting_id) DO UPDATE SET
     not_enough_info = excluded.not_enough_info, freshness = excluded.freshness,
     bands = excluded.bands, weights_version = excluded.weights_version,
     bands_version = excluded.bands_version, profile_version = excluded.profile_version,
-    reason_inputs = excluded.reason_inputs, cv_variant = excluded.cv_variant, scored_at = now()
+    reason_inputs = excluded.reason_inputs, cv_variant = excluded.cv_variant,
+    stretch = excluded.stretch, scored_at = now()
 """
 
 # A reason is queued at once for posting content it hasn't described (a new or changed
@@ -127,6 +128,7 @@ def rescore(pool: ConnectionPool, profile: Profile, cfg: Config) -> int:
                         {k: f.model_dump() | {"weight": w[k]} for k, f in s.factors.items()}
                     ),
                     "nei": s.not_enough_info,
+                    "stretch": s.stretch,
                     "freshness": freshness,
                     "bands_json": bands,
                     "inputs": reason_inputs(s),

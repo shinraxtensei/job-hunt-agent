@@ -481,8 +481,8 @@ func TestScoreCursorPagination(t *testing.T) {
 			}
 		}
 	})
-	// -1: unscored; 90 is capped at stretch by the location gate (M3-09): it sorts after
-	// every good lead, whatever its total.
+	// -1: unscored; 90 is capped at good by the location gate (M3-09, M9-03): it sorts
+	// with the good leads (first of them, by its total), after the strong one.
 	scores := []float64{50, 50, 40, -1, 60, -1, 40, 90}
 	for i, sc := range scores {
 		id := int64(9510 + i)
@@ -538,7 +538,7 @@ func TestScoreCursorPagination(t *testing.T) {
 		cursor = body.NextCursor
 	}
 	// no publication date: freshness counts half (+2.5 of 5)
-	want := []float64{62.5, 52.5, 52.5, 42.5, 42.5, 92.5, -1, -1}
+	want := []float64{62.5, 92.5, 52.5, 52.5, 42.5, 42.5, -1, -1}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Errorf("scores in page order = %v, want %v", got, want)
 	}

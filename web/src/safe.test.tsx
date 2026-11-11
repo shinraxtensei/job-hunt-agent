@@ -33,6 +33,7 @@ const lead = (over: Partial<Lead>): Lead => ({
   score: null,
   fit_level: null,
   not_enough_info: false,
+  stretch: false,
   breakdown: null,
   reason: null,
   gaps: null,
@@ -231,5 +232,17 @@ describe("board postings (M7-03)", () => {
     const el = render([lead({ origin: "board", source: "remotive", url: "https://remotive.com/remote-jobs/software-dev/x-1" })]);
     expect(el.textContent).toContain("via Remotive");
     expect(el.querySelector("a[href='https://remotive.com/remote-jobs/software-dev/x-1']")).not.toBeNull();
+  });
+});
+
+describe("stretch (M9-03)", () => {
+  // A flag beside the fit, not a fit level: four levels remain.
+  it("tags a lead that asks for more than the profile", async () => {
+    const { FIT_LEVELS } = await import("./api");
+    expect(FIT_LEVELS).toEqual(["very_strong", "strong", "good", "no"]);
+    const el = render([lead({ score: 61, fit_level: "strong", stretch: true, score_status: "scored" })]);
+    const tag = [...el.querySelectorAll(".tag")].find((t) => t.textContent === "Stretch");
+    expect(tag?.getAttribute("title")).toContain("higher level or more years");
+    expect(render([lead({ score: 61, fit_level: "strong", score_status: "scored" })]).textContent).not.toContain("Stretch");
   });
 });

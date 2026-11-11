@@ -38,6 +38,7 @@
       "score": 60,
       "fit_level": "strong",
       "not_enough_info": false,
+      "stretch": false,
       "breakdown": [
         {
           "factor": "required",
@@ -125,6 +126,7 @@
       "score": 20,
       "fit_level": "no",
       "not_enough_info": true,
+      "stretch": false,
       "breakdown": [
         {
           "factor": "required",

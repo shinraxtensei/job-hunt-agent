@@ -52,6 +52,7 @@ type Lead struct {
 	Score         *float64 `json:"score"` // with freshness as of now
 	FitLevel      *string  `json:"fit_level"`
 	NotEnoughInfo bool     `json:"not_enough_info"`
+	Stretch       bool     `json:"stretch"` // M9-03: the job asks for a higher level or more years than the profile
 	Breakdown     []Factor `json:"breakdown"`
 	Reason        *string  `json:"reason"`
 	Gaps          []string `json:"gaps"`

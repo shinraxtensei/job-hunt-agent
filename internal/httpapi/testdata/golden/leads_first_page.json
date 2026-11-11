@@ -38,6 +38,7 @@
       "score": 60,
       "fit_level": "strong",
       "not_enough_info": false,
+      "stretch": false,
       "breakdown": [
         {
           "factor": "required",
@@ -125,6 +126,7 @@
       "score": 20,
       "fit_level": "no",
       "not_enough_info": true,
+      "stretch": false,
       "breakdown": [
         {
           "factor": "required",
@@ -180,6 +182,6 @@
       "status_at": null
     }
   ],
-  "next_cursor": "eyJtIjoic2NvcmUiLCJmIjo0LCJzIjoyMCwidCI6MTc5MzUzNjIwMDAwMDAwMCwiYyI6OTAyLCJrIjoibW9iaWxlIGVuZ2luZWVyIGZsdXR0ZXIifQ"
+  "next_cursor": "eyJtIjoic2NvcmUiLCJmIjozLCJzIjoyMCwidCI6MTc5MzUzNjIwMDAwMDAwMCwiYyI6OTAyLCJrIjoibW9iaWxlIGVuZ2luZWVyIGZsdXR0ZXIifQ"
 }
 

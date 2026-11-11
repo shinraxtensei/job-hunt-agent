@@ -41,7 +41,7 @@ const BOARDS: Record<string, string> = { remotive: "Remotive", remoteok: "Remote
 
 // The semantic pastels (docs/design/brief.md): one meaning each, always with words.
 export type Tone = "mint" | "sand" | "salmon" | "blue" | "lilac";
-export const fitTone: Record<string, Tone> = { very_strong: "mint", strong: "mint", good: "sand", stretch: "salmon", no: "salmon" };
+export const fitTone: Record<string, Tone> = { very_strong: "mint", strong: "mint", good: "sand", no: "salmon" };
 export const statusTone: Record<string, Tone> = {
   new: "lilac",
   shortlisted: "lilac",
