@@ -108,7 +108,7 @@ func (a *api) load(ctx context.Context) ([]Lead, error) {
 	members := map[key][]preset.Place{}
 	for _, p := range places {
 		k := key{p.CompanyID, p.TitleKey}
-		members[k] = append(members[k], preset.Place{Workplace: p.Workplace, Locations: p.Locations,
+		members[k] = append(members[k], preset.Place{PostingID: p.PostingID, Workplace: p.Workplace, Locations: p.Locations,
 			RemoteScopes: p.RemoteScopes, Countries: p.Countries})
 	}
 	out := make([]Lead, 0, len(rows))
@@ -138,7 +138,7 @@ func (a *api) load(ctx context.Context) ([]Lead, error) {
 			l.Countries = union(l.Countries, m.Countries)
 		}
 		l.group = preset.Group{RoleFamily: r.RoleFamily, Seniority: r.Seniority,
-			ExperienceMinYears: int(r.ExperienceMinYears.Int32), Track: r.Track, Closed: r.Closed, Members: ms}
+			ExperienceMinYears: int(r.ExperienceMinYears.Int32), Track: r.Track, Closed: r.Closed, Members: ms, Canonical: r.PostingID}
 		l.ScoreStatus = "not_queued" // no extract item: the default preset never showed it
 		if s, ok := byPosting[l.ID]; ok {
 			if err := applyScore(&l, s, now); err != nil {

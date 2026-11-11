@@ -162,12 +162,13 @@ func (q *Queries) ListGroupsForPresets(ctx context.Context) ([]ListGroupsForPres
 }
 
 const listJobPlaces = `-- name: ListJobPlaces :many
-SELECT company_id, title_key, workplace, locations, remote_scopes, countries
+SELECT posting_id, company_id, title_key, workplace, locations, remote_scopes, countries
 FROM jobs
 WHERE title_key <> ''
 `
 
 type ListJobPlacesRow struct {
+	PostingID    int64
 	CompanyID    int64
 	TitleKey     string
 	Workplace    string
@@ -176,7 +177,8 @@ type ListJobPlacesRow struct {
 	Countries    []string
 }
 
-// Each job's location facets, for evaluating its group's location rules.
+// Each job's location facets, for evaluating its group's location rules; posting_id says
+// which member passed (ADR-0030).
 func (q *Queries) ListJobPlaces(ctx context.Context) ([]ListJobPlacesRow, error) {
 	rows, err := q.db.Query(ctx, listJobPlaces)
 	if err != nil {
@@ -187,6 +189,7 @@ func (q *Queries) ListJobPlaces(ctx context.Context) ([]ListJobPlacesRow, error)
 	for rows.Next() {
 		var i ListJobPlacesRow
 		if err := rows.Scan(
+			&i.PostingID,
 			&i.CompanyID,
 			&i.TitleKey,
 			&i.Workplace,

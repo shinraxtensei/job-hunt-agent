@@ -23,11 +23,14 @@ func Reconcile(ctx context.Context, db DB, p preset.Preset) (int, error) {
 	var ids []int64
 	var hashes [][]byte
 	var matched []string // ADR-0023: the location that passed, for the scorer
+	var members []int64  // ADR-0030: the member it belongs to (0: none)
 	for _, g := range groups {
 		if p.Evaluate(g.Group) == nil {
 			ids = append(ids, g.PostingID)
 			hashes = append(hashes, g.ContentHash)
-			matched = append(matched, p.MatchedLocation(g.Group))
+			loc, member := p.Match(g.Group)
+			matched = append(matched, loc)
+			members = append(members, member)
 		}
 	}
 	q := store.New(db)
@@ -39,7 +42,9 @@ func Reconcile(ctx context.Context, db DB, p preset.Preset) (int, error) {
 			return total, fmt.Errorf("enqueuing: %w", err)
 		}
 		total += int(n)
-		if err := q.SetMatchedLocations(ctx, store.SetMatchedLocationsParams{PostingIds: ids[start:end], Locations: matched[start:end]}); err != nil {
+		if err := q.SetMatchedLocations(ctx, store.SetMatchedLocationsParams{
+			PostingIds: ids[start:end], Locations: matched[start:end], Members: members[start:end],
+		}); err != nil {
 			return total, fmt.Errorf("storing matched locations: %w", err)
 		}
 	}

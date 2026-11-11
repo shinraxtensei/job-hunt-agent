@@ -46,6 +46,9 @@ WHERE state = 'failed' AND kind = @kind;
 -- name: SetMatchedLocations :exec
 -- The reconcile step's second write (ADR-0023): the default preset's matched location of
 -- each shown group's canonical posting, for the scorer. Unchanged rows aren't touched.
-UPDATE jobs j SET matched_location = x.loc
-FROM (SELECT unnest(@posting_ids::bigint[]) AS id, unnest(@locations::text[]) AS loc) x
-WHERE j.posting_id = x.id AND j.matched_location <> x.loc;
+-- matched_posting_id (ADR-0030) is the member that passed; 0 in members means none.
+UPDATE jobs j SET matched_location = x.loc, matched_posting_id = nullif(x.member, 0)
+FROM (SELECT unnest(@posting_ids::bigint[]) AS id, unnest(@locations::text[]) AS loc,
+	unnest(@members::bigint[]) AS member) x
+WHERE j.posting_id = x.id
+	AND (j.matched_location, j.matched_posting_id) IS DISTINCT FROM (x.loc, nullif(x.member, 0));

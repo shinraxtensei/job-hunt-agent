@@ -118,12 +118,13 @@ class Config(_Strict):
     bands_version: str
 
 
-SCORE_CODE = 7  # bump when scoring code changes what a score is: every lead re-scores
+SCORE_CODE = 8  # bump when scoring code changes what a score is: every lead re-scores
 # 2: skills named like the posting's company are dropped (M3-06 review)
 # 3: freshness in whole days; stored factors carry their weight (M3-08)
 # 4: the location detail names the place (M3-09)
 # 5: ... the matched location first (ADR-0023)
 # 6, 7: the CV variant is chosen with the score (M4-06)
+# 8: the place is the matched member's (ADR-0030)
 
 
 def _hash(v: object) -> str:
@@ -325,10 +326,16 @@ def band(points: float, b: Bands) -> FitLevel:
     return "no"
 
 
+# The place comes from the group member that passed the default preset (m, ADR-0030),
+# else the job's own. rescore._STALE reads it the same way.
 JOB_SQL = """
-SELECT j.title, j.seniority, j.experience_min_years, j.workplace, j.remote_scopes, j.countries,
-       j.locations, j.published_at, j.matched_location, j.role_family, coalesce(c.track, '')
-FROM jobs j JOIN companies c ON c.id = j.company_id WHERE j.posting_id = %s
+SELECT j.title, j.seniority, j.experience_min_years,
+       coalesce(m.workplace, j.workplace), coalesce(m.remote_scopes, j.remote_scopes),
+       coalesce(m.countries, j.countries), coalesce(m.locations, j.locations),
+       j.published_at, j.matched_location, j.role_family, coalesce(c.track, '')
+FROM jobs j JOIN companies c ON c.id = j.company_id
+LEFT JOIN jobs m ON m.posting_id = j.matched_posting_id
+WHERE j.posting_id = %s
 """
 
 

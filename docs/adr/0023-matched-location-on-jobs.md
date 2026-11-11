@@ -1,6 +1,6 @@
 # 0023. Reconcile stores the default preset's matched location on jobs, for the scorer
 
-- **Status:** Accepted
+- **Status:** Accepted; amended by ADR-0030 (the scorer reads the matched member's place)
 - **Date:** 2026-11-06
 - **Story:** docs/stories/M3-09-location-gate.md
 

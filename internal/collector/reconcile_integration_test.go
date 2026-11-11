@@ -208,4 +208,16 @@ func TestReconcileStoresMatchedLocation(t *testing.T) {
 	if got != "Remote - EMEA" {
 		t.Errorf("matched_location = %q, want %q (the location that passed, not the first)", got, "Remote - EMEA")
 	}
+	// M9-02: and which member passed, so the scorer reads that member's place.
+	var member, want int64
+	if err := e.pool.QueryRow(t.Context(), `SELECT coalesce(j.matched_posting_id, 0) FROM jobs j JOIN postings po ON po.id = j.posting_id
+		WHERE po.source_posting_id = $1`, austin).Scan(&member); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.pool.QueryRow(t.Context(), `SELECT id FROM postings WHERE source_posting_id = $1`, emea).Scan(&want); err != nil {
+		t.Fatal(err)
+	}
+	if member != want {
+		t.Errorf("matched_posting_id = %d, want the EMEA member %d", member, want)
+	}
 }
