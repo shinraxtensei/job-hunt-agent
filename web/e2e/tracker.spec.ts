@@ -394,6 +394,8 @@ for (const width of [375, 1280]) {
         const skipped = page.waitForRequest((r) => r.method() === "POST" && r.url().endsWith("/api/leads/9006/skip"));
         await ask.getByRole("button", { name: "Skipped" }).click();
         await skipped;
+      });
+
       // M9-05: a rejected or closed application can be set aside to apply again; earlier
       // ones are listed in History.
       test("apply again after a rejection", async ({ page }) => {
