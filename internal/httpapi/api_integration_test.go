@@ -1308,3 +1308,65 @@ func TestToday(t *testing.T) {
 		t.Errorf("after mark all seen: %+v", v)
 	}
 }
+
+// M9-05 (ADR-0032): an application that ended (rejected or closed) can be set aside, and
+// the lead starts over: its next status creates a new application. The old one is kept,
+// listed as previous. An active application can't be set aside.
+func TestReapply(t *testing.T) {
+	db := world(t)
+	h := server(t)
+	t.Cleanup(func() {
+		if _, err := db.Exec(context.Background(), forgetApplications); err != nil {
+			t.Error(err)
+		}
+	})
+	type view struct {
+		Application *struct {
+			ID      int64           `json:"id"`
+			Status  string          `json:"status"`
+			History []httpapi.Event `json:"history"`
+		} `json:"application"`
+		Previous []struct {
+			ID     int64  `json:"id"`
+			Status string `json:"status"`
+		} `json:"previous"`
+	}
+	postJSON(h, "/api/leads/9002/status", `{"status":"applied"}`, "")
+	if rec := postJSON(h, "/api/leads/9002/reapply", `{}`, "cross-site"); rec.Code != http.StatusForbidden {
+		t.Errorf("cross-site reapply: %d", rec.Code)
+	}
+	if rec := postJSON(h, "/api/leads/9002/reapply", `{}`, ""); rec.Code != http.StatusConflict {
+		t.Errorf("reapply while applied: %d %s, want 409", rec.Code, rec.Body)
+	}
+	if rec := postJSON(h, "/api/leads/99999/reapply", `{}`, ""); rec.Code != http.StatusNotFound {
+		t.Errorf("unknown lead: %d", rec.Code)
+	}
+	postJSON(h, "/api/leads/9002/status", `{"status":"rejected"}`, "")
+	var v view
+	getJSON(t, h, "/api/leads/9002/application", &v)
+	first := v.Application.ID
+	if rec := postJSON(h, "/api/leads/9002/reapply", `{}`, ""); rec.Code != http.StatusOK {
+		t.Fatalf("reapply after rejected: %d %s", rec.Code, rec.Body)
+	}
+	v = view{}
+	getJSON(t, h, "/api/leads/9002/application", &v)
+	if v.Application != nil || len(v.Previous) != 1 || v.Previous[0].ID != first || v.Previous[0].Status != "rejected" {
+		t.Fatalf("after reapply: %+v", v)
+	}
+	postJSON(h, "/api/leads/9002/status", `{"status":"applied"}`, "")
+	v = view{}
+	getJSON(t, h, "/api/leads/9002/application", &v)
+	if v.Application == nil || v.Application.ID == first || v.Application.Status != "applied" ||
+		len(v.Application.History) != 1 || len(v.Previous) != 1 {
+		t.Fatalf("the new application: %+v", v)
+	}
+	var current, all int
+	if err := db.QueryRow(t.Context(), `SELECT count(*) FILTER (WHERE a.archived_at IS NULL), count(*)
+		FROM applications a JOIN jobs j ON j.company_id = a.company_id AND j.title_key = a.title_key
+		WHERE j.posting_id = 9002`).Scan(&current, &all); err != nil {
+		t.Fatal(err)
+	}
+	if current != 1 || all != 2 {
+		t.Errorf("applications of the group: %d current of %d, want 1 of 2", current, all)
+	}
+}

@@ -12,10 +12,12 @@ SELECT
 	(SELECT count(*) FROM applications WHERE company_id = @from_id::bigint) AS applications;
 
 -- name: MergeConflicts :many
--- Title keys both companies have an application for: they can't both move into one.
+-- Title keys both companies have a current application for: they can't both move into one
+-- (earlier, set-aside applications can: ADR-0032).
 SELECT f.title_key FROM applications f
 JOIN applications t ON t.company_id = @into_id::bigint AND t.title_key = f.title_key
-WHERE f.company_id = @from_id::bigint ORDER BY f.title_key;
+	AND t.archived_at IS NULL
+WHERE f.company_id = @from_id::bigint AND f.archived_at IS NULL ORDER BY f.title_key;
 
 -- name: MovePostings :execrows
 UPDATE postings SET company_id = @into_id::bigint WHERE company_id = @from_id::bigint;

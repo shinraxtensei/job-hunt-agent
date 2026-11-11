@@ -48,11 +48,28 @@ func (q *Queries) ApplicationHistory(ctx context.Context, applicationID int64) (
 	return items, nil
 }
 
+const archiveApplication = `-- name: ArchiveApplication :one
+UPDATE applications a SET archived_at = now()
+FROM jobs j
+WHERE j.posting_id = $1::bigint AND a.company_id = j.company_id AND a.title_key = j.title_key
+	AND a.archived_at IS NULL AND a.status IN ('rejected', 'closed')
+RETURNING a.id
+`
+
+// Sets aside the lead's current application if it ended (rejected or closed), so its next
+// status starts a new one (ADR-0032). No row: none, or still active.
+func (q *Queries) ArchiveApplication(ctx context.Context, postingID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, archiveApplication, postingID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getApplication = `-- name: GetApplication :one
 SELECT a.id, a.status, a.status_at, a.applied_at, a.snapshot, a.created_at
 FROM applications a
 JOIN jobs j ON j.company_id = a.company_id AND j.title_key = a.title_key
-WHERE j.posting_id = $1::bigint
+WHERE j.posting_id = $1::bigint AND a.archived_at IS NULL
 `
 
 type GetApplicationRow struct {
@@ -64,7 +81,7 @@ type GetApplicationRow struct {
 	CreatedAt pgtype.Timestamptz
 }
 
-// The application of the lead with posting @posting_id (any member of its group).
+// The current application of the lead with posting @posting_id (any member of its group).
 func (q *Queries) GetApplication(ctx context.Context, postingID int64) (GetApplicationRow, error) {
 	row := q.db.QueryRow(ctx, getApplication, postingID)
 	var i GetApplicationRow
@@ -92,7 +109,7 @@ func (q *Queries) LeadExists(ctx context.Context, postingID int64) (bool, error)
 
 const listApplications = `-- name: ListApplications :many
 SELECT id, company_id, title_key, posting_id, status, status_at, applied_at
-FROM applications
+FROM applications WHERE archived_at IS NULL
 `
 
 type ListApplicationsRow struct {
@@ -105,7 +122,7 @@ type ListApplicationsRow struct {
 	AppliedAt pgtype.Timestamptz
 }
 
-// Every application, for the leads API and the board.
+// Every current application (ADR-0032: not set aside), for the leads API and the board.
 func (q *Queries) ListApplications(ctx context.Context) ([]ListApplicationsRow, error) {
 	rows, err := q.db.Query(ctx, listApplications)
 	if err != nil {
@@ -134,12 +151,59 @@ func (q *Queries) ListApplications(ctx context.Context) ([]ListApplicationsRow, 
 	return items, nil
 }
 
+const previousApplications = `-- name: PreviousApplications :many
+SELECT a.id, a.status, a.status_at, a.applied_at, a.archived_at::timestamptz AS archived_at
+FROM applications a
+JOIN jobs j ON j.company_id = a.company_id AND j.title_key = a.title_key
+WHERE j.posting_id = $1::bigint AND a.archived_at IS NOT NULL
+ORDER BY a.archived_at DESC, a.id DESC
+`
+
+type PreviousApplicationsRow struct {
+	ID         int64
+	Status     string
+	StatusAt   pgtype.Timestamptz
+	AppliedAt  pgtype.Timestamptz
+	ArchivedAt pgtype.Timestamptz
+}
+
+// The lead's earlier applications, set aside to apply again (ADR-0032), newest first.
+func (q *Queries) PreviousApplications(ctx context.Context, postingID int64) ([]PreviousApplicationsRow, error) {
+	rows, err := q.db.Query(ctx, previousApplications, postingID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []PreviousApplicationsRow
+	for rows.Next() {
+		var i PreviousApplicationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Status,
+			&i.StatusAt,
+			&i.AppliedAt,
+			&i.ArchivedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const sentDocuments = `-- name: SentDocuments :many
 SELECT d.id, d.kind, d.sent_at
 FROM documents d
 JOIN jobs j ON j.posting_id = d.posting_id
 JOIN applications a ON a.company_id = j.company_id AND a.title_key = j.title_key
 WHERE a.id = $1::bigint AND d.sent_at IS NOT NULL
+	-- an earlier, set-aside application keeps the documents sent before it was set aside
+	AND d.sent_at > coalesce((SELECT max(p.archived_at) FROM applications p
+		WHERE p.company_id = a.company_id AND p.title_key = a.title_key AND p.archived_at IS NOT NULL
+			AND p.archived_at <= coalesce(a.archived_at, 'infinity')), '-infinity')
 ORDER BY d.sent_at DESC, d.id DESC
 `
 
@@ -182,7 +246,7 @@ WITH g AS (
 	SELECT g.company_id, g.title_key, $3::bigint, $1::text,
 		CASE WHEN $1::text = 'applied' THEN now() END, (SELECT s FROM snap)
 	FROM g
-	ON CONFLICT (company_id, title_key) DO UPDATE SET status = excluded.status, status_at = now(),
+	ON CONFLICT (company_id, title_key) WHERE archived_at IS NULL DO UPDATE SET status = excluded.status, status_at = now(),
 		applied_at = coalesce(applications.applied_at, excluded.applied_at),
 		snapshot = coalesce(applications.snapshot, excluded.snapshot)
 	WHERE applications.status <> excluded.status

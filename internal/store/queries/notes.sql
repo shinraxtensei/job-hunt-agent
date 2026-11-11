@@ -5,12 +5,13 @@ WITH g AS (SELECT j.company_id, j.title_key FROM jobs j WHERE j.posting_id = @po
 ins AS (
 	INSERT INTO applications (company_id, title_key, posting_id, status)
 	SELECT g.company_id, g.title_key, @posting_id::bigint, 'new' FROM g
-	ON CONFLICT (company_id, title_key) DO NOTHING
+	ON CONFLICT (company_id, title_key) WHERE archived_at IS NULL DO NOTHING
 	RETURNING id
 )
 SELECT id FROM ins
 UNION ALL
-SELECT a.id FROM applications a JOIN g ON a.company_id = g.company_id AND a.title_key = g.title_key;
+SELECT a.id FROM applications a JOIN g ON a.company_id = g.company_id AND a.title_key = g.title_key
+WHERE a.archived_at IS NULL;
 
 -- name: AddNote :one
 INSERT INTO notes (application_id, body) VALUES (@application_id::bigint, @body::text) RETURNING id;
