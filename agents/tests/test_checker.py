@@ -69,6 +69,7 @@ def test_unsupported_verdict_blocks(app_dsn: str, go: Go, profile_dir: Path) -> 
         answer(json.dumps(GOOD)),
         answer(json.dumps(LETTER)),
         verdicts(4, {1: "altered_fact", 3: "unsupported"}),
+        verdicts(4, {1: "altered_fact", 3: "unsupported"}),  # M9-06: the second run agrees
     )
     run(app_dsn, profile_dir, provider)
     d = latest(app_dsn, posting)
@@ -100,12 +101,14 @@ def test_mismatched_verdicts_retry_then_fail(app_dsn: str, bank: Bank) -> None:
 
 
 def test_mismatched_verdicts_once_is_retried(app_dsn: str, bank: Bank) -> None:
-    provider = FakeProvider(verdicts(1), verdicts(2, {1: "unsupported"}))
+    provider = FakeProvider(
+        verdicts(1), verdicts(2, {1: "unsupported"}), verdicts(2, {1: "unsupported"})
+    )
     c, pool = checker(provider, app_dsn)
     with pool:
         found = c.check(ITEMS, bank)
     assert [(f.rule, f.where) for f in found] == [("checker_unsupported", "letter[0][0]")]
-    assert len(provider.requests) == 2
+    assert len(provider.requests) == 3  # a retry, then the second run (M9-06)
 
 
 # A closest id the bank doesn't hold is dropped (the page looks it up).
@@ -116,7 +119,7 @@ def test_unknown_closest_dropped(app_dsn: str, bank: Bank) -> None:
             {"n": 1, "verdict": "unsupported", "reason": "r", "closest": "letter-availability"},
         ]
     }
-    c, pool = checker(FakeProvider(answer(json.dumps(v))), app_dsn)
+    c, pool = checker(FakeProvider(answer(json.dumps(v)), answer(json.dumps(v))), app_dsn)
     with pool:
         found = c.check(ITEMS, bank)
     assert [f.closest for f in found] == [None, "letter-availability"]
@@ -131,3 +134,41 @@ def test_failed_draft_when_checker_malformed(app_dsn: str, go: Go, profile_dir: 
     d = latest(app_dsn, posting)
     assert d["status"] == "failed"
     assert d["error"].startswith("InvalidOutput")
+
+
+# M9-06: the checker's verdicts vary run to run, so an unsupported sentence is blocked only
+# when a second run flags it too. An altered fact (title, employer, date: what a background
+# check compares) blocks on one run. The finding is the first run's; a clean first run needs
+# no second.
+@pytest.mark.parametrize(
+    ("first", "second", "blocked", "calls"),
+    [
+        ({1: "unsupported"}, {1: "unsupported"}, ["letter[0][0]"], 2),
+        ({1: "unsupported"}, {1: "altered_fact"}, ["letter[0][0]"], 2),  # both flag it
+        ({1: "unsupported"}, {}, [], 2),  # the second run disagrees: not blocked
+        ({0: "unsupported", 1: "unsupported"}, {1: "unsupported"}, ["letter[0][0]"], 2),
+        ({1: "altered_fact"}, None, ["letter[0][0]"], 1),  # an altered fact: no second run
+        ({0: "altered_fact", 1: "unsupported"}, {}, ["summary[0]"], 2),
+        ({}, None, [], 1),  # nothing flagged: one call
+    ],
+)
+def test_two_runs_must_agree(
+    app_dsn: str,
+    bank: Bank,
+    first: dict[int, str],
+    second: dict[int, str] | None,
+    blocked: list[str],
+    calls: int,
+) -> None:
+    answers = [verdicts(2, first)] + ([verdicts(2, second)] if second is not None else [])
+    provider = FakeProvider(*answers)
+    c, pool = checker(provider, app_dsn)
+    with pool:
+        found = c.check(ITEMS, bank)
+    assert [f.where for f in found] == blocked
+    assert [f.rule for f in found] == [  # the first run's verdict
+        f"checker_{'altered_fact' if first[n] == 'altered_fact' else 'unsupported'}"
+        for n in sorted(first)
+        if ITEMS[n].where in blocked
+    ]
+    assert len(provider.requests) == calls

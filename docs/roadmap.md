@@ -458,6 +458,24 @@ M8-04 done (#77): `docs/threat-model.md`; ADR-0018 amended (what reaches the mod
 M8-03 (#78): public README, demo screenshots, `make history-scan`; the history rewrite and
 going public wait for the owner (`docs/publication-plan.md`).
 
+## M9: Cleanup ✅ done 2026-11-11
+
+A cleanup pass after the first days of real use (owner, 2026-11-11), in the new
+repository (`shinraxtensei/job-hunt-agent`, PR numbers there).
+- **M9-01** placeholder locations ("N/A", "TBD", a bare "Hybrid") are no longer places:
+  449 jobs cleaned (#9).
+- **M9-02** the location factor scores the group member that passed your filters
+  (ADR-0030, #10).
+- **M9-03** four fit levels; "Stretch" is a flag (a higher level or more years than the
+  profile). Agreement with the 36 blind labels: exact 72.2%, within one level 100%
+  (ADR-0031, #14).
+- **M9-04** dropping a card on Done asks rejected, skipped or closed (#12).
+- **M9-05** apply again after a rejected or closed application; the old one is kept
+  (ADR-0032, #13).
+- **M9-06** the claim checker blocks an unsupported sentence only when a second run agrees;
+  an altered fact still blocks on one run; planted cases 25/25 (see the story).
+- Also: Go 1.27.4 for a `net/http` advisory (#11), minimatch 11.0.1 for the web tooling (#15).
+
 ## D: Deploy to a server (last)
 
 **Goal:** the finished stack, already running with `make up` on the Mac (L–M8), runs on an
@@ -517,3 +535,4 @@ with their own filters, without seeing anything private of the owner's.
 | 2026-11-08 | **M6 complete; v1 complete.** M6-01…M6-06 (#58…#63), ADR-0028. README: "How to use it daily". Next: **M7**, then M8, then D. | Every M6 exit criterion is met; the owner asked to mark v1 complete when M6 is done. |
 | 2026-11-09 | M7 reshaped: the digest and its channel ADR moved to D; M7 is a Today view, Moroccan employers (Personio feed, French drafts) and remote boards (Remotive, RemoteOK). Step 0 research in `docs/research/m7-sources.md`. | Owner: no push digest before the server collects on its own. Step 0 found no Moroccan job board whose terms allow automated reads. |
 | 2026-11-09 | **M7 complete.** M7-00…M7-03 (#70…#75), ADR-0029. Next: **M8**, then D. | Every M7 exit criterion is met: Today view, Moroccan employers through the one source whose terms allow it, two remote boards. |
+| 2026-11-11 | **M9 Cleanup** added and done: M9-01…M9-06, ADR-0030…0032. | The owner's list after the first days of real use; M8-01 still waits for 2–3 weeks of data. |

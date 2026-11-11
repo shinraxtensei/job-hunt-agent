@@ -91,20 +91,32 @@ class Checker:
             thinking=True,  # measured: more consistent verdicts (M5-02 evals)
         )
 
+    def _run(self, data: str, n: int, posting_id: int | None) -> list[Verdict]:
+        """One verdict per sentence, or InvalidOutput (after one retry): never a guess."""
+        for _ in range(2):
+            got = self._ask(data, posting_id).verdicts
+            if sorted(v.n for v in got) == list(range(n)):
+                return got
+        raise InvalidOutput("the checker's verdicts don't match the sentences")
+
     def check(
         self, items: list[Sentence], bank: Bank, posting_id: int | None = None
     ) -> list[Finding]:
-        """One verdict per sentence, or InvalidOutput (after one retry): never a guess."""
+        """What blocks (M9-06): an altered fact (title, employer, date: what a background
+        check compares) on one run; an unsupported sentence only when a second run flags it
+        too, since the checker's verdicts vary from run to run. The findings are the first
+        run's; a first run with no unsupported verdict needs no second. The code validator
+        ran before, deterministically."""
         if not items:
             return []
         data = check_data(items, bank)
         known = {x.id for x in bank.lines()}
-        for _ in range(2):
-            got = self._ask(data, posting_id).verdicts
-            if sorted(v.n for v in got) == list(range(len(items))):
-                break
-        else:
-            raise InvalidOutput("the checker's verdicts don't match the sentences")
+        got = self._run(data, len(items), posting_id)
+        if any(v.verdict == "unsupported" for v in got):
+            again = {
+                v.n for v in self._run(data, len(items), posting_id) if v.verdict != "supported"
+            }
+            got = [v for v in got if v.verdict == "altered_fact" or v.n in again]
         return [
             Finding(
                 "checker_unsupported" if v.verdict == "unsupported" else "checker_altered_fact",
