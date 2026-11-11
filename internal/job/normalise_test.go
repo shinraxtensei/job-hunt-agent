@@ -208,7 +208,7 @@ func TestNormalisePersonio(t *testing.T) {
 			job.Record{Title: "Android Software Engineer", URL: "https://inyad.jobs.personio.de/job/578189", Locations: []string{"Casablanca"},
 				Workplace: job.Unknown, Department: "Tech", EmploymentType: "permanent", PublishedAt: time.Date(2022, 2, 1, 16, 33, 49, 0, time.UTC)}},
 		"remote and more offices": {`{"id":"1","name":"Backend Engineer","office":"Remote","additionalOffices":["Rabat","Remote",5],"url":"https://x.jobs.personio.de/job/1"}`,
-			job.Record{Title: "Backend Engineer", URL: "https://x.jobs.personio.de/job/1", Locations: []string{"Remote", "Rabat"}, Workplace: job.Remote}},
+			job.Record{Title: "Backend Engineer", URL: "https://x.jobs.personio.de/job/1", Locations: []string{"Rabat"}, Workplace: job.Remote}}, // "Remote" is a mode, not a place (M9-01)
 	} {
 		t.Run(name, func(t *testing.T) {
 			got, err := job.Normalise("personio", []byte(c.payload))
@@ -391,5 +391,36 @@ func TestNormaliseManual(t *testing.T) {
 			job.Record{Title: "Data Engineer", URL: "https://x.ma/1", Workplace: job.Unknown}},
 	} {
 		t.Run(name, func(t *testing.T) { check(t, "manual", []byte(c.payload), c.want) })
+	}
+}
+
+// M9-01: a placeholder is not a place ("N/A", "-", "TBD", and a work mode on its own:
+// "Remote", "Hybrid"). It is dropped from the locations; a work mode still sets the
+// workplace. A place that mentions a work mode ("Remote - EMEA") stays.
+func TestNormaliseDropsPlaceholderLocations(t *testing.T) {
+	for name, c := range map[string]struct {
+		source, payload string
+		locations       []string
+		workplace       job.Workplace
+	}{
+		"greenhouse remote":  {"greenhouse", `{"title":"x","location":{"name":"Remote"},"offices":[{"location":"N/A"}]}`, nil, job.Remote},
+		"greenhouse hybrid":  {"greenhouse", `{"title":"x","location":{"name":"Hybrid"},"offices":[{"location":"Berlin, Germany"}]}`, []string{"Berlin, Germany"}, job.Hybrid},
+		"greenhouse scope":   {"greenhouse", `{"title":"x","location":{"name":"Remote - EMEA"}}`, []string{"Remote - EMEA"}, job.Remote},
+		"lever placeholders": {"lever", `{"text":"x","categories":{"location":"n/a","allLocations":["-","TBD","Lisbon"]}}`, []string{"Lisbon"}, job.Unknown},
+		"personio remote":    {"personio", `{"name":"x","office":"Remote","additionalOffices":["Rabat"]}`, []string{"Rabat"}, job.Remote},
+		"ashby na":           {"ashby", `{"title":"x","location":"na","secondaryLocations":[{"location":"Paris"}]}`, []string{"Paris"}, job.Unknown},
+		"NA is a region":     {"ashby", `{"title":"x","location":"NA"}`, []string{"NA"}, job.Unknown},
+		"manual tbd":         {"manual", `{"title":"x","company":"y","location":"TBD"}`, nil, job.Unknown},
+		"anywhere stays":     {"manual", `{"title":"x","company":"y","location":"Anywhere"}`, []string{"Anywhere"}, job.Remote},
+	} {
+		t.Run(name, func(t *testing.T) {
+			r, err := job.Normalise(c.source, []byte(c.payload))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if fmt.Sprint(r.Locations) != fmt.Sprint(c.locations) || r.Workplace != c.workplace {
+				t.Errorf("locations %q, workplace %s; want %q, %s", r.Locations, r.Workplace, c.locations, c.workplace)
+			}
+		})
 	}
 }
