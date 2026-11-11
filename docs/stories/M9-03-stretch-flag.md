@@ -53,3 +53,8 @@ output or model data.
 - Tests: `test_stretch_flag`, `test_stretch_labels_count_as_no`, the location-gate table
   (Python and Go), the view test, `TestFitLevel`, vitest "tags a lead that asks for more
   than the profile"; API goldens carry `stretch`.
+- Local data, 584 scored leads re-scored (`SCORE_CODE` 9): very strong 7 → 10, strong
+  106 → 113, good 157 → 254, stretch 120 → (flag), no 194 → 207. The flag is on 337 of
+  584 (the profile is mid level with 3 years; most roles ask for senior): 7 very strong,
+  52 strong, 144 good, 134 no.
+
