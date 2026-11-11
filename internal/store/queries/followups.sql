@@ -8,7 +8,7 @@ SELECT a.id, a.posting_id, j.title, c.name AS company, a.applied_at,
 FROM applications a
 JOIN jobs j ON j.posting_id = a.posting_id
 JOIN companies c ON c.id = a.company_id
-WHERE a.status = 'applied' AND a.followup_done_at IS NULL
+WHERE a.status = 'applied' AND a.followup_done_at IS NULL AND a.archived_at IS NULL
 	AND a.applied_at <= sqlc.arg(due_before)::timestamptz
 	AND (a.followup_snoozed_until IS NULL OR a.followup_snoozed_until <= sqlc.arg(at_time)::timestamptz)
 ORDER BY a.applied_at, a.id;

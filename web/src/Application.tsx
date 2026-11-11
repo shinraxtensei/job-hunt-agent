@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { STATUSES, get, post, type Application, type Lead, type Status } from "./api";
+import { STATUSES, get, post, type Application, type Lead, type Previous, type Status } from "./api";
 import { statusTone } from "./format";
 import { label } from "./labels";
 import { ExternalLink } from "./safe";
@@ -14,19 +14,24 @@ const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
 // the lead never left `new`. The detail panel's tabs share it.
 export function useApplication(leadId: number) {
   const [app, setApp] = useState<Application | null | undefined>(undefined);
+  const [previous, setPrevious] = useState<Previous[]>([]); // set aside (M9-05)
   const [error, setError] = useState<string | null>(null);
   const load = useCallback(
     () =>
-      get<{ application: Application | null }>(`/api/leads/${leadId}/application`)
-        .then((r) => setApp(r.application))
+      get<{ application: Application | null; previous?: Previous[] }>(`/api/leads/${leadId}/application`)
+        .then((r) => {
+          setApp(r.application);
+          setPrevious(r.previous ?? []);
+        })
         .catch((e: unknown) => setError(message(e))),
     [leadId],
   );
   useEffect(() => {
     setApp(undefined);
+    setPrevious([]);
     void load();
   }, [load]);
-  return { app, error, load };
+  return { app, previous, error, load };
 }
 
 // StatusControl: the lead's status (any may follow any, M6-01), one-click Skip with Undo
@@ -56,7 +61,17 @@ export function StatusControl(props: { lead: Lead; app: Application | null | und
       })
       .catch((e: unknown) => setError(message(e)));
   };
-  const current = app?.status ?? lead.status;
+  // M9-05: an application that ended can be set aside; the next status starts a new one.
+  const again = () => {
+    setError(null);
+    post(`/api/leads/${lead.id}/reapply`, {})
+      .then(() => {
+        onStatus?.("new");
+        return reload();
+      })
+      .catch((e: unknown) => setError(message(e)));
+  };
+  const current = app === null ? "new" : (app?.status ?? lead.status);
   const id = `status-${lead.id}`;
   return (
     <section className={`tile status-tile ${statusTone[current] ?? "lilac"}`} aria-label="Application">
@@ -71,9 +86,14 @@ export function StatusControl(props: { lead: Lead; app: Application | null | und
             </option>
           ))}
         </select>
-        {current !== "skipped" && (
+        {current !== "skipped" && current !== "rejected" && current !== "closed" && (
           <button type="button" className="button on-pastel" onClick={() => skip()}>
             Skip
+          </button>
+        )}
+        {(current === "rejected" || current === "closed") && (
+          <button type="button" className="button on-pastel" onClick={again}>
+            Apply again
           </button>
         )}
       </div>
@@ -113,11 +133,24 @@ export function StatusControl(props: { lead: Lead; app: Application | null | und
 
 // HistoryPanel: the posting as applied to, the documents sent (M5-04) and every status
 // change, newest first (M6-01). Snapshot text is the posting's: text only.
-export function HistoryPanel({ app }: { app: Application | null | undefined }) {
+export function HistoryPanel({ app, previous = [] }: { app: Application | null | undefined; previous?: Previous[] }) {
   if (app === undefined) return <p role="status">Loading…</p>;
-  if (app === null) return <p className="quiet-note">No history yet: set a status to start one.</p>;
+  const earlier = previous.map((p) => (
+    <p key={p.id} className="quiet-note">
+      Earlier application: {label("status", p.status)} on {when(p.status_at)}
+      {p.applied_at && <>, applied {when(p.applied_at)}</>}
+    </p>
+  ));
+  if (app === null)
+    return (
+      <div className="history">
+        <p className="quiet-note">{previous.length ? "A new application starts with the next status." : "No history yet: set a status to start one."}</p>
+        {earlier}
+      </div>
+    );
   return (
     <div className="history">
+      {earlier}
       {app.snapshot && (
         <p>
           Applied {app.applied_at && when(app.applied_at)} to: <ExternalLink href={app.snapshot.url}>{app.snapshot.title}</ExternalLink> (as it was then)

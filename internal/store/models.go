@@ -26,6 +26,7 @@ type Application struct {
 	CreatedAt            pgtype.Timestamptz
 	FollowupDoneAt       pgtype.Timestamptz
 	FollowupSnoozedUntil pgtype.Timestamptz
+	ArchivedAt           pgtype.Timestamptz
 }
 
 type ApplicationEvent struct {

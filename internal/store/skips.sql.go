@@ -15,7 +15,7 @@ const addSkip = `-- name: AddSkip :one
 INSERT INTO skips (application_id, reason, note, score)
 SELECT a.id, $1::text, $2::text, $3::jsonb
 FROM applications a JOIN jobs j ON j.company_id = a.company_id AND j.title_key = a.title_key
-WHERE j.posting_id = $4::bigint
+WHERE j.posting_id = $4::bigint AND a.archived_at IS NULL
 RETURNING id
 `
 
@@ -95,7 +95,7 @@ WHERE id = (
 	SELECT s.id FROM skips s
 	JOIN applications a ON a.id = s.application_id
 	JOIN jobs j ON j.company_id = a.company_id AND j.title_key = a.title_key
-	WHERE j.posting_id = $3::bigint AND a.status = 'skipped'
+	WHERE j.posting_id = $3::bigint AND a.status = 'skipped' AND a.archived_at IS NULL
 	ORDER BY s.at DESC, s.id DESC LIMIT 1
 )
 `

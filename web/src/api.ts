@@ -15,6 +15,8 @@ export type Application = {
   notes: Note[];
   contacts: Contact[];
 };
+// M9-05 (ADR-0032): an earlier application, set aside to apply again.
+export type Previous = { id: number; status: Status; status_at: string; applied_at: string | null; archived_at: string };
 // M6-03: the owner's notes; contacts are other people's data (never logged or exported).
 export type Note = { id: number; body: string; created_at: string; edited_at: string | null };
 export type Contact = { id: number; name: string; role: string; email: string; linkedin: string; phone: string };
