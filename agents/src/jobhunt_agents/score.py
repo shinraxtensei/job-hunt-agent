@@ -23,8 +23,9 @@ from jobhunt_agents.aliases import normalize
 from jobhunt_agents.extraction import Extraction
 from jobhunt_agents.profile import Profile
 
-FitLevel = Literal["very_strong", "strong", "good", "stretch", "no"]
-FIT_LEVELS: tuple[FitLevel, ...] = ("very_strong", "strong", "good", "stretch", "no")
+# M9-03: four levels; "stretch" is a flag on the score (Scored.stretch), not a level.
+FitLevel = Literal["very_strong", "strong", "good", "no"]
+FIT_LEVELS: tuple[FitLevel, ...] = ("very_strong", "strong", "good", "no")
 # the extraction's levels and the job facets' (intern, staff_plus, lead_manager)
 _LADDER = {
     "intern": 0,
@@ -96,13 +97,12 @@ class Bands(_Strict):
     very_strong: float
     strong: float
     good: float
-    stretch: float
-    location_gate: float  # location points below this cap the level at stretch (M3-09)
+    location_gate: float  # location points below this cap the level at good (M3-09, M9-03)
 
     @model_validator(mode="after")
     def _order(self) -> Bands:
-        if not self.very_strong > self.strong > self.good > self.stretch:
-            raise ValueError("bands must go down: very_strong > strong > good > stretch")
+        if not self.very_strong > self.strong > self.good > 0:
+            raise ValueError("bands must go down: very_strong > strong > good > 0")
         return self
 
 
@@ -118,13 +118,14 @@ class Config(_Strict):
     bands_version: str
 
 
-SCORE_CODE = 8  # bump when scoring code changes what a score is: every lead re-scores
+SCORE_CODE = 9  # bump when scoring code changes what a score is: every lead re-scores
 # 2: skills named like the posting's company are dropped (M3-06 review)
 # 3: freshness in whole days; stored factors carry their weight (M3-08)
 # 4: the location detail names the place (M3-09)
 # 5: ... the matched location first (ADR-0023)
 # 6, 7: the CV variant is chosen with the score (M4-06)
 # 8: the place is the matched member's (ADR-0030)
+# 9: four fit levels, stretch a flag (M9-03)
 
 
 def _hash(v: object) -> str:
@@ -175,7 +176,8 @@ class Scored(_Strict):
     points: float  # weighted sum without freshness
     factors: dict[str, Factor]
     not_enough_info: bool  # no required skills stated: the reason says so
-    capped: bool  # location/remote/visa below the gate: at most stretch (M3-09)
+    capped: bool  # location/remote/visa below the gate: at most good (M3-09, M9-03)
+    stretch: bool  # the job asks for a higher level or more years than the profile (M9-03)
     weights_version: str
     bands_version: str
     profile_version: str
@@ -213,16 +215,33 @@ def title(job_title: str, profile: Profile, cfg: Config) -> Factor:
     return Factor(value=cfg.title.none, detail="matches none of the target titles")
 
 
+def _level(e: Extraction, job: Job) -> str:
+    return e.seniority if e.seniority != "unknown" else job.seniority
+
+
+def _need(e: Extraction, job: Job) -> int | None:
+    return e.min_years if e.min_years is not None else job.experience_min_years
+
+
+def stretch(e: Extraction, job: Job, profile: Profile) -> bool:
+    """M9-03: the job is a step up: a higher level than the profile's, or more years than
+    it has. Unknown level and no stated years: not a stretch."""
+    exp = profile.search_profile.experience
+    level, need = _level(e, job), _need(e, job)
+    above = level in _LADDER and _LADDER[level] > _LADDER[exp.seniority]
+    return above or (need is not None and need > exp.professional_years)
+
+
 def seniority(e: Extraction, job: Job, profile: Profile, cfg: Config) -> Factor:
     c = cfg.seniority
-    level = e.seniority if e.seniority != "unknown" else job.seniority
+    level = _level(e, job)
     if level in _LADDER:
         gap = _LADDER[level] - _LADDER[profile.search_profile.experience.seniority]
         level_v = c.by_gap[max(-3, min(3, gap))]
     else:
         level_v = c.unknown
     have = profile.search_profile.experience.professional_years
-    need = e.min_years if e.min_years is not None else job.experience_min_years
+    need = _need(e, job)
     years_v = 1.0 if need is None else max(0.0, 1 - max(0.0, need - have) * c.per_year_short)
     return Factor(
         value=(level_v + years_v) / 2,
@@ -287,6 +306,7 @@ def score(e: Extraction, job: Job, profile: Profile, cfg: Config) -> Scored:
         points=sum(w[k] * f.value for k, f in factors.items()),
         not_enough_info=not e.required_skills,
         capped=capped(w["location"] * factors["location"].value, cfg.bands),
+        stretch=stretch(e, job, profile),
         factors=factors,
         weights_version=cfg.weights_version,
         bands_version=cfg.bands_version,
@@ -300,17 +320,17 @@ def total(s: Scored, published_at: datetime | None, now: datetime, cfg: Config) 
 
 
 def capped(location_points: float, b: Bands) -> bool:
-    """M3-09: a lead you can't work at (location/remote/visa below the gate) is at most a
-    stretch, whatever its other factors."""
+    """M3-09: a lead you can't work at (location/remote/visa below the gate) is at most
+    good (M9-03), whatever its other factors."""
     return location_points < b.location_gate
 
 
 def fit_level(total_points: float, location_points: float, b: Bands) -> FitLevel:
-    """The band of the total, capped at stretch by the location gate. The total itself is
+    """The band of the total, capped at good by the location gate. The total itself is
     never changed."""
     level = band(total_points, b)
-    if capped(location_points, b) and level in ("very_strong", "strong", "good"):
-        return "stretch"
+    if capped(location_points, b) and level in ("very_strong", "strong"):
+        return "good"
     return level
 
 
@@ -319,7 +339,6 @@ def band(points: float, b: Bands) -> FitLevel:
         ("very_strong", b.very_strong),
         ("strong", b.strong),
         ("good", b.good),
-        ("stretch", b.stretch),
     ):
         if points >= cut:
             return cast(FitLevel, level)

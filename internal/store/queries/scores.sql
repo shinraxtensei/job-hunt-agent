@@ -3,7 +3,7 @@
 -- item (Go queued it because the default preset showed the lead), the coded score with
 -- the freshness and bands it was scored with, and the reason with whether it is current.
 SELECT w.posting_id, w.state AS extract_state,
-	s.points, s.factors, s.not_enough_info, s.freshness, s.bands,
+	s.points, s.factors, s.not_enough_info, s.freshness, s.bands, s.stretch, -- M9-03: a flag
 	r.reason, r.gaps, r.cv_variant, s.cv_variant AS score_variant, -- M4-06: the score's wins
 	(r.posting_id IS NOT NULL AND s.posting_id IS NOT NULL AND r.content_hash = s.content_hash
 		AND r.inputs = s.reason_inputs)::boolean AS reason_current,

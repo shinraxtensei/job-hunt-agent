@@ -203,6 +203,7 @@ type LeadScore struct {
 	Gaps          []byte
 	CvVariant     pgtype.Text
 	ReasonCurrent pgtype.Bool
+	Stretch       bool
 }
 
 type ModelCall struct {
@@ -264,6 +265,7 @@ type Score struct {
 	ReasonRequestedAt       pgtype.Timestamptz
 	ScoredAt                pgtype.Timestamptz
 	CvVariant               pgtype.Text
+	Stretch                 bool
 }
 
 type ScoreReason struct {

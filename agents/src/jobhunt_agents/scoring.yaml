@@ -45,15 +45,13 @@ freshness:          # by days since published
   stale_days: 45    # 0.0 from here, linear in between
   unknown: 0.5
 
-bands:              # lowest total for each fit level; below `stretch` is `no`.
-  # Fitted on the dev split (26 postings, the shipped extraction prompt's outputs) against
-  # the owner's blind fit labels, after the skill-map gaps were filled, 2026-11-06:
-  # make evals-fit SET=dev (72.5 / 52.5 / 33 / 31.5), rounded to whole numbers. Weights
-  # unchanged. Held-out was seen in the first fit, 2026-11-05: it is no longer unseen.
-  very_strong: 73
-  strong: 53
+bands:              # lowest total for each fit level; below `good` is `no` (M9-03: four levels).
+  # Fitted on the dev split (26 postings) against the owner's blind fit labels, four
+  # levels since M9-03 (a "stretch" label counts as no), 2026-11-11: make evals-fit
+  # SET=dev (72 / 52 / 32.5), rounded to whole numbers. Weights unchanged.
+  very_strong: 72
+  strong: 52
   good: 33
-  stretch: 32
-  # M3-09: location/remote/visa points below this cap the level at "stretch" (the total
-  # is unchanged): a lead you can't work at never ranks as a strong fit. Of 15.
+  # M3-09: location/remote/visa points below this cap the level at "good" (M9-03; the
+  # total is unchanged): a lead you can't work at never ranks as a strong fit. Of 15.
   location_gate: 5

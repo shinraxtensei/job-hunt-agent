@@ -225,5 +225,5 @@ def test_capped_lead_breakdown_says_why(app_dsn: str, go: Go, profile_dir: Path)
     only(app_dsn, posting)
     run_reason(app_dsn, provider)
     user = provider.requests[0].user
-    assert "FIT CAPPED AT STRETCH" in user
+    assert "FIT CAPPED: you can't work there" in user  # M9-03: no level named
     assert "elsewhere: on-site in New York, visa unknown" in user

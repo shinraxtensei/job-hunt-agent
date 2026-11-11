@@ -13,13 +13,26 @@ export function FitTag({ lead: l }: { lead: Lead }) {
   }
   const level = label("fit", l.fit_level);
   return (
-    <span className={`tag ${fitTone[l.fit_level] ?? "lilac"}`} title={`${level} fit`}>
-      <span className="visually-hidden">{level} fit, score </span>
-      <span aria-hidden="true">{level} · </span>
-      {one.format(l.score)}
+    <>
+      <span className={`tag ${fitTone[l.fit_level] ?? "lilac"}`} title={`${level} fit`}>
+        <span className="visually-hidden">{level} fit, score </span>
+        <span aria-hidden="true">{level} · </span>
+        {one.format(l.score)}
+      </span>
+      {l.stretch && <StretchTag />}
+    </>
+  );
+}
+
+// StretchTag (M9-03): the job asks for more than the profile, whatever its fit.
+export function StretchTag() {
+  return (
+    <span className="tag quiet" title={STRETCH}>
+      Stretch
     </span>
   );
 }
+export const STRETCH = "A step up: the job asks for a higher level or more years than your profile.";
 
 type Props = {
   leads: Lead[];

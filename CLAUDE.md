@@ -190,6 +190,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0028 | Applications: one per lead group, an append-only status history, a snapshot when applied | Accepted |
 | 0029 | Board-wide sources: postings of many companies, origin `board`, closed by source, a minimum fetch interval | Accepted |
 | 0030 | The location factor scores the group member that passed the preset (amends 0023) | Accepted |
+| 0031 | Four fit levels; "stretch" is a flag on the score; the location gate caps at good | Accepted |
 
 ## Project skills
 

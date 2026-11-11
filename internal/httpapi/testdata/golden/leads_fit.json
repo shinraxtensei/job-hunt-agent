@@ -38,6 +38,7 @@
       "score": 60,
       "fit_level": "strong",
       "not_enough_info": false,
+      "stretch": false,
       "breakdown": [
         {
           "factor": "required",
@@ -125,6 +126,7 @@
       "score": null,
       "fit_level": null,
       "not_enough_info": false,
+      "stretch": false,
       "breakdown": null,
       "reason": null,
       "gaps": null,
@@ -169,6 +171,7 @@
       "score": null,
       "fit_level": null,
       "not_enough_info": false,
+      "stretch": false,
       "breakdown": null,
       "reason": null,
       "gaps": null,
@@ -211,6 +214,7 @@
       "score": null,
       "fit_level": null,
       "not_enough_info": false,
+      "stretch": false,
       "breakdown": null,
       "reason": null,
       "gaps": null,

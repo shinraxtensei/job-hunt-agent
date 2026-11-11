@@ -35,6 +35,7 @@
   "score": 60,
   "fit_level": "strong",
   "not_enough_info": false,
+  "stretch": false,
   "breakdown": [
     {
       "factor": "required",

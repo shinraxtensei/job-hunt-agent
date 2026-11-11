@@ -13,7 +13,7 @@ import (
 
 const listLeadScores = `-- name: ListLeadScores :many
 SELECT w.posting_id, w.state AS extract_state,
-	s.points, s.factors, s.not_enough_info, s.freshness, s.bands,
+	s.points, s.factors, s.not_enough_info, s.freshness, s.bands, s.stretch, -- M9-03: a flag
 	r.reason, r.gaps, r.cv_variant, s.cv_variant AS score_variant, -- M4-06: the score's wins
 	(r.posting_id IS NOT NULL AND s.posting_id IS NOT NULL AND r.content_hash = s.content_hash
 		AND r.inputs = s.reason_inputs)::boolean AS reason_current,
@@ -33,6 +33,7 @@ type ListLeadScoresRow struct {
 	NotEnoughInfo pgtype.Bool
 	Freshness     []byte
 	Bands         []byte
+	Stretch       pgtype.Bool
 	Reason        pgtype.Text
 	Gaps          []byte
 	CvVariant     pgtype.Text
@@ -61,6 +62,7 @@ func (q *Queries) ListLeadScores(ctx context.Context) ([]ListLeadScoresRow, erro
 			&i.NotEnoughInfo,
 			&i.Freshness,
 			&i.Bands,
+			&i.Stretch,
 			&i.Reason,
 			&i.Gaps,
 			&i.CvVariant,

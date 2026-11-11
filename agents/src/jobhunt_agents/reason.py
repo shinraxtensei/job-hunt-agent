@@ -20,7 +20,7 @@ from jobhunt_agents.queue import Handler, Item, ItemError
 from jobhunt_agents.score import Config, load_config
 
 AGENT = "reason"
-PROMPT_VERSION = 3  # bump with a new prompts/reason/vN.md; leads regenerate when opened
+PROMPT_VERSION = 4  # 4: "FIT CAPPED" (M9-03). Bump with a new vN.md; leads regenerate when opened
 MAX_TOKENS = 400
 _LABELS = {
     "required": "required skills",
@@ -121,7 +121,7 @@ def breakdown(
     lines = ["NOT ENOUGH INFO: the posting names no required skills."] if not_enough_info else []
     if capped:  # M3-09: the location gate
         where = factors["location"].get("detail") or "location, remote and visa terms"
-        lines.append(f"FIT CAPPED AT STRETCH: you can't work there ({where}).")
+        lines.append(f"FIT CAPPED: you can't work there ({where}).")  # at good, M9-03
     for key, label in _LABELS.items():
         f = factors[key]
         note = f" ({f['detail']})" if f.get("detail") else ""

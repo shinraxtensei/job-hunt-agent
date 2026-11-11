@@ -156,7 +156,7 @@ def test_config_change_rescores_with_no_model_call(
 # The view adds freshness as of now and the fit level from the stored bands, as score.py
 # does.
 # M3-09: with low bands so the total is "very strong", an on-site job abroad is capped
-# at stretch by the location gate, in the view as in the code.
+# at good by the location gate (M9-03), in the view as in the code.
 @pytest.mark.parametrize("abroad", [False, True])
 def test_view_matches_the_code(
     app_dsn: str, go: Go, profile_dir: Path, tmp_path: Path, abroad: bool
@@ -178,10 +178,9 @@ def test_view_matches_the_code(
     low = tmp_path / "scoring.yaml"
     low.write_text(
         SCORING.read_text()
-        .replace("very_strong: 73", "very_strong: 30")
-        .replace("strong: 53", "strong: 20")
+        .replace("very_strong: 72", "very_strong: 30")
+        .replace("strong: 52", "strong: 20")
         .replace("good: 33", "good: 10")
-        .replace("stretch: 32", "stretch: 5")
     )
     profile, cfg = load(profile_dir), load_config(low)
     with open_pool(app_dsn, max_size=2) as pool:
@@ -201,7 +200,7 @@ def test_view_matches_the_code(
     assert v[0] == pytest.approx(want, abs=0.01)
     loc = s.factors["location"].value * cfg.weights.location
     assert v[1] == fit_level(want, loc, cfg.bands)
-    assert v[1] == ("stretch" if abroad else "very_strong")
+    assert v[1] == ("good" if abroad else "very_strong")  # M9-03: the gate caps at good
     assert v[2] is False  # no reason yet
 
 

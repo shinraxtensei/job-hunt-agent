@@ -12,7 +12,7 @@ import pytest
 
 from jobhunt_agents import aliases
 from jobhunt_agents import score as score_module
-from jobhunt_agents.evals.fit import Agreement, fit_bands
+from jobhunt_agents.evals.fit import Agreement, fit_bands, four_levels
 from jobhunt_agents.extraction import Extraction, drop_company
 from jobhunt_agents.profile import Profile, load
 from jobhunt_agents.score import (
@@ -174,7 +174,8 @@ def test_band_ends(cfg: Config, points: float, want: str) -> None:
 
 def test_bands_are_cut_offs(cfg: Config) -> None:
     b = cfg.bands
-    assert b.very_strong > b.strong > b.good > b.stretch > 0
+    assert b.very_strong > b.strong > b.good > 0
+    assert not hasattr(b, "stretch")  # M9-03: a flag, not a level
     assert band(b.strong, b) == "strong"
     assert band(b.strong - 0.01, b) == "good"
 
@@ -226,7 +227,7 @@ def test_fit_bands_and_agreement() -> None:
         "strong",
         "good",
         "good",
-        "stretch",
+        "no",
         "no",
     ]
     b = fit_bands(points, labels)
@@ -275,17 +276,17 @@ def test_weights_version_covers_code_and_aliases(monkeypatch: pytest.MonkeyPatch
     assert load_config().weights_version != v
 
 
-# M3-09 AC1: location/remote/visa points below bands.location_gate cap the fit level at
-# stretch; the total is unchanged. The same table is in internal/httpapi/score_test.go.
+# M3-09 AC1, M9-03: location/remote/visa points below bands.location_gate cap the fit
+# level at good; the total is unchanged. The same table is in internal/httpapi/score_test.go.
 @pytest.mark.parametrize(
     ("total_points", "location_points", "want"),
     [
-        (80, 3.0, "stretch"),  # very strong, but can't work there
+        (80, 3.0, "good"),  # very strong, but can't work there
         (80, 5.0, "very_strong"),  # at the gate: not capped
-        (60, 4.9, "stretch"),
-        (40, 0.0, "stretch"),  # good → stretch
-        (32.5, 3.0, "stretch"),  # already stretch
-        (10, 3.0, "no"),  # never raised
+        (60, 4.9, "good"),
+        (40, 0.0, "good"),  # already good
+        (32.5, 3.0, "no"),  # never raised
+        (10, 3.0, "no"),
     ],
 )
 def test_location_gate_caps_the_level(
@@ -346,3 +347,32 @@ def test_location_detail_uses_the_matched_location(
 ) -> None:
     j = job(workplace="hybrid", countries=("US",), locations=locations, matched_location=matched)
     assert location(ext(), j, cfg).detail == want
+
+
+# M9-03: a stretch is a flag, not a fit level: the job asks for a higher level or more
+# years than the profile (mid, 3 years in the example profile).
+@pytest.mark.parametrize(
+    ("e", "j", "want"),
+    [
+        (ext(seniority="senior"), job(), True),  # above mid
+        (ext(seniority="mid", min_years=5), job(), True),  # 2 years short
+        (ext(seniority="mid", min_years=3), job(), False),
+        (ext(seniority="junior"), job(), False),
+        (ext(), job(seniority="lead_manager"), True),  # the facet when unextracted
+        (ext(), job(experience_min_years=4), True),
+        (ext(), job(), False),  # unknown level, no years stated
+    ],
+)
+def test_stretch_flag(profile: Profile, cfg: Config, e: Extraction, j: Job, want: bool) -> None:
+    assert score_lead(e, j, profile, cfg).stretch is want
+
+
+# M9-03: the owner's blind labels used five levels; "stretch" leads scored like "no"
+# (17-32 points), so for the four levels a stretch label counts as no.
+def test_stretch_labels_count_as_no() -> None:
+    assert four_levels(["very_strong", "stretch", "no", "good"]) == [
+        "very_strong",
+        "no",
+        "no",
+        "good",
+    ]

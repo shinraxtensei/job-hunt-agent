@@ -71,7 +71,7 @@ const words: Record<string, Record<string, string>> = {
   },
   track: { remote: "Remote", relocation: "Relocation", morocco: "Morocco", consulting: "Consulting" },
   closed: { true: "Closed", false: "Open" },
-  fit: { very_strong: "Very strong", strong: "Strong", good: "Good", stretch: "Stretch", no: "No fit", unscored: "Not scored" },
+  fit: { very_strong: "Very strong", strong: "Strong", good: "Good", no: "No fit", unscored: "Not scored" },
   factor: {
     required: "Required skills",
     title: "Title",

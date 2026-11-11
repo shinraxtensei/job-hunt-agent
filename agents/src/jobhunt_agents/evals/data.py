@@ -20,7 +20,6 @@ from typing import Any, Literal
 from pydantic import BaseModel
 
 from jobhunt_agents.extraction import Extraction
-from jobhunt_agents.score import FitLevel
 from jobhunt_agents.text import bound, posting_text
 
 
@@ -70,6 +69,11 @@ class Lead:
         return posting_text(self.source, self.payload, title=self.title, location=self.location)
 
 
+# The blind fit labels used five levels (M3-06); scores use four since M9-03.
+LabelFit = Literal["very_strong", "strong", "good", "stretch", "no"]
+LABEL_LEVELS: tuple[LabelFit, ...] = ("very_strong", "strong", "good", "stretch", "no")
+
+
 class Item(BaseModel):
     id: str
     order: int
@@ -82,7 +86,7 @@ class Item(BaseModel):
     fixture_of: int | None = None
     injection: Injection | None = None
     # pass 1 (blind)
-    fit: FitLevel | None = None
+    fit: LabelFit | None = None  # five levels, as labelled; fit.four_levels maps them
     # pass 2
     prefill: Extraction | None = None
     prefill_model: str | None = None
