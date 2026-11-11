@@ -21,15 +21,19 @@ from jobhunt_agents.variant import cv_variant
 # "Shown" = has an extract item: Go queues those only for leads the default preset shows.
 # ponytail: a lead hidden by a later preset change keeps its score (ADR-0021); job facet
 # changes alone (a new classifier) don't trigger a rescore until another input changes.
+# The place is the matched member's (m, ADR-0030), as in score.JOB_SQL.
 _STALE = """
 SELECT p.id, p.content_hash, e.id, e.prompt_version, e.data, c.name,
-       j.title, j.seniority, j.experience_min_years, j.workplace, j.remote_scopes,
-       j.countries, j.locations, j.published_at, j.matched_location, j.role_family,
+       j.title, j.seniority, j.experience_min_years,
+       coalesce(m.workplace, j.workplace), coalesce(m.remote_scopes, j.remote_scopes),
+       coalesce(m.countries, j.countries), coalesce(m.locations, j.locations),
+       j.published_at, j.matched_location, j.role_family,
        coalesce(c.track, '')
 FROM work_items w
 JOIN postings p ON p.id = w.posting_id
 JOIN jobs j ON j.posting_id = p.id
 JOIN companies c ON c.id = j.company_id
+LEFT JOIN jobs m ON m.posting_id = j.matched_posting_id
 JOIN LATERAL (
     SELECT x.id, x.prompt_version, x.data FROM extractions x
     WHERE x.posting_id = p.id AND x.content_hash = p.content_hash

@@ -305,3 +305,35 @@ def test_company_name_is_not_a_skill(app_dsn: str, go: Go, profile_dir: Path) ->
     got = row(app_dsn, posting)
     assert got is not None
     assert [m["name"] for m in got["factors"]["required"]["matches"]] == ["PostgreSQL"]
+
+
+# M9-02 (ADR-0030): the scorer reads the place of the group member that passed the
+# default preset (reconcile's matched_posting_id), not the canonical posting's.
+def test_job_sql_reads_the_matched_member(app_dsn: str, go: Go) -> None:
+    canonical, member = go.add_shown_job(), go.add_shown_job()
+    with psycopg.connect(app_dsn) as conn:
+        conn.execute(
+            "UPDATE jobs SET workplace = 'onsite', remote_scopes = '{}', countries = '{BR}',"
+            " locations = '{\"Sao Paulo\"}' WHERE posting_id = %s",
+            (canonical,),
+        )
+        conn.execute(
+            "UPDATE jobs SET workplace = 'remote', remote_scopes = '{country:MA}',"
+            " countries = '{MA}', locations = '{\"Remote - Morocco\"}' WHERE posting_id = %s",
+            (member,),
+        )
+        row = conn.execute(JOB_SQL, (canonical,)).fetchone()
+        assert row
+        assert job_from_row(row).workplace == "onsite"  # nothing matched yet: its own
+        conn.execute(
+            "UPDATE jobs SET matched_posting_id = %s WHERE posting_id = %s", (member, canonical)
+        )
+        row = conn.execute(JOB_SQL, (canonical,)).fetchone()
+    assert row
+    j = job_from_row(row)
+    assert (j.workplace, j.remote_scopes, j.countries, j.locations) == (
+        "remote",
+        ("country:MA",),
+        ("MA",),
+        ("Remote - Morocco",),
+    )

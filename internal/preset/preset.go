@@ -43,10 +43,12 @@ type Group struct {
 	Track                 string
 	Closed                bool
 	Members               []Place
+	Canonical             int64 // the canonical posting: tried first when matching (ADR-0030)
 }
 
 // Place is one member's location facets.
 type Place struct {
+	PostingID                          int64 // the member's posting (M9-02)
 	Workplace                          string
 	Locations, RemoteScopes, Countries []string
 }
@@ -78,7 +80,14 @@ func (p Preset) Evaluate(g Group) []string {
 // its own (classified alone), else that member's first location. "" when p has no location
 // rules or none matched. Locations are untrusted text: returned as is, only compared.
 func (p Preset) MatchedLocation(g Group) string {
-	for _, m := range g.Members {
+	loc, _ := p.Match(g)
+	return loc
+}
+
+// Match is MatchedLocation plus the posting of the member that passed (ADR-0030); 0 when
+// p has no location rules or none matched.
+func (p Preset) Match(g Group) (string, int64) {
+	for _, m := range canonicalFirst(g) {
 		for _, r := range p.Location {
 			if !r.matches(g.Track, m) {
 				continue
@@ -87,16 +96,33 @@ func (p Preset) MatchedLocation(g Group) string {
 				f := job.Classify(job.Record{Locations: []string{loc}, Workplace: job.Workplace(m.Workplace)}, "")
 				alone := Place{Workplace: m.Workplace, Locations: []string{loc}, RemoteScopes: f.RemoteScopes, Countries: f.Countries}
 				if r.matches(g.Track, alone) {
-					return loc
+					return loc, m.PostingID
 				}
 			}
 			if len(m.Locations) > 0 {
-				return m.Locations[0] // matched through the board's country code, not the text
+				return m.Locations[0], m.PostingID // matched through the board's country code
 			}
-			return ""
+			return "", m.PostingID
 		}
 	}
-	return ""
+	return "", 0
+}
+
+// canonicalFirst is g's members with the canonical posting's first, so when it passes the
+// location rules it is the member the scorer reads; the others keep their order.
+func canonicalFirst(g Group) []Place {
+	out := make([]Place, 0, len(g.Members))
+	for _, m := range g.Members {
+		if m.PostingID == g.Canonical {
+			out = append(out, m)
+		}
+	}
+	for _, m := range g.Members {
+		if m.PostingID != g.Canonical {
+			out = append(out, m)
+		}
+	}
+	return out
 }
 
 func (p Preset) locationMatches(g Group) bool {

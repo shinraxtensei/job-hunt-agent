@@ -189,6 +189,7 @@ Never run `python` or `pytest` directly — always through `uv run`.
 | 0027 | PDF export with fpdf2 and a vendored Noto Sans font; no image parsed; Python deps scanned | Accepted |
 | 0028 | Applications: one per lead group, an append-only status history, a snapshot when applied | Accepted |
 | 0029 | Board-wide sources: postings of many companies, origin `board`, closed by source, a minimum fetch interval | Accepted |
+| 0030 | The location factor scores the group member that passed the preset (amends 0023) | Accepted |
 
 ## Project skills
 

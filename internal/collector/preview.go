@@ -38,14 +38,14 @@ func Groups(ctx context.Context, db DB) ([]GroupRow, error) {
 	members := map[key][]preset.Place{}
 	for _, p := range places {
 		k := key{p.CompanyID, p.TitleKey}
-		members[k] = append(members[k], preset.Place{Workplace: p.Workplace, Locations: p.Locations,
+		members[k] = append(members[k], preset.Place{PostingID: p.PostingID, Workplace: p.Workplace, Locations: p.Locations,
 			RemoteScopes: p.RemoteScopes, Countries: p.Countries})
 	}
 	out := make([]GroupRow, 0, len(gs))
 	for _, g := range gs {
 		out = append(out, GroupRow{Company: g.Company, Title: g.Title, PostingID: g.PostingID, ContentHash: g.ContentHash, Group: preset.Group{
 			RoleFamily: g.RoleFamily, Seniority: g.Seniority, ExperienceMinYears: int(g.ExperienceMinYears.Int32),
-			Track: g.Track, Closed: g.Closed, Members: members[key{g.CompanyID, g.TitleKey}],
+			Track: g.Track, Closed: g.Closed, Members: members[key{g.CompanyID, g.TitleKey}], Canonical: g.PostingID,
 		}})
 	}
 	return out, nil

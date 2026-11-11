@@ -180,6 +180,7 @@ type Job struct {
 	Countries          []string
 	ClassifierVersion  int32
 	MatchedLocation    string
+	MatchedPostingID   pgtype.Int8
 }
 
 type JobGroup struct {

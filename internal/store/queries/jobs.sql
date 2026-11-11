@@ -60,8 +60,9 @@ WHERE c.active OR EXISTS (
 ORDER BY g.company_id, g.title_key;
 
 -- name: ListJobPlaces :many
--- Each job's location facets, for evaluating its group's location rules.
-SELECT company_id, title_key, workplace, locations, remote_scopes, countries
+-- Each job's location facets, for evaluating its group's location rules; posting_id says
+-- which member passed (ADR-0030).
+SELECT posting_id, company_id, title_key, workplace, locations, remote_scopes, countries
 FROM jobs
 WHERE title_key <> '';
 

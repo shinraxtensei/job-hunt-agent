@@ -219,3 +219,28 @@ func TestRegionAliases(t *testing.T) {
 		t.Errorf("remote latam hidden by %v", got)
 	}
 }
+
+// M9-02 (ADR-0030): Match names the member that passed: the canonical posting when it
+// does, else the first member that does; 0 when none.
+func TestMatchNamesTheMember(t *testing.T) {
+	p, err := preset.Parse([]byte("name: t\nlocation:\n  - {workplace: [remote], remote_scopes: [emea]}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	onsite := preset.Place{PostingID: 1, Workplace: "onsite", Locations: []string{"Austin, TX"}, Countries: []string{"US"}}
+	emea := preset.Place{PostingID: 2, Workplace: "remote", Locations: []string{"Remote - EMEA"}, RemoteScopes: []string{"emea"}}
+	emea2 := preset.Place{PostingID: 3, Workplace: "remote", Locations: []string{"EMEA (remote)"}, RemoteScopes: []string{"emea"}}
+	for name, c := range map[string]struct {
+		g      preset.Group
+		loc    string
+		member int64
+	}{
+		"other member":   {preset.Group{Members: []preset.Place{onsite, emea}, Canonical: 1}, "Remote - EMEA", 2},
+		"canonical wins": {preset.Group{Members: []preset.Place{emea, emea2}, Canonical: 3}, "EMEA (remote)", 3},
+		"none passes":    {preset.Group{Members: []preset.Place{onsite}, Canonical: 1}, "", 0},
+	} {
+		if loc, member := p.Match(c.g); loc != c.loc || member != c.member {
+			t.Errorf("%s: Match = %q, %d; want %q, %d", name, loc, member, c.loc, c.member)
+		}
+	}
+}

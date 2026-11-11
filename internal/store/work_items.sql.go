@@ -160,19 +160,23 @@ func (q *Queries) RetryFailed(ctx context.Context, kind string) (int64, error) {
 }
 
 const setMatchedLocations = `-- name: SetMatchedLocations :exec
-UPDATE jobs j SET matched_location = x.loc
-FROM (SELECT unnest($1::bigint[]) AS id, unnest($2::text[]) AS loc) x
-WHERE j.posting_id = x.id AND j.matched_location <> x.loc
+UPDATE jobs j SET matched_location = x.loc, matched_posting_id = nullif(x.member, 0)
+FROM (SELECT unnest($1::bigint[]) AS id, unnest($2::text[]) AS loc,
+	unnest($3::bigint[]) AS member) x
+WHERE j.posting_id = x.id
+	AND (j.matched_location, j.matched_posting_id) IS DISTINCT FROM (x.loc, nullif(x.member, 0))
 `
 
 type SetMatchedLocationsParams struct {
 	PostingIds []int64
 	Locations  []string
+	Members    []int64
 }
 
 // The reconcile step's second write (ADR-0023): the default preset's matched location of
 // each shown group's canonical posting, for the scorer. Unchanged rows aren't touched.
+// matched_posting_id (ADR-0030) is the member that passed; 0 in members means none.
 func (q *Queries) SetMatchedLocations(ctx context.Context, arg SetMatchedLocationsParams) error {
-	_, err := q.db.Exec(ctx, setMatchedLocations, arg.PostingIds, arg.Locations)
+	_, err := q.db.Exec(ctx, setMatchedLocations, arg.PostingIds, arg.Locations, arg.Members)
 	return err
 }
